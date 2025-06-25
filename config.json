@@ -1,13 +1,13 @@
 {
   "work_folder1": {
     "path": "C:/_cloud/___TEST_FOLDER/Tree Grass etc",
-    "name": "",
+    "name": "test",
     "icon": "",
     "color": ""
   },
   "work_folder2": {
-    "path": "",
-    "name": "",
+    "path": "C:/_cloud/___TEST_FOLDER/",
+    "name": "ASD",
     "icon": "",
     "color": ""
   },

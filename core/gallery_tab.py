@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QProgressBar,
+    QPushButton,
     QScrollArea,
     QSlider,
     QSplitter,
@@ -17,6 +18,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from core.folder_scanner_worker import FolderStructureScanner
 from core.thumbnail_tile import ThumbnailTile
 
 # Dodanie loggera dla modułu
@@ -512,9 +514,46 @@ class GalleryTab(QWidget):
 
         folder_layout = QVBoxLayout()
         folder_layout.addWidget(QLabel("Drzewo folderów"))
-        folder_layout.addStretch()
-        self.folder_tree_panel.setLayout(folder_layout)
 
+        # Scroll area dla struktury folderów
+        self.folder_scroll_area = QScrollArea()
+        self.folder_scroll_area.setWidgetResizable(True)
+        self.folder_scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self.folder_scroll_area.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+
+        # Widget dla struktury folderów
+        self.folder_structure_widget = QWidget()
+        self.folder_structure_layout = QVBoxLayout()
+        self.folder_structure_layout.setContentsMargins(5, 5, 5, 5)
+        self.folder_structure_layout.setSpacing(2)
+
+        # Początkowy komunikat
+        initial_label = QLabel("Wybierz folder aby wyświetlić strukturę")
+        initial_label.setStyleSheet(
+            """
+            QLabel {
+                color: #888888;
+                font-size: 11px;
+                padding: 10px;
+            }
+        """
+        )
+        self.folder_structure_layout.addWidget(initial_label)
+        self.folder_structure_layout.addStretch()
+
+        self.folder_structure_widget.setLayout(self.folder_structure_layout)
+        self.folder_scroll_area.setWidget(self.folder_structure_widget)
+
+        folder_layout.addWidget(self.folder_scroll_area)
+
+        # Dodanie przycisków folderów na dole
+        self._create_folder_buttons(folder_layout)
+
+        self.folder_tree_panel.setLayout(folder_layout)
         self.splitter.addWidget(self.folder_tree_panel)
 
     def _create_gallery_panel(self):
@@ -565,7 +604,7 @@ class GalleryTab(QWidget):
     def _create_control_panel(self):
         """Tworzy dolny panel kontrolny"""
         self.control_panel = QFrame()
-        self.control_panel.setFixedHeight(24)
+        self.control_panel.setFixedHeight(18)
         self.control_panel.setStyleSheet(
             """
             QFrame {
@@ -758,6 +797,180 @@ class GalleryTab(QWidget):
             }
         """
         )
+
+    def _create_folder_buttons(self, folder_layout):
+        """Tworzy 5 przycisków folderów na dole panelu"""
+        try:
+            config_manager = ConfigManager()
+            config = config_manager.get_config()
+
+            for i in range(1, 6):
+                folder_key = f"work_folder{i}"
+                folder_config = config.get(folder_key, {})
+                folder_path = folder_config.get("path", "")
+                folder_name = folder_config.get("name", f"Folder {i}")
+
+                # Użyj nazwy jeśli jest dostępna, w przeciwnym razie domyślną
+                button_text = folder_name if folder_name else f"Folder {i}"
+
+                button = QPushButton(button_text)
+                button.setFixedHeight(24)
+                button.setEnabled(bool(folder_path))  # Aktywny tylko gdy jest ścieżka
+
+                # Podłącz sygnał z przekazaniem ścieżki
+                if folder_path:
+                    button.clicked.connect(
+                        lambda checked, path=folder_path: self._on_folder_button_clicked(
+                            path
+                        )
+                    )
+
+                folder_layout.addWidget(button)
+
+        except Exception as e:
+            logger.error(f"Błąd tworzenia przycisków folderów: {e}")
+
+    def _on_folder_button_clicked(self, folder_path):
+        """Obsługuje kliknięcie przycisku folderu - uruchamia skanowanie struktury"""
+        try:
+            logger.info(f"Skanowanie struktury folderu: {folder_path}")
+
+            # Sprawdź czy ścieżka istnieje
+            if not os.path.exists(folder_path):
+                logger.warning(f"Ścieżka nie istnieje: {folder_path}")
+                self._show_error_message(f"Folder nie istnieje: {folder_path}")
+                return
+
+            # Zatrzymaj poprzedni folder scanner jeśli działa
+            if (
+                hasattr(self, "folder_scanner")
+                and self.folder_scanner
+                and self.folder_scanner.isRunning()
+            ):
+                self.folder_scanner.quit()
+                self.folder_scanner.wait()
+
+            # Wyczyść strukturę folderów w lewym panelu
+            self._clear_folder_structure()
+
+            # Utwórz i uruchom folder scanner
+            self.folder_scanner = FolderStructureScanner(folder_path)
+            self.folder_scanner.progress_updated.connect(self._on_folder_scan_progress)
+            self.folder_scanner.folder_found.connect(self._on_folder_found)
+            self.folder_scanner.finished_scanning.connect(self._on_folder_scan_finished)
+            self.folder_scanner.error_occurred.connect(self._on_folder_scan_error)
+
+            self.folder_scanner.start()
+
+        except Exception as e:
+            logger.error(f"Błąd obsługi kliknięcia przycisku folderu: {e}")
+            self._show_error_message(f"Błąd skanowania folderu: {e}")
+
+    def _clear_folder_structure(self):
+        """Czyści strukturę folderów w lewym panelu"""
+        try:
+            # Usuń wszystkie widgety z layoutu
+            while self.folder_structure_layout.count():
+                child = self.folder_structure_layout.takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+
+            # Dodaj komunikat o ładowaniu
+            loading_label = QLabel("Ładowanie struktury folderów...")
+            loading_label.setStyleSheet(
+                """
+                QLabel {
+                    color: #CCCCCC;
+                    font-size: 11px;
+                    padding: 5px;
+                }
+            """
+            )
+            self.folder_structure_layout.addWidget(loading_label)
+
+        except Exception as e:
+            logger.error(f"Błąd czyszczenia struktury folderów: {e}")
+
+    def _on_folder_scan_progress(self, progress: int):
+        """Obsługuje postęp skanowania folderów"""
+        try:
+            self.progress_bar.setValue(progress)
+        except Exception as e:
+            logger.error(f"Błąd aktualizacji postępu skanowania folderów: {e}")
+
+    def _on_folder_found(self, folder_path: str, level: int):
+        """Obsługuje znalezienie folderu - dodaje do lewego panelu"""
+        try:
+            folder_name = os.path.basename(folder_path)
+
+            # Twórz wcięcie dla drzewa
+            if level == 0:
+                display_text = f"📁 {folder_name}"
+            else:
+                indent = "  " * (level - 1)
+                display_text = f"{indent}└─ 📂 {folder_name}"
+
+            folder_label = QLabel(display_text)
+            folder_label.setStyleSheet(
+                """
+                QLabel {
+                    color: #CCCCCC;
+                    font-size: 10px;
+                    padding: 1px 5px;
+                    font-family: monospace;
+                }
+                QLabel:hover {
+                    background-color: #3F3F46;
+                }
+            """
+            )
+
+            # Usuń komunikat o ładowaniu jeśli to pierwszy folder
+            if level == 0 and self.folder_structure_layout.count() > 0:
+                first_item = self.folder_structure_layout.itemAt(0)
+                if first_item and first_item.widget():
+                    first_item.widget().deleteLater()
+
+            # Dodaj do layoutu
+            self.folder_structure_layout.addWidget(folder_label)
+
+        except Exception as e:
+            logger.error(f"Błąd dodawania folderu do wyświetlania: {e}")
+
+    def _on_folder_scan_finished(self):
+        """Obsługuje zakończenie skanowania folderów"""
+        try:
+            self.progress_bar.setValue(0)
+
+            # Dodaj stretch na końcu
+            self.folder_structure_layout.addStretch()
+
+            logger.info("Skanowanie struktury folderów zakończone")
+        except Exception as e:
+            logger.error(f"Błąd finalizacji skanowania folderów: {e}")
+
+    def _on_folder_scan_error(self, error_message: str):
+        """Obsługuje błędy skanowania folderów"""
+        try:
+            self.progress_bar.setValue(0)
+
+            # Wyczyść i pokaż błąd w lewym panelu
+            self._clear_folder_structure()
+            error_label = QLabel(f"Błąd: {error_message}")
+            error_label.setStyleSheet(
+                """
+                QLabel {
+                    color: #FF6B6B;
+                    font-size: 10px;
+                    padding: 5px;
+                }
+            """
+            )
+            self.folder_structure_layout.addWidget(error_label)
+            self.folder_structure_layout.addStretch()
+
+        except Exception as e:
+            logger.error(f"Błąd obsługi błędu skanowania folderów: {e}")
 
 
 if __name__ == "__main__":
