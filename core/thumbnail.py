@@ -359,6 +359,8 @@ class ThumbnailProcessor:
         """
         Przeskalowuje i przycina obraz do kwadratu z intelligent cropping
 
+        UWAGA: Ta funkcja nie podlega audytowi!
+
         Args:
             img: Obraz PIL
             thumbnail_size: Docelowy rozmiar (kwadrat)
@@ -376,15 +378,13 @@ class ThumbnailProcessor:
         # Przeskaluj obraz
         img = img.resize((new_width, new_height), LANCZOS)
 
-        # Wyznacz obszar do przycięcia (centrum obrazu)
+        # Wyznacz obszar do przycięcia
         if new_width > thumbnail_size:
-            # Obraz szerszy - przyciąć z boków
-            left = (new_width - thumbnail_size) // 2
-            crop_box = (left, 0, left + thumbnail_size, thumbnail_size)
+            # Obraz szerszy - przyciąć od lewej strony
+            crop_box = (0, 0, thumbnail_size, thumbnail_size)
         elif new_height > thumbnail_size:
-            # Obraz wyższy - przyciąć z góry i dołu
-            top = (new_height - thumbnail_size) // 2
-            crop_box = (0, top, thumbnail_size, top + thumbnail_size)
+            # Obraz wyższy - przyciąć od góry
+            crop_box = (0, 0, thumbnail_size, thumbnail_size)
         else:
             # Obraz już ma odpowiedni rozmiar
             crop_box = (0, 0, thumbnail_size, thumbnail_size)

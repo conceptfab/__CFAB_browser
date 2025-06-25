@@ -38,6 +38,8 @@ Ten audyt opiera się na trzech kluczowych filarach, które stanowią najwyższe
 
 **WAŻNE: Proces prezentacji danych w interfejsie użytkownika jest RÓWNIE WAŻNY jak główne procesy biznesowe!**
 
+**⚠️ KRYTYCZNE: Część funkcji jest wyłączona z audytu - informacja jest zawarta w opisie funkcji!**
+
 #### 🎯 **Dlaczego UI to Logika Biznesowa**
 
 - **Główny interfejs użytkownika** - większość czasu użytkownik spędza w interfejsie

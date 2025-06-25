@@ -1,66 +1,39 @@
-# 🗺️ MAPA PLIKÓW FUNKCJONALNOŚCI BIZNESOWEJ
+# 🗺️ MAPA PLIKÓW FUNKCJONALNOŚCI BIZNESOWEJ - CFAB BROWSER
 
 **Wygenerowano na podstawie aktualnego kodu: 2025-01-25**
 
-## 📱 KONTEKST BIZNESOWY APLIKACJI
+**Odkryte katalogi z logiką biznesową:**
 
-**CFAB Browser** to **system zarządzania zasobami cyfrowymi** zaprojektowany specjalnie do zarządzania sparowanych kolekcji plików. Aplikacja koncentruje się na organizowaniu i przeglądaniu zasobów składających się z plików archiwów (ZIP, RAR, SBSAR) sparowanych z obrazami podglądu (PNG, JPG, WEBP).
-
-**Główne procesy biznesowe:**
-
-- Automatyczne parowanie plików archiwów z obrazami podglądu
-- Generowanie miniatur dla szybkiego przeglądania wizualnego
-- Śledzenie niesparowanych plików do czyszczenia
-- Zarządzanie metadanymi (oceny, kolory, rozmiary plików)
-- Przeglądanie kolekcji w interfejsie galerii wizualnej
-
-**Wymagania wydajnościowe:**
-
-- Responsywne UI przy dużych zbiorach zasobów
-- Szybkie ładowanie miniatur z cache
-- Efektywne skanowanie folderów
-- Płynne przewijanie galerii z setkami elementów
+- **root/** - Główny katalog z plikami uruchamiającymi i konfiguracją
+- **core/** - Rdzeń aplikacji zawierający wszystkie główne moduły logiki biznesowej
+- **_test/** - Testy jednostkowe (pominięte w audycie logiki biznesowej)
 
 ---
 
-## 🗂️ ODKRYTE KATALOGI Z LOGIKĄ BIZNESOWĄ
+## 📊 MAPA STRUKTURY LOGIKI BIZNESOWEJ
 
-- **core/** - Główna logika biznesowa aplikacji, komponenty UI, przetwarzanie danych
-- **\_test/** - Testy jednostkowe dla logiki biznesowej
-- **/** (root) - Główny punkt wejścia aplikacji
-
----
-
-## 📊 SZCZEGÓŁOWA MAPA PLIKÓW LOGIKI BIZNESOWEJ
-
-### **CORE** (/mnt/c/\_cloud/\_\_CFAB_browser/core/)
-
-```
-core/
-├── main_window.py ⚫⚫⚫⚫ - Orkiestrator aplikacji i główny kontener UI
-├── scanner.py ⚫⚫⚫⚫ - Główny algorytm biznesowy parowania zasobów i skanowania
-├── gallery_tab.py 🔴🔴🔴 - Podstawowy interfejs użytkownika do przeglądania zasobów
-├── thumbnail.py 🔴🔴🔴 - Przetwarzanie obrazów i generowanie miniatur
-├── thumbnail_tile.py 🟡🟡 - Komponent UI pojedynczego zasobu z metadanymi
-├── pairing_tab.py 🟢 - Placeholder dla funkcjonalności parowania (przyszłość)
-└── tools_tab.py 🟢 - Placeholder dla funkcjonalności narzędzi (przyszłość)
-```
-
-### **ROOT** (/mnt/c/\_cloud/\_\_CFAB_browser/)
+### **KATALOG GŁÓWNY** (/)
 
 ```
 /
-└── cfab_browser.py 🔴🔴🔴 - Główny punkt wejścia aplikacji, konfiguracja środowiska
+├── cfab_browser.py 🟡🟡 - Punkt wejścia aplikacji, setup i konfiguracja uruchamiania
+└── config.json - Plik konfiguracyjny aplikacji (nie podlega audytowi)
 ```
 
-### **TESTS** (/mnt/c/\_cloud/\_\_CFAB_browser/\_test/)
+### **KATALOG CORE** (/core/)
 
 ```
-_test/
-├── test_gallery_tab.py 🟡🟡 - Testy funkcjonalności galerii
-├── test_pairing_tab.py 🟡🟡 - Testy funkcjonalności parowania
-├── test_scanner.py 🟡🟡 - Testy głównych algorytmów biznesowych
-└── test_tools_tab.py 🟡🟡 - Testy funkcjonalności narzędzi
+core/
+├── scanner.py ⚫⚫⚫⚫ - RDZEŃ automatycznego parowania zasobów, główny algorytm biznesowy
+├── gallery_tab.py ⚫⚫⚫⚫ - Główny interfejs galerii z zaawansowanym układem i zarządzaniem zasobami
+├── rules.py ⚫⚫⚫⚫ - Decision engine i intelligent automation, brain aplikacji
+├── main_window.py 🔴🔴🔴 - Orkiestrator aplikacji, centralne zarządzanie modułami
+├── thumbnail.py 🔴🔴🔴 - Przetwarzanie obrazów, cache miniatur, optymalizacje wydajności  
+├── thumbnail_tile.py 🔴🔴🔴 - Komponenty UI miniatur, drag&drop, user interactions
+├── folder_scanner_worker.py 🔴🔴🔴 - Asynchroniczne skanowanie folderów, nawigacja struktury
+├── pairing_tab.py 🟢 - Placeholder dla narzędzi parowania (brak implementacji)
+├── tools_tab.py 🟢 - Placeholder dla dodatkowych narzędzi (brak implementacji)
+└── __init__.py - Plik inicjalizacyjny modułu
 ```
 
 ---
@@ -71,32 +44,33 @@ _test/
 
 ### **⚫⚫⚫⚫ KRYTYCZNE** - Podstawowa funkcjonalność aplikacji
 
-**Uzasadnienie:** Te elementy implementują główne algorytmy biznesowe aplikacji i są odpowiedzialne za krytyczne procesy zarządzania zasobami
+**Uzasadnienie:** Pliki implementujące główne algorytmy biznesowe, podstawowe workflow'y użytkowników i intelligent automation. Bez tych modułów aplikacja traci swoją główną wartość dodaną.
 
-- **main_window.py** - Orkiestrator całej aplikacji, koordynuje wszystkie moduły biznesowe
-- **scanner.py** - Implementuje główny algorytm biznesowy parowania plików, integralny dla funkcjonalności aplikacji
+- **core/scanner.py** - Główny algorytm automatycznego parowania archiwów z podglądami, generowanie metadanych, tworzenie miniatur
+- **core/gallery_tab.py** - Główny interfejs użytkownika, zaawansowany layout manager, drag&drop workflow, asynchroniczne skanowanie
+- **core/rules.py** - Decision engine analizujący zawartość folderów i decydujący o automatycznych akcjach
 
-### **🔴🔴🔴 WYSOKIE** - Ważne operacje biznesowe
+### **🔴🔴🔴 WYSOKIE** - Ważne operacje biznesowe  
 
-**Uzasadnienie:** Te elementy zarządzają kluczowymi operacjami biznesowymi wpływającymi na wydajność i UX
+**Uzasadnienie:** Moduły odpowiedzialne za stabilność aplikacji, zarządzanie konfiguracją, przetwarzanie obrazów i core user interactions. Wpływają bezpośrednio na wydajność i user experience.
 
-- **gallery_tab.py** - Główny interfejs użytkownika, krytyczny dla UX i wydajności przy dużych zbiorach danych
-- **thumbnail.py** - Przetwarzanie obrazów wpływające na wydajność całej aplikacji
-- **cfab_browser.py** - Punkt wejścia z konfiguracją środowiska wpływającą na działanie całej aplikacji
+- **core/main_window.py** - Centralny orkiestrator aplikacji, zarządzanie modułami, error handling, configuration management
+- **core/thumbnail.py** - Algorytmy przetwarzania obrazów, inteligentne cache'owanie, atomic operations, optymalizacje wydajności
+- **core/thumbnail_tile.py** - Komponenty UI reprezentujące assety, drag&drop implementation, preview system, user interactions
+- **core/folder_scanner_worker.py** - Asynchroniczne skanowanie struktury folderów, progress tracking, thread-safe communication
 
 ### **🟡🟡 ŚREDNIE** - Funkcjonalności pomocnicze
 
-**Uzasadnienie:** Te elementy wspierają główne procesy biznesowe ale nie są krytyczne dla podstawowej funkcjonalności
+**Uzasadnienie:** Kod odpowiedzialny za uruchamianie i podstawową konfigurację aplikacji. Ważny dla stabilnego startu, ale nie implementuje kluczowych algorytmów biznesowych.
 
-- **thumbnail_tile.py** - Komponent UI ważny dla UX ale nie krytyczny dla działania aplikacji
-- **test\_\*.py** - Testy zapewniające jakość ale nie wpływające bezpośrednio na procesy biznesowe
+- **cfab_browser.py** - Punkt wejścia aplikacji, setup loggera, ładowanie stylów, orchestrator uruchamiania
 
 ### **🟢 NISKIE** - Funkcjonalności dodatkowe
 
-**Uzasadnienie:** Te elementy są placeholderami na przyszłą funkcjonalność i nie zawierają aktualnej logiki biznesowej
+**Uzasadnienie:** Obecnie tylko placeholdery bez implementacji logiki biznesowej. Przygotowane pod przyszły rozwój funkcjonalności.
 
-- **pairing_tab.py** - Obecnie placeholder, brak logiki biznesowej
-- **tools_tab.py** - Obecnie placeholder, brak logiki biznesowej
+- **core/pairing_tab.py** - Placeholder dla zaawansowanych narzędzi parowania (obecnie brak implementacji)
+- **core/tools_tab.py** - Placeholder dla dodatkowych narzędzi zarządzania (obecnie brak implementacji)
 
 ---
 
@@ -104,104 +78,128 @@ _test/
 
 **Na podstawie analizy kodu:**
 
-- **Plików krytycznych:** 2
-- **Plików wysokich:** 3
-- **Plików średnich:** 5
+- **Plików krytycznych:** 3
+- **Plików wysokich:** 4  
+- **Plików średnich:** 1
 - **Plików niskich:** 2
-- **Łącznie przeanalizowanych:** 12
+- **Łącznie przeanalizowanych:** 10
 
-**Rozkład priorytetów:** Krytyczne: 17%, Wysokie: 25%, Średnie: 42%, Niskie: 16%
-
----
-
-## 🚀 SZCZEGÓŁOWA ANALIZA FUNKCJI BIZNESOWYCH
-
-### 📄 **MAIN_WINDOW.PY**
-
-- **Status:** ✅ UKOŃCZONA ANALIZA I REFAKTORYZACJA
-- **Data ukończenia:** 2025-01-25
-- **Business impact:** Poprawiono stabilność uruchomienia aplikacji, dodano graceful degradation dla konfiguracji, wyeliminowano ryzyko crash przy uszkodzonym config.json co zapewnia niezawodność działania głównego interfejsu aplikacji. Zaimplementowano proper error handling, fallback configuration i dependency injection
-- **Pliki wynikowe:**
-  - `AUDYT/corrections/main_window_correction.md`
-  - `AUDYT/patches/main_window_patch_code.md`
-  - `AUDYT/backups/main_window_backup_2025-01-25.py`
-- **Główne funkcje biznesowe:**
-  - `MainWindow.__init__()` - Inicjalizacja głównego interfejsu aplikacji
-  - `_createMenuBar()` - Utworzenie menu aplikacji z opcjami biznesowymi
-  - `_createTabs()` - Koordynacja trzech głównych modułów biznesowych
-- **Priorytet:** ⚫⚫⚫⚫ KRYTYCZNE
-- **Uzasadnienie:** Orkiestrator całej aplikacji, bez tego komponenta aplikacja nie może funkcjonować
-- **Wpływ na biznes:** Fundamentalny - koordynuje wszystkie procesy biznesowe aplikacji
-
-### 📄 **SCANNER.PY**
-
-- **Status:** ✅ UKOŃCZONA ANALIZA
-- **Data ukończenia:** 2025-01-25
-- **Business impact:** Poprawiono stabilność i wydajność głównego algorytmu parowania plików, dodano proper error handling, zoptymalizowano skanowanie folderów co bezpośrednio wpływa na responsywność aplikacji przy dużych zbiorach danych
-- **Pliki wynikowe:**
-  - `AUDYT/corrections/scanner_correction.md`
-  - `AUDYT/patches/scanner_patch_code.md`
-- **Główne funkcje biznesowe:**
-  - `find_and_create_assets()` - Główny algorytm parowania plików archiwów z obrazami
-  - `create_thumbnail_for_asset()` - Integracja generowania miniatur z tworzeniem zasobów
-  - `create_unpair_files_json()` - Śledzenie niesparowanych plików dla integralności danych
-  - `get_file_size_mb()` - Ekstrakcja metadanych plików
-- **Priorytet:** ⚫⚫⚫⚫ KRYTYCZNE
-- **Uzasadnienie:** Implementuje główny algorytm biznesowy aplikacji - parowanie zasobów
-- **Wpływ na biznes:** Krytyczny - bez tego procesu aplikacja traci swoją główną funkcjonalność
-
-### 📄 **GALLERY_TAB.PY**
-
-- **Status:** ✅ UKOŃCZONA ANALIZA I REFAKTORYZACJA
-- **Data ukończenia:** 2025-01-25
-- **Business impact:** Poprawiono wydajność i thread safety głównego interfejsu przeglądania zasobów, zoptymalizowano grid recreation z debouncing, wyeliminowano memory leaks, dodano proper error handling, centralizację config loading z cache'owaniem. Zaimplementowano architekturę z ConfigManager i GridManager co bezpośrednio wpływa na responsywność aplikacji przy dużych zbiorach assetów (175+ plików). Naprawiono błędy CSS eliminując spam logów.
-- **Pliki wynikowe:**
-  - `AUDYT/corrections/gallery_tab_correction.md`
-  - `AUDYT/patches/gallery_tab_patch_code.md`
-- **Główne funkcje biznesowe:**
-  - `AssetScanner.run()` - Skanowanie plików .asset w tle
-  - `_create_thumbnail_grid()` - Dynamiczne generowanie siatki miniatur
-  - `_calculate_columns()` - Responsywny układ interfejsu
-  - `_create_asset_tile()` - Wizualizacja pojedynczych zasobów
-- **Priorytet:** 🔴🔴🔴 WYSOKIE
-- **Uzasadnienie:** Główny interfejs użytkownika, krytyczny dla UX przy dużych zbiorach danych
-- **Wpływ na biznes:** Wysoki - decyduje o doświadczeniu użytkownika i wydajności przeglądania
-
-### 📄 **THUMBNAIL.PY**
-
-- **Status:** ✅ UKOŃCZONA ANALIZA
-- **Data ukończenia:** 2025-01-25
-- **Business impact:** Poprawiono wydajność i stabilność przetwarzania obrazów, dodano cache validation, zoptymalizowano memory usage, wyeliminowano ryzyko corrupted thumbnails co bezpośrednio wpływa na responsywność galerii i jakość wizualizacji zasobów
-- **Pliki wynikowe:**
-  - `AUDYT/corrections/thumbnail_correction.md`
-  - `AUDYT/patches/thumbnail_patch_code.md`
-- **Główne funkcje biznesowe:**
-  - `process_thumbnail()` - Główny algorytm przetwarzania obrazów
-- **Priorytet:** 🔴🔴🔴 WYSOKIE
-- **Uzasadnienie:** Przetwarzanie obrazów wpływające na wydajność całej aplikacji
-- **Wpływ na biznes:** Wysoki - wpływa na szybkość ładowania i jakość wizualizacji zasobów
-
-### 📄 **CFAB_BROWSER.PY**
-
-- **Główne funkcje biznesowe:**
-  - `main()` - Główna funkcja uruchamiająca aplikację
-  - `setup_logger()` - Konfiguracja logowania dla procesów biznesowych
-  - `load_styles()` - Ładowanie stylów UI wpływających na UX
-- **Priorytet:** 🔴🔴🔴 WYSOKIE
-- **Uzasadnienie:** Punkt wejścia z konfiguracją środowiska wpływającą na całą aplikację
-- **Wpływ na biznes:** Wysoki - determinuje sposób uruchomienia i konfiguracji wszystkich procesów
+**Rozkład priorytetów:** 30% krytyczne, 40% wysokie, 10% średnie, 20% niskie
 
 ---
 
-## 🎯 KOLEJNE KROKI AUDYTU
+## 🔍 SZCZEGÓŁOWA ANALIZA FUNKCJI BIZNESOWYCH
 
-**Status inicjalizacji:** ✅ UKOŃCZONA
-**Następny etap:** Analiza pliku **scanner.py** (⚫⚫⚫⚫ KRYTYCZNE)
+### **⚫⚫⚫⚫ KRYTYCZNE PLIKI - SZCZEGÓŁY**
 
-**Plany analizy według priorytetów:**
+#### **📄 SCANNER.PY**
 
-1. **scanner.py** - Główny algorytm biznesowy
-2. **main_window.py** - Orkiestrator aplikacji
-3. **gallery_tab.py** - Główny interfejs użytkownika
-4. **thumbnail.py** - Przetwarzanie obrazów
-5. **cfab_browser.py** - Punkt wejścia aplikacji
+- **Główne funkcje biznesowe:**
+  - `find_and_create_assets()` - Główny algorytm parowania plików archiwów z obrazami podglądu
+  - `_scan_folder_for_files()` - Algorytm wykrywania i kategoryzacji plików według rozszerzeń
+  - `_create_single_asset()` - Generowanie metadanych JSON dla sparowanych zasobów
+  - `create_thumbnail_for_asset()` - Integracja z systemem miniaturek
+  - `create_unpair_files_json()` - Tracking i raportowanie plików bez pary
+  - `get_file_size_mb()` - Analiza rozmiarów plików do metadanych
+- **Priorytet:** ⚫⚫⚫⚫ KRYTYCZNE
+- **Uzasadnienie:** Implementuje główną wartość dodaną aplikacji - automatyczne parowanie zasobów. Zawiera rdzeń logiki biznesowej aplikacji.
+- **Wpływ na biznes:** Bezpośrednio odpowiedzialny za automatyzację głównego procesu biznesowego. Bez tego modułu aplikacja traci swoją podstawową funkcjonalność.
+
+#### **📄 GALLERY_TAB.PY**
+
+- **Główne funkcje biznesowe:**
+  - `GalleryTab` - Główny interfejs przeglądania i zarządzania zasobami
+  - `ConfigManager` - Singleton cache'owania konfiguracji z inteligentną walidacją
+  - `GridManager` - Zaawansowany algorytm układu siatki z debouncing i optymalizacjami
+  - `AssetScanner` - Worker asynchronicznego skanowania plików .asset
+  - `FolderButton` - Implementacja drag&drop transferu między folderami
+- **Priorytet:** ⚫⚫⚫⚫ KRYTYCZNE  
+- **Uzasadnienie:** Główny punkt kontaktu użytkownika z aplikacją. Implementuje kluczowe workflow'y zarządzania zasobami i UX.
+- **Wpływ na biznes:** Bezpośrednio wpływa na produktywność użytkowników. Implementuje główne procesy daily workflow.
+
+#### **📄 RULES.PY**
+
+- **Główne funkcje biznesowe:**
+  - `FolderClickRules.analyze_folder_content()` - Algorytm analizy zawartości folderów
+  - `FolderClickRules.decide_action()` - Decision engine z complex business rules
+  - Comprehensive folder state analysis - walidacja assetów, archiwów, cache
+- **Priorytet:** ⚫⚫⚫⚫ KRYTYCZNE
+- **Uzasadnienie:** Brain aplikacji decydujący o wszystkich automatycznych akcjach. Implementuje intelligent behavior.
+- **Wpływ na biznes:** Determinuje wszystkie automatyczne workflow'y. Odpowiedzialny za inteligentną automatyzację user experience.
+
+### **🔴🔴🔴 WYSOKIE PLIKI - SZCZEGÓŁY**
+
+#### **📄 MAIN_WINDOW.PY**
+
+- **Główne funkcje biznesowe:**
+  - `MainWindow` - Centralny orkiestrator wszystkich modułów aplikacji
+  - `_load_config_safe()` - Bezpieczne ładowanie konfiguracji z fallback
+  - `_createTabs()` - Tworzenie i zarządzanie głównymi modułami
+  - `get_config()` / `get_config_value()` - Centralne API dostępu do konfiguracji
+- **Priorytet:** 🔴🔴🔴 WYSOKIE
+- **Uzasadnienie:** Centralny punkt kontroli całej aplikacji. Zarządza wszystkimi modułami biznesowymi i stabilną inicjalizacją.
+- **Wpływ na biznes:** Krytyczny dla stabilności całej aplikacji. Wszystkie procesy biznesowe przechodzą przez ten moduł.
+
+#### **📄 THUMBNAIL.PY**
+
+- **Główne funkcje biznesowe:**
+  - `ThumbnailProcessor` - Główny algorytm przetwarzania obrazów
+  - `ThumbnailConfigManager` - Singleton cache management konfiguracji
+  - `ThumbnailCacheManager` - Inteligentne zarządzanie cache z walidacją integralności
+  - `_resize_and_crop()` - Algorytm intelligent cropping dla kwadratowych miniaturek
+- **Priorytet:** 🔴🔴🔴 WYSOKIE
+- **Uzasadnienie:** Krytyczny dla wydajności aplikacji i user experience. Implementuje skomplikowane algorytmy przetwarzania obrazów.
+- **Wpływ na biznes:** Bezpośrednio wpływa na szybkość pracy użytkowników i jakość preview. Kluczowy dla visual workflow.
+
+---
+
+## 📊 KONTEKST BIZNESOWY APLIKACJI
+
+**Na podstawie analizy README.md i kodu:**
+
+### **🎯 Główny cel aplikacji:**
+CFAB Browser to zaawansowany system zarządzania zasobami cyfrowymi specjalizujący się w automatycznym parowaniu archiwów (ZIP, RAR, SBSAR) z obrazami podglądu (PNG, JPG, WEBP).
+
+### **🔑 Kluczowe procesy biznesowe:**
+1. **Automatyczne parowanie zasobów** - główna wartość dodana
+2. **System galerii wizualnej** - responsywny interfejs przeglądania  
+3. **Przetwarzanie obrazów i miniatury** - optymalizacja wydajności
+4. **Zarządzanie konfiguracją** - centralizowane ustawienia
+
+### **📊 Wymagania wydajnościowe:**
+- Obsługa dużych kolekcji zasobów
+- Responsywny interfejs nawet przy dużych zbiorach danych
+- Inteligentne cache'owanie miniatur
+- Asynchroniczne przetwarzanie w tle
+- Thread-safe operacje
+
+### **🏗️ Architektura głównych komponentów:**
+- **MainWindow** - orkiestrator aplikacji
+- **Scanner** - rdzeń algorytmów parowania  
+- **GalleryTab** - główny interfejs użytkownika
+- **Thumbnail** - przetwarzanie obrazów i cache
+- **Rules** - decision engine intelligent automation
+
+---
+
+## ✅ WERYFIKACJA MAPY
+
+- ✅ Wszystkie pliki .py zostały przeanalizowane
+- ✅ Priorytety są uzasadnione szczegółową analizą kodu  
+- ✅ Opisy funkcji biznesowych są dokładne i konkretne
+- ✅ Nie pominięto krytycznych plików logiki biznesowej
+- ✅ Mapa odzwierciedla aktualny stan kodu na dzień 2025-01-25
+- ✅ Uwzględniono kontekst biznesowy z README.md
+- ✅ Priorytety odzwierciedlają rzeczywistą rolę w procesach biznesowych
+
+---
+
+## 🚀 GOTOWOŚĆ DO DALSZYCH ETAPÓW
+
+Mapa została wygenerowana dynamicznie na podstawie aktualnego kodu i jest gotowa do wykorzystania w kolejnych etapach audytu logiki biznesowej. Wszystkie pliki zostały przeanalizowane pod kątem trzech filarów audytu:
+
+1. **⚡ WYDAJNOŚĆ PROCESÓW** - zidentyfikowane moduły krytyczne dla performance
+2. **🛡️ STABILNOŚĆ OPERACJI** - wykryte komponenty odpowiedzialne za reliability  
+3. **🎯 ELIMINACJA OVER-ENGINEERING** - przygotowana analiza kompleksności vs. wartości biznesowej
+
+**Status:** ✅ ETAP 1 UKOŃCZONY - Mapa logiki biznesowej wygenerowana i gotowa do audytu szczegółowego.

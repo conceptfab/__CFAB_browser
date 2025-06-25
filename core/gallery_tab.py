@@ -231,7 +231,7 @@ class GridManager:
                 tile_width = thumbnail_size + 20
 
                 # Marginesy layoutu (8px z każdej strony)
-                layout_margins = 16
+                layout_margins = 14
 
                 # Spacing między kafelkami (8px)
                 spacing = 8
@@ -524,7 +524,7 @@ class FolderButton(QPushButton):
             QPushButton {
                 color: #CCCCCC;
                 font-size: 11px;
-                padding: 4px 8px;
+                padding: 1px 8px;
                 font-family: 'Segoe UI', Arial, sans-serif;
                 text-align: left;
                 border: none;
@@ -546,7 +546,7 @@ class FolderButton(QPushButton):
             QPushButton {
                 color: #FFFFFF;
                 font-size: 11px;
-                padding: 4px 8px;
+                padding: 1px 8px;
                 font-family: 'Segoe UI', Arial, sans-serif;
                 text-align: left;
                 border: 2px solid #007ACC;
@@ -746,7 +746,7 @@ class GalleryTab(QWidget):
             """
             QLabel {
                 color: #007ACC;
-                font-size: 16px;
+                font-size: 12px;
                 padding: 0px;
             }
         """
@@ -1131,20 +1131,6 @@ class GalleryTab(QWidget):
             buttons_layout.setContentsMargins(8, 8, 8, 8)
             buttons_layout.setSpacing(4)
 
-            # Nagłówek przycisków
-            buttons_header = QLabel("Szybki dostęp")
-            buttons_header.setStyleSheet(
-                """
-                QLabel {
-                    color: #CCCCCC;
-                    font-size: 11px;
-                    font-weight: bold;
-                    padding: 4px 0px;
-                }
-            """
-            )
-            buttons_layout.addWidget(buttons_header)
-
             config_manager = ConfigManager()
             config = config_manager.get_config()
 
@@ -1158,7 +1144,7 @@ class GalleryTab(QWidget):
                 button_text = folder_name if folder_name else f"Folder {i}"
 
                 button = FolderButton(button_text, folder_path, self)
-                button.setFixedHeight(22)
+                button.setFixedHeight(14)
                 button.setEnabled(bool(folder_path))
 
                 # Włącz obsługę drag and drop dla przycisków folderów w strukturze
@@ -1189,8 +1175,8 @@ class GalleryTab(QWidget):
                             border: 1px solid #3F3F46;
                             border-radius: 4px;
                             font-size: 10px;
-                            padding: 4px 8px;
-                            text-align: left;
+                            padding: 1px 12px;
+                            text-align: center;
                         }
                         QPushButton:hover {
                             background-color: #3F3F46;
@@ -1223,8 +1209,8 @@ class GalleryTab(QWidget):
                             border: 1px solid #2D2D30;
                             border-radius: 4px;
                             font-size: 10px;
-                            padding: 4px 8px;
-                            text-align: left;
+                            padding: 1px 12px;
+                            text-align: center;
                         }
                         QPushButton:disabled {
                             background-color: #1E1E1E;
@@ -1332,7 +1318,7 @@ class GalleryTab(QWidget):
 
             # Twórz klikalny przycisk zamiast QLabel
             folder_button = FolderButton(display_text, folder_path, self)
-            folder_button.setFixedHeight(24)
+            folder_button.setFixedHeight(14)
 
             # Włącz obsługę drag and drop dla przycisków folderów w strukturze
             folder_button.setAcceptDrops(True)
@@ -1476,7 +1462,7 @@ class GalleryTab(QWidget):
                         QPushButton {
                             color: #FFFFFF;
                             font-size: 11px;
-                            padding: 4px 8px;
+                            padding: 1px 8px;
                             font-family: 'Segoe UI', Arial, sans-serif;
                             text-align: left;
                             border: 2px solid #007ACC;
@@ -1503,7 +1489,7 @@ class GalleryTab(QWidget):
                     QPushButton {
                         color: #CCCCCC;
                         font-size: 11px;
-                        padding: 4px 8px;
+                        padding: 1px 8px;
                         font-family: 'Segoe UI', Arial, sans-serif;
                         text-align: left;
                         border: none;

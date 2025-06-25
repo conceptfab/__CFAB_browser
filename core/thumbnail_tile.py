@@ -80,7 +80,7 @@ class ThumbnailTile(QFrame):
             """
             QLabel {
                 background-color: #2A2D2E;
-                border: 2px solid orange;
+                border: 2px solid transparent;
                 border-radius: 4px;
             }
             QLabel:hover {
@@ -93,13 +93,6 @@ class ThumbnailTile(QFrame):
         self._create_placeholder_thumbnail()
 
         # RZĄD 2: Dolna sekcja (tekst, gwiazdki, etc.)
-        bottom_container = QFrame()  # Używamy QFrame, by nie dodawać własnego tła
-        bottom_container.setStyleSheet("background-color: transparent; border: none;")
-
-        bottom_layout = QVBoxLayout(bottom_container)
-        bottom_layout.setSpacing(4)
-        bottom_layout.setContentsMargins(0, 0, 0, 0)
-
         # Nazwa pliku
         self.filename_label = QLabel(self.filename)
         self.filename_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -172,19 +165,21 @@ class ThumbnailTile(QFrame):
         bottom_row.addStretch()
         bottom_row.addWidget(self.checkbox)
 
+        # Dodanie elementów do głównego layoutu
+        layout.addWidget(self.thumbnail_container)
+
         # Dodajemy nazwę pliku w osobnym layoutcie poziomym dla wycentrowania
         filename_container = QHBoxLayout()
         filename_container.addStretch()
         filename_container.addWidget(self.filename_label)
         filename_container.addStretch()
+        layout.addLayout(filename_container)
 
-        bottom_layout.addLayout(filename_container)
-        bottom_layout.addLayout(bottom_row)
+        # Dodajemy stretch, który dopycha dolny rząd do dołu
+        layout.addStretch(1)
 
-        # Dodanie elementów do głównego layoutu
-        layout.addWidget(self.thumbnail_container)
-        layout.addWidget(bottom_container)
-        layout.addStretch(1)  # Dopycha wszystko do góry
+        # Dolny rząd z numerem, gwiazdkami i checkboxem - teraz przyklejony do dołu
+        layout.addLayout(bottom_row)
 
         self.setAcceptDrops(False)
         self.setMouseTracking(True)
