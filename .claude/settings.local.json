@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(python3:*)",
+      "Bash(git checkout:*)",
+      "Bash(python -m pytest tests/ -v --tb=short)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(rg:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(true)",
+      "Bash(ls:*)",
+      "Bash(rm:*)",
+      "Bash(touch:*)",
+      "Bash(cat:*)",
+      "Bash(awk:*)",
+      "Bash(git add:*)",
+      "Bash(cp:*)",
+      "Bash(source:*)",
+      "Bash(pipx install:*)",
+      "Bash(chmod:*)",
+      "Bash(pylint:*)",
+      "Bash(flake8:*)",
+      "Bash(vulture:*)",
+      "Bash(radon:*)",
+      "Bash(tree:*)"
+    ],
+    "deny": []
+  }
+}

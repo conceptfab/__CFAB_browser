@@ -1,0 +1,35 @@
+{
+  "work_folder1": {
+    "path": "C:/_cloud/___TEST_FOLDER/Tree Grass etc",
+    "name": "",
+    "icon": "",
+    "color": ""
+  },
+  "work_folder2": {
+    "path": "",
+    "name": "",
+    "icon": "",
+    "color": ""
+  },
+  "work_folder3": {
+    "path": "",
+    "name": "",
+    "icon": "",
+    "color": ""
+  },
+  "work_folder4": {
+    "path": "",
+    "name": "",
+    "icon": "",
+    "color": ""
+  },
+  "work_folder5": {
+    "path": "",
+    "name": "",
+    "icon": "",
+    "color": ""
+  },
+  "thumbnail": 512,
+  "logger_level": "INFO",
+  "use_styles": true
+}
