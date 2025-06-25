@@ -7,12 +7,10 @@ logger = logging.getLogger(__name__)
 
 
 class FolderStructureScanner(QThread):
-    """Worker do skanowania struktury folderów i wykrywania plików asset"""
+    """Worker do skanowania struktury folderów i podfolderów"""
 
     progress_updated = pyqtSignal(int)  # Sygnał postępu
     folder_found = pyqtSignal(str, int)  # Sygnał z folderem (ścieżka, poziom)
-    assets_folder_found = pyqtSignal(str)  # Sygnał gdy folder zawiera pliki asset
-    subfolders_only_found = pyqtSignal(str)  # Sygnał gdy folder ma tylko podfoldery
     finished_scanning = pyqtSignal()  # Sygnał zakończenia
     error_occurred = pyqtSignal(str)  # Sygnał błędu
 
@@ -43,9 +41,6 @@ class FolderStructureScanner(QThread):
                 self.finished_scanning.emit()
                 return
 
-            # Sprawdź główny folder najpierw
-            self._check_folder_content(self.folder_path)
-
             # Najpierw policz wszystkie foldery dla postępu
             self._count_total_folders()
 
@@ -65,57 +60,6 @@ class FolderStructureScanner(QThread):
             self.error_occurred.emit(error_msg)
         finally:
             self.finished_scanning.emit()
-
-    def _check_folder_content(self, folder_path: str):
-        """
-        Sprawdza zawartość folderu i wysyła odpowiedni sygnał
-
-        Args:
-            folder_path (str): Ścieżka do folderu do sprawdzenia
-        """
-        try:
-            # Pobierz listę plików i folderów
-            items = os.listdir(folder_path)
-
-            # Znajdź pliki asset
-            asset_files = [
-                item
-                for item in items
-                if item.endswith(".asset") and not item.startswith(".")
-            ]
-
-            # Znajdź podfoldery (bez ukrytych)
-            subfolders = [
-                item
-                for item in items
-                if not item.startswith(".")
-                and os.path.isdir(os.path.join(folder_path, item))
-            ]
-
-            logger.debug(
-                f"Folder {folder_path}: {len(asset_files)} plików asset, "
-                f"{len(subfolders)} podfolderów"
-            )
-
-            # Decyzja na podstawie zawartości
-            if asset_files:
-                # Folder zawiera pliki asset - wyślij sygnał do galerii
-                logger.info(
-                    f"Znaleziono {len(asset_files)} plików asset w: {folder_path}"
-                )
-                self.assets_folder_found.emit(folder_path)
-            elif subfolders:
-                # Folder zawiera tylko podfoldery - czekaj na reakcję użytkownika
-                logger.info(f"Znaleziono tylko podfoldery w: {folder_path}")
-                self.subfolders_only_found.emit(folder_path)
-            else:
-                # Folder pusty lub zawiera tylko inne pliki
-                logger.info(f"Folder pusty lub bez asset/podfolderów: {folder_path}")
-
-        except PermissionError:
-            logger.warning(f"Brak uprawnień do folderu: {folder_path}")
-        except Exception as e:
-            logger.error(f"Błąd sprawdzania zawartości folderu {folder_path}: {e}")
 
     def _count_total_folders(self):
         """Liczy wszystkie foldery dla obliczenia postępu"""
@@ -159,8 +103,6 @@ class FolderStructureScanner(QThread):
 
                 # Rekurencyjnie skanuj każdy podfolder
                 for subfolder_path in subfolders:
-                    # Sprawdź zawartość każdego podfolderu
-                    self._check_folder_content(subfolder_path)
                     self._scan_folder_structure(subfolder_path, level + 1)
 
             except PermissionError:

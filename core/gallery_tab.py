@@ -462,7 +462,7 @@ class GalleryTab(QWidget):
             self._setup_ui()
             self._initialize_grid_manager()
             self._connect_signals()
-            self._start_asset_scanning()
+            self._show_waiting_for_folder_message()
             logger.info("GalleryTab zainicjalizowany pomyślnie")
         except Exception as e:
             logger.error(f"Błąd inicjalizacji GalleryTab: {e}")
@@ -736,6 +736,31 @@ class GalleryTab(QWidget):
         """Pokazuje komunikat o braku folderu roboczego"""
         self._show_error_message("Nie skonfigurowano folderu roboczego w config.json")
 
+    def _show_waiting_for_folder_message(self):
+        """Pokazuje komunikat oczekiwania na wybór folderu"""
+        try:
+            if self.grid_manager:
+                self.grid_manager._clear_gallery_safe()
+
+            waiting_label = QLabel(
+                "Wybierz folder z lewego panelu aby wyświetlić assety"
+            )
+            waiting_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            waiting_label.setStyleSheet(
+                """
+                QLabel {
+                    color: #CCCCCC;
+                    font-size: 14px;
+                    padding: 50px;
+                    font-style: italic;
+                }
+            """
+            )
+            self.gallery_layout.addWidget(waiting_label, 0, 0)
+
+        except Exception as e:
+            logger.error(f"Błąd pokazywania komunikatu oczekiwania: {e}")
+
     def _create_loading_placeholder(self):
         """Tworzy placeholder podczas ładowania asset-ów"""
         loading_label = QLabel("Ładowanie asset-ów...")
@@ -857,6 +882,12 @@ class GalleryTab(QWidget):
             self.folder_scanner = FolderStructureScanner(folder_path)
             self.folder_scanner.progress_updated.connect(self._on_folder_scan_progress)
             self.folder_scanner.folder_found.connect(self._on_folder_found)
+            self.folder_scanner.assets_folder_found.connect(
+                self._on_assets_folder_found
+            )
+            self.folder_scanner.subfolders_only_found.connect(
+                self._on_subfolders_only_found
+            )
             self.folder_scanner.finished_scanning.connect(self._on_folder_scan_finished)
             self.folder_scanner.error_occurred.connect(self._on_folder_scan_error)
 
@@ -971,6 +1002,39 @@ class GalleryTab(QWidget):
 
         except Exception as e:
             logger.error(f"Błąd obsługi błędu skanowania folderów: {e}")
+
+    def _on_assets_folder_found(self, folder_path: str):
+        """Obsługuje znalezienie folderu z plikami asset - wyświetla w galerii"""
+        try:
+            logger.info(f"Wyświetlanie assetów z folderu: {folder_path}")
+
+            # Zatrzymaj poprzedni asset scanner jeśli działa
+            if hasattr(self, "scanner") and self.scanner and self.scanner.isRunning():
+                self.scanner.quit()
+                self.scanner.wait()
+
+            # Utwórz i uruchom asset scanner dla tego folderu
+            self.scanner = AssetScanner(folder_path)
+            self.scanner.progress_updated.connect(self._on_scan_progress)
+            self.scanner.assets_found.connect(self._on_assets_found)
+            self.scanner.finished_scanning.connect(self._on_scan_finished)
+            self.scanner.error_occurred.connect(self._on_scan_error)
+
+            self.scanner.start()
+
+        except Exception as e:
+            logger.error(f"Błąd wyświetlania assetów z folderu: {e}")
+
+    def _on_subfolders_only_found(self, folder_path: str):
+        """Obsługuje znalezienie folderu tylko z podfolderami - czeka na reakcję"""
+        try:
+            logger.info(f"Folder zawiera tylko podfoldery: {folder_path}")
+
+            # Można tutaj dodać logikę oczekiwania na reakcję użytkownika
+            # Na razie logujemy informację
+
+        except Exception as e:
+            logger.error(f"Błąd obsługi folderu z podfolderami: {e}")
 
 
 if __name__ == "__main__":
