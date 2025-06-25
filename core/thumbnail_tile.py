@@ -28,9 +28,9 @@ class ThumbnailTile(QFrame):
         layout = QVBoxLayout()
         layout.setSpacing(4)
         # lewy, górny, prawy, dolny
-        layout.setContentsMargins(10, 10, 10, 22)
+        layout.setContentsMargins(10, 10, 10, 10)
 
-        # Kontener na miniaturkę
+        # Kontener na miniaturkę - przyklejony do góry
         self.thumbnail_container = QLabel()
         self.thumbnail_container.setFixedSize(self.thumbnail_size, self.thumbnail_size)
         self.thumbnail_container.setStyleSheet(
@@ -52,7 +52,8 @@ class ThumbnailTile(QFrame):
         filename_layout.setContentsMargins(0, 0, 0, 0)
 
         # Numer kafelka po lewej stronie
-        self.tile_number_label = QLabel(f"{self.tile_number} / {self.total_tiles}")
+        tile_label_text = f"{self.tile_number} / {self.total_tiles}"
+        self.tile_number_label = QLabel(tile_label_text)
         self.tile_number_label.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
@@ -116,13 +117,13 @@ class ThumbnailTile(QFrame):
 
         # Dodanie elementów do layoutu poziomego
         filename_layout.addWidget(self.tile_number_label)
-        filename_layout.addWidget(self.filename_label, 1)  # 1 = stretch factor
+        filename_layout.addStretch()  # Przestrzeń między numerem a checkboxem
         filename_layout.addWidget(self.checkbox)
 
-        # Layout dla gwiazdek
+        # Layout dla gwiazdek - przyklejony do dołu
         stars_layout = QHBoxLayout()
         stars_layout.setSpacing(6)
-        stars_layout.setContentsMargins(0, 4, 0, 0)
+        stars_layout.setContentsMargins(0, 0, 0, 0)
         stars_layout.addStretch()  # Wyśrodkowanie gwiazdek
 
         # Gwiazdki do oceny
@@ -159,8 +160,21 @@ class ThumbnailTile(QFrame):
 
         # Dodanie elementów do głównego layoutu
         layout.addWidget(self.thumbnail_container)
-        layout.addLayout(filename_layout)
-        layout.addLayout(stars_layout)
+        layout.addLayout(filename_layout)  # Numer i checkbox pod miniaturką
+
+        # Kontener na samą nazwę pliku (bez numeru i checkboxa)
+        filename_only_layout = QHBoxLayout()
+        filename_only_layout.setContentsMargins(0, 4, 0, 4)
+        filename_only_layout.addStretch()
+
+        # Przenosimy tylko label z nazwą pliku do osobnego layoutu
+        self.filename_label.setParent(None)  # Usuwamy z poprzedniego layoutu
+        filename_only_layout.addWidget(self.filename_label)
+        filename_only_layout.addStretch()
+
+        layout.addLayout(filename_only_layout)  # Nazwa w środku
+        layout.addStretch()  # Elastyczna przestrzeń między nazwą a gwiazdkami
+        layout.addLayout(stars_layout)  # Gwiazdki na dole
 
         self.setLayout(layout)
 
