@@ -1,7 +1,8 @@
 import json
+import os
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -18,15 +19,87 @@ from PyQt6.QtWidgets import (
 from core.thumbnail_tile import ThumbnailTile
 
 
+class AssetScanner(QThread):
+    """Worker dla skanowania plików asset w folderze roboczym"""
+
+    progress_updated = pyqtSignal(int)  # Sygnał postępu
+    assets_found = pyqtSignal(list)  # Sygnał z listą znalezionych asset-ów
+    finished_scanning = pyqtSignal()  # Sygnał zakończenia skanowania
+
+    def __init__(self, work_folder_path: str):
+        super().__init__()
+        self.work_folder_path = work_folder_path
+        self.assets = []
+
+    def run(self):
+        """Główna metoda worker-a"""
+        self.assets = []
+
+        print(f"Skanowanie folderu: {self.work_folder_path}")
+
+        if not os.path.exists(self.work_folder_path):
+            print(f"Folder nie istnieje: {self.work_folder_path}")
+            self.finished_scanning.emit()
+            return
+
+        # Skanuj pliki .asset w folderze roboczym
+        asset_files = []
+        all_files = os.listdir(self.work_folder_path)
+        print(f"Wszystkie pliki w folderze: {all_files}")
+
+        for file in all_files:
+            if file.endswith(".asset") and not file.startswith("."):
+                asset_files.append(file)
+
+        print(f"Znalezione pliki .asset: {asset_files}")
+
+        total_files = len(asset_files)
+        if total_files == 0:
+            self.finished_scanning.emit()
+            return
+
+        # Przetwarzaj każdy plik asset
+        for i, asset_file in enumerate(asset_files):
+            try:
+                asset_path = os.path.join(self.work_folder_path, asset_file)
+                with open(asset_path, "r", encoding="utf-8") as f:
+                    asset_data = json.load(f)
+
+                # Sprawdź czy to poprawny asset
+                if self._is_valid_asset(asset_data):
+                    self.assets.append(asset_data)
+
+            except Exception as e:
+                print(f"Błąd wczytywania asset: {asset_file}, error: {e}")
+
+            # Aktualizuj postęp
+            progress = int((i + 1) / total_files * 100)
+            self.progress_updated.emit(progress)
+
+        # Prześlij wyniki
+        self.assets_found.emit(self.assets)
+        self.finished_scanning.emit()
+
+    def _is_valid_asset(self, data: dict) -> bool:
+        """Sprawdza czy JSON zawiera poprawną strukturę asset"""
+        required_fields = ["name", "archive", "preview", "size_mb", "thumbnail"]
+        return all(field in data for field in required_fields)
+
+
 class GalleryTab(QWidget):
     def __init__(self):
         super().__init__()
         self.thumbnail_size = self._load_thumbnail_size()
         self.min_thumbnail_size = 50  # Minimalny rozmiar przy 0%
-        self.max_thumbnail_size = self.thumbnail_size  # Maksymalny rozmiar z config
+        self.max_thumbnail_size = self.thumbnail_size  # Maksymalny rozmiar
         self.current_tiles = []  # Lista aktualnych kafelków
+        self.assets = []  # Lista wczytanych asset-ów
+        self.work_folder_path = self._load_work_folder_path()
+        self.scanner = None  # Worker do skanowania asset-ów
+        self.tile_spacing = 10  # Odstęp między kaflami (stała 10px)
         self._setup_ui()
         self._connect_signals()
+        self._start_asset_scanning()
 
     def _load_thumbnail_size(self) -> int:
         """Wczytuje rozmiar thumbnail z config.json"""
@@ -39,6 +112,19 @@ class GalleryTab(QWidget):
         except Exception as e:
             print(f"Błąd wczytywania config.json: {e}")
             return 512
+
+    def _load_work_folder_path(self) -> str:
+        """Wczytuje ścieżkę work_folder1 z config.json"""
+        config_path = Path(__file__).parent.parent / "config.json"
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            # Pobierz ścieżkę work_folder1
+            work_folder1 = config.get("work_folder1", {})
+            return work_folder1.get("path", "")
+        except Exception as e:
+            print(f"Błąd wczytywania work_folder1 z config.json: {e}")
+            return ""
 
     def _setup_ui(self):
         """Setup user interface for gallery tab"""
@@ -86,8 +172,8 @@ class GalleryTab(QWidget):
         self.gallery_layout.setSpacing(8)
         self.gallery_layout.setContentsMargins(8, 8, 8, 8)
 
-        # Szkic 32 kafelków
-        self._create_thumbnail_grid()
+        # Placeholder info o ładowaniu
+        self._create_loading_placeholder()
 
         self.gallery_widget.setLayout(self.gallery_layout)
         self.scroll_area.setWidget(self.gallery_widget)
@@ -178,52 +264,141 @@ class GalleryTab(QWidget):
 
         self.setLayout(main_layout)
 
+    def _create_loading_placeholder(self):
+        """Tworzy placeholder podczas ładowania asset-ów"""
+        loading_label = QLabel("Ładowanie asset-ów...")
+        loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        loading_label.setStyleSheet(
+            """
+            QLabel {
+                color: #CCCCCC;
+                font-size: 14px;
+                padding: 20px;
+            }
+        """
+        )
+        self.gallery_layout.addWidget(loading_label, 0, 0)
+
     def _create_thumbnail_grid(self):
-        """Tworzy szkic 32 kafelków w siatce"""
-        # Przykładowe nazwy plików
-        sample_files = [
-            "image_001.jpg",
-            "image_002.png",
-            "image_003.webp",
-            "image_004.jpg",
-            "image_005.png",
-            "image_006.webp",
-            "image_007.jpg",
-            "image_008.png",
-            "image_009.webp",
-            "image_010.jpg",
-            "image_011.png",
-            "image_012.webp",
-            "image_013.jpg",
-            "image_014.png",
-            "image_015.webp",
-            "image_016.jpg",
-            "image_017.png",
-            "image_018.webp",
-            "image_019.jpg",
-            "image_020.png",
-            "image_021.webp",
-            "image_022.jpg",
-            "image_023.png",
-            "image_024.webp",
-            "image_025.jpg",
-            "image_026.png",
-            "image_027.webp",
-            "image_028.jpg",
-            "image_029.png",
-            "image_030.webp",
-            "image_031.jpg",
-            "image_032.png",
-        ]
+        """Tworzy kafelki na podstawie wczytanych asset-ów"""
+        # Wyczyść istniejące kafelki
+        self._clear_gallery()
 
-        # Tworzenie 32 kafelków w siatce 8x4
-        for i in range(32):
-            row = i // 8  # 8 kolumn
-            col = i % 8
+        if not self.assets:
+            # Brak asset-ów - pokaż komunikat
+            no_assets_label = QLabel("Brak asset-ów w folderze roboczym")
+            no_assets_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_assets_label.setStyleSheet(
+                """
+                QLabel {
+                    color: #888888;
+                    font-size: 12px;
+                    padding: 20px;
+                }
+            """
+            )
+            self.gallery_layout.addWidget(no_assets_label, 0, 0)
+            return
 
-            tile = ThumbnailTile(self.thumbnail_size, sample_files[i])
+        # Oblicz ilość kolumn na podstawie szerokości scroll area
+        columns = self._calculate_columns()
+
+        # Tworzenie kafelków na podstawie asset-ów
+        for i, asset in enumerate(self.assets):
+            row = i // columns
+            col = i % columns
+
+            # Użyj aktualnego rozmiaru z suwaka
+            current_size = self.thumbnail_size_slider.value()
+
+            # Utwórz kafelek z danymi asset
+            tile = self._create_asset_tile(asset, i + 1, len(self.assets), current_size)
             self.gallery_layout.addWidget(tile, row, col)
             self.current_tiles.append(tile)
+
+    def _clear_gallery(self):
+        """Czyści wszystkie widgety z galerii"""
+        for tile in self.current_tiles:
+            tile.deleteLater()
+        self.current_tiles.clear()
+
+        # Usuń wszystkie widgety z layout-u
+        while self.gallery_layout.count():
+            item = self.gallery_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+    def _calculate_columns(self) -> int:
+        """Oblicza optymalną ilość kolumn na podstawie szerokości scroll area"""
+        if not hasattr(self, "scroll_area"):
+            return 4  # Domyślna wartość
+
+        # Pobierz aktualny rozmiar kafelka z suwaka
+        current_tile_size = self.thumbnail_size_slider.value()
+
+        # Szerokość scroll area minus marginesy
+        available_width = self.scroll_area.width() - 40  # 20px z każdej strony
+
+        # Szerokość kafelka = rozmiar thumbnail + padding (20px)
+        tile_width = current_tile_size + 20
+
+        # Oblicz ile kolumn się zmieści (z odstępem 10px między kaflami)
+        columns = max(
+            1, (available_width + self.tile_spacing) // (tile_width + self.tile_spacing)
+        )
+
+        return columns
+
+    def _create_asset_tile(
+        self, asset: dict, tile_number: int, total_tiles: int, thumbnail_size: int
+    ):
+        """Tworzy kafelek na podstawie danych asset"""
+        # Utwórz nazwę wyświetlaną z rozmiarem
+        display_name = f"{asset['name']} ({asset['size_mb']:.1f} MB)"
+
+        # Utwórz kafelek
+        tile = ThumbnailTile(thumbnail_size, display_name, tile_number, total_tiles)
+
+        # Ustaw gwiazdki jeśli są w asset
+        if asset.get("stars") is not None:
+            tile.set_star_rating(asset["stars"])
+
+        # Załaduj thumbnail z .cache jeśli dostępny
+        if asset.get("thumbnail") is True:
+            cache_folder = os.path.join(self.work_folder_path, ".cache")
+            asset_name = asset["name"]
+            tile.load_thumbnail_from_cache(asset_name, cache_folder)
+
+        # TODO: Dodać obsługę kliknięć w archiwum i preview
+
+        return tile
+
+    def _start_asset_scanning(self):
+        """Rozpoczyna skanowanie asset-ów w tle"""
+        if not self.work_folder_path:
+            print("Brak ścieżki do folderu roboczego")
+            return
+
+        # Utwórz i uruchom worker
+        self.scanner = AssetScanner(self.work_folder_path)
+        self.scanner.progress_updated.connect(self._on_scan_progress)
+        self.scanner.assets_found.connect(self._on_assets_found)
+        self.scanner.finished_scanning.connect(self._on_scan_finished)
+        self.scanner.start()
+
+    def _on_scan_progress(self, progress: int):
+        """Obsługuje aktualizację postępu skanowania"""
+        self.progress_bar.setValue(progress)
+
+    def _on_assets_found(self, assets: list):
+        """Obsługuje znalezione asset-y"""
+        self.assets = assets
+        print(f"Znaleziono {len(assets)} asset-ów")
+
+    def _on_scan_finished(self):
+        """Obsługuje zakończenie skanowania"""
+        self.progress_bar.setValue(0)  # Ukryj progress bar
+        self._create_thumbnail_grid()  # Utwórz kafelki
 
     def _connect_signals(self):
         """Podłącza sygnały suwaka"""
@@ -237,10 +412,21 @@ class GalleryTab(QWidget):
         # Aktualizuj rozmiar wszystkich kafelków
         self._update_tile_sizes(new_size)
 
+        # Przelicz layout kolumn po zmianie rozmiaru
+        if self.assets:
+            self._create_thumbnail_grid()
+
     def _update_tile_sizes(self, new_size):
         """Aktualizuje rozmiar wszystkich kafelków"""
         for tile in self.current_tiles:
             tile.update_thumbnail_size(new_size)
+
+    def resizeEvent(self, event):
+        """Obsługuje zmianę rozmiaru okna - przelicza kolumny"""
+        super().resizeEvent(event)
+        # Przelicz layout kolumn po zmianie rozmiaru okna
+        if hasattr(self, "assets") and self.assets:
+            self._create_thumbnail_grid()
 
 
 if __name__ == "__main__":

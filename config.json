@@ -29,7 +29,7 @@
     "icon": "",
     "color": ""
   },
-  "thumbnail": 512,
+  "thumbnail": 256,
   "logger_level": "INFO",
   "use_styles": true
 }

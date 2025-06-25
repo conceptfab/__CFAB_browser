@@ -1,3 +1,5 @@
+import os
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap
 from PyQt6.QtWidgets import QCheckBox, QFrame, QHBoxLayout, QLabel, QVBoxLayout
@@ -206,6 +208,33 @@ class ThumbnailTile(QFrame):
         painter.end()
 
         self.thumbnail_container.setPixmap(pixmap)
+
+    def load_thumbnail_from_cache(self, asset_name: str, cache_folder_path: str):
+        """Ładuje miniaturkę z pliku .thumb z folderu .cache"""
+        if not cache_folder_path or not os.path.exists(cache_folder_path):
+            return False
+
+        # Szukaj pliku .thumb
+        thumb_file = os.path.join(cache_folder_path, f"{asset_name}.thumb")
+
+        if os.path.exists(thumb_file):
+            try:
+                # Wczytaj obraz z pliku
+                pixmap = QPixmap(thumb_file)
+                if not pixmap.isNull():
+                    # Przeskaluj do aktualnego rozmiaru zachowując proporcje
+                    scaled_pixmap = pixmap.scaled(
+                        self.thumbnail_size,
+                        self.thumbnail_size,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                    self.thumbnail_container.setPixmap(scaled_pixmap)
+                    return True
+            except Exception as e:
+                print(f"Błąd ładowania thumbnail: {e}")
+
+        return False
 
     def set_filename(self, filename: str):
         """Aktualizuje nazwę pliku"""
