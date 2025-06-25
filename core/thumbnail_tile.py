@@ -106,12 +106,7 @@ class ThumbnailTile(QFrame):
             QCheckBox::indicator:checked {
                 background-color: #007ACC;
                 border-color: #007ACC;
-            }
-            QCheckBox::indicator:checked::after {
-                content: "✓";
-                color: white;
-                font-size: 10px;
-                font-weight: bold;
+                image: none;
             }
             QCheckBox::indicator:hover {
                 border-color: #007ACC;
