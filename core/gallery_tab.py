@@ -227,8 +227,23 @@ class GridManager:
                 or thumbnail_size != self._last_tile_size
             ):
                 # Przelicz tylko jeśli zmienił się rozmiar
-                tile_width = thumbnail_size + 20  # 20px na marginesy
-                self._cached_columns = max(1, current_width // tile_width)
+                # Rzeczywisty rozmiar kafelka (z thumbnail_tile.py: max-width: {new_size + 20}px)
+                tile_width = thumbnail_size + 20
+
+                # Marginesy layoutu (8px z każdej strony)
+                layout_margins = 16
+
+                # Spacing między kafelkami (8px)
+                spacing = 8
+
+                # Dostępna szerokość po odjęciu marginesów
+                available_width = current_width - layout_margins
+
+                # Oblicz liczbę kolumn z uwzględnieniem spacing
+                # Wzór: (available_width + spacing) // (tile_width + spacing)
+                columns_calc = (available_width + spacing) // (tile_width + spacing)
+                self._cached_columns = max(1, columns_calc)
+
                 self._last_width = current_width
                 self._last_tile_size = thumbnail_size
             return self._cached_columns
@@ -545,43 +560,78 @@ class FolderButton(QPushButton):
     def dragEnterEvent(self, event):
         """Obsługa wejścia drag nad folderem"""
         try:
+            print(f"DEBUG: dragEnterEvent - folder: {self.folder_path}")
+            print(f"DEBUG: MIME formats: {event.mimeData().formats()}")
+
             # Sprawdź czy MIME data zawiera dane asset-a
             if event.mimeData().hasFormat("application/x-cfab-asset"):
+                print(
+                    f"DEBUG: Akceptuję drag - format application/x-cfab-asset znaleziony"
+                )
                 event.acceptProposedAction()
                 # Podświetl przycisk
                 self.setStyleSheet(self.drag_style)
             else:
+                print(f"DEBUG: Ignoruję drag - brak formatu application/x-cfab-asset")
                 event.ignore()
         except Exception as e:
+            print(f"Błąd obsługi drag enter: {e}")
             logger.error(f"Błąd obsługi drag enter: {e}")
             event.ignore()
 
     def dragLeaveEvent(self, event):
         """Obsługa wyjścia drag z folderu"""
         try:
+            print(f"DEBUG: dragLeaveEvent - folder: {self.folder_path}")
             # Przywróć normalny styl
             self.setStyleSheet(self.normal_style)
         except Exception as e:
+            print(f"Błąd obsługi drag leave: {e}")
             logger.error(f"Błąd obsługi drag leave: {e}")
 
     def dropEvent(self, event):
         """Obsługa upuszczenia asset-a na folder"""
         try:
+            print(f"DEBUG: dropEvent - folder: {self.folder_path}")
+            print(f"DEBUG: MIME formats: {event.mimeData().formats()}")
+
             # Sprawdź czy MIME data zawiera dane asset-a
             if event.mimeData().hasFormat("application/x-cfab-asset"):
+                print(
+                    f"DEBUG: Przetwarzam drop - format application/x-cfab-asset znaleziony"
+                )
+
                 # Pobierz dane asset-a
                 asset_data_bytes = event.mimeData().data("application/x-cfab-asset")
                 asset_data = json.loads(asset_data_bytes.data().decode("utf-8"))
+                print(f"DEBUG: Asset data: {asset_data.get('name', 'Unknown')}")
 
                 # Emituj sygnał do parent widget
                 if hasattr(self.parent(), "_on_folder_drop"):
+                    print(f"DEBUG: Wywołuję _on_folder_drop")
                     self.parent()._on_folder_drop(asset_data, self.folder_path)
+                else:
+                    print(f"DEBUG: BŁĄD - parent nie ma metody _on_folder_drop")
+                    # Spróbuj wywołać bezpośrednio na parent
+                    try:
+                        parent = self.parent()
+                        if parent and hasattr(parent, "_on_folder_drop"):
+                            parent._on_folder_drop(asset_data, self.folder_path)
+                        else:
+                            print(f"DEBUG: Parent type: {type(parent)}")
+                            print(
+                                f"DEBUG: Parent methods: {dir(parent) if parent else 'None'}"
+                            )
+                    except Exception as e:
+                        print(f"DEBUG: Błąd wywołania _on_folder_drop: {e}")
 
                 event.acceptProposedAction()
             else:
+                print(f"DEBUG: Ignoruję drop - brak formatu application/x-cfab-asset")
                 event.ignore()
 
         except Exception as e:
+            print(f"Błąd obsługi drop: {e}")
             logger.error(f"Błąd obsługi drop: {e}")
             event.ignore()
 
@@ -1107,9 +1157,27 @@ class GalleryTab(QWidget):
                 # Użyj nazwy jeśli jest dostępna, w przeciwnym razie domyślną
                 button_text = folder_name if folder_name else f"Folder {i}"
 
-                button = FolderButton(button_text, folder_path)
+                button = FolderButton(button_text, folder_path, self)
                 button.setFixedHeight(22)
                 button.setEnabled(bool(folder_path))
+
+                # Włącz obsługę drag and drop dla przycisków folderów w strukturze
+                button.setAcceptDrops(True)
+                button.dragEnterEvent = (
+                    lambda event, path=folder_path: self._on_folder_drag_enter(
+                        event, path
+                    )
+                )
+                button.dragLeaveEvent = (
+                    lambda event, path=folder_path: self._on_folder_drag_leave(
+                        event, path
+                    )
+                )
+                button.dropEvent = (
+                    lambda event, path=folder_path: self._on_folder_drop_event(
+                        event, path
+                    )
+                )
 
                 # Profesjonalne stylowanie przycisków
                 if folder_path:
@@ -1263,8 +1331,20 @@ class GalleryTab(QWidget):
                 display_text = f"{indent}└─ 📂 {folder_name}"
 
             # Twórz klikalny przycisk zamiast QLabel
-            folder_button = FolderButton(display_text, folder_path)
+            folder_button = FolderButton(display_text, folder_path, self)
             folder_button.setFixedHeight(24)
+
+            # Włącz obsługę drag and drop dla przycisków folderów w strukturze
+            folder_button.setAcceptDrops(True)
+            folder_button.dragEnterEvent = (
+                lambda event, path=folder_path: self._on_folder_drag_enter(event, path)
+            )
+            folder_button.dragLeaveEvent = (
+                lambda event, path=folder_path: self._on_folder_drag_leave(event, path)
+            )
+            folder_button.dropEvent = (
+                lambda event, path=folder_path: self._on_folder_drop_event(event, path)
+            )
 
             # Podłącz kliknięcie do handle_folder_click workera
             folder_button.clicked.connect(
@@ -1387,8 +1467,9 @@ class GalleryTab(QWidget):
             if event.mimeData().hasFormat("application/x-cfab-asset"):
                 event.acceptProposedAction()
 
-                # Podświetl przycisk folderu - używamy widget() z event
-                widget = event.source()
+                # Podświetl przycisk folderu - znajdź widget po ścieżce
+                widget = self._find_folder_button_by_path(folder_path)
+
                 if widget:
                     widget.setStyleSheet(
                         """
@@ -1413,8 +1494,9 @@ class GalleryTab(QWidget):
     def _on_folder_drag_leave(self, event, folder_path):
         """Obsługa wyjścia drag z folderu"""
         try:
-            # Przywróć normalny styl przycisku
-            widget = event.source()
+            # Przywróć normalny styl przycisku - znajdź widget po ścieżce
+            widget = self._find_folder_button_by_path(folder_path)
+
             if widget:
                 widget.setStyleSheet(
                     """
@@ -1441,6 +1523,37 @@ class GalleryTab(QWidget):
         except Exception as e:
             logger.error(f"Błąd obsługi drag leave: {e}")
 
+    def _find_folder_button_by_path(self, folder_path):
+        """Znajduje przycisk folderu po ścieżce"""
+        try:
+            # Sprawdź w panelu szybkiego dostępu (folder_buttons_layout)
+            if hasattr(self, "folder_buttons_layout"):
+                for i in range(self.folder_buttons_layout.count()):
+                    item = self.folder_buttons_layout.itemAt(i)
+                    if item and item.widget():
+                        widget = item.widget()
+                        if (
+                            hasattr(widget, "folder_path")
+                            and widget.folder_path == folder_path
+                        ):
+                            return widget
+
+            # Sprawdź w strukturze folderów
+            for i in range(self.folder_structure_layout.count()):
+                item = self.folder_structure_layout.itemAt(i)
+                if item and item.widget():
+                    widget = item.widget()
+                    if (
+                        hasattr(widget, "folder_path")
+                        and widget.folder_path == folder_path
+                    ):
+                        return widget
+
+            return None
+        except Exception as e:
+            logger.error(f"Błąd wyszukiwania przycisku folderu: {e}")
+            return None
+
     def _on_folder_drop(self, asset_data, folder_path):
         """Obsługa upuszczenia asset-a na folder"""
         try:
@@ -1448,6 +1561,36 @@ class GalleryTab(QWidget):
             self._move_asset_to_folder(asset_data, folder_path)
         except Exception as e:
             logger.error(f"Błąd obsługi drop: {e}")
+
+    def _on_folder_drop_event(self, event, folder_path):
+        """Obsługa upuszczenia asset-a na folder (dla przycisków w panelu szybkiego dostępu)"""
+        try:
+            print(f"DEBUG: _on_folder_drop_event - folder: {folder_path}")
+            print(f"DEBUG: MIME formats: {event.mimeData().formats()}")
+
+            # Sprawdź czy MIME data zawiera dane asset-a
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                print(
+                    f"DEBUG: Przetwarzam drop - format application/x-cfab-asset znaleziony"
+                )
+
+                # Pobierz dane asset-a
+                asset_data_bytes = event.mimeData().data("application/x-cfab-asset")
+                asset_data = json.loads(asset_data_bytes.data().decode("utf-8"))
+                print(f"DEBUG: Asset data: {asset_data.get('name', 'Unknown')}")
+
+                # Wykonaj przeniesienie asset-a
+                self._move_asset_to_folder(asset_data, folder_path)
+
+                event.acceptProposedAction()
+            else:
+                print(f"DEBUG: Ignoruję drop - brak formatu application/x-cfab-asset")
+                event.ignore()
+
+        except Exception as e:
+            print(f"Błąd obsługi drop: {e}")
+            logger.error(f"Błąd obsługi drop: {e}")
+            event.ignore()
 
     def _move_asset_to_folder(self, asset_data, target_folder_path):
         """Przenosi asset do nowego folderu"""
