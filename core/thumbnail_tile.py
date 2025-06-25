@@ -1,8 +1,7 @@
 import os
-import subprocess
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QPainter, QPixmap
+from PyQt6.QtCore import QMimeData, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QDrag, QFont, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -20,6 +19,7 @@ class ThumbnailTile(QFrame):
     # Sygnały dla komunikacji z parent widget
     thumbnail_clicked = pyqtSignal(str)  # Sygnał kliknięcia w miniaturkę
     filename_clicked = pyqtSignal(str)  # Sygnał kliknięcia w nazwę pliku
+    drag_started = pyqtSignal(object)  # Sygnał rozpoczęcia przeciągania
 
     def __init__(
         self,
@@ -40,7 +40,8 @@ class ThumbnailTile(QFrame):
         """Setup wyglądu kafelka"""
         # Główny layout pionowy - 2 rzędy
         layout = QVBoxLayout()
-        layout.setSpacing(22)  # Więcej przestrzeni między miniaturką a dolną częścią
+        # Więcej przestrzeni między miniaturką a dolną częścią
+        layout.setSpacing(22)
         layout.setContentsMargins(10, 10, 10, 10)
 
         # RZĄD 1: Miniaturka
@@ -201,34 +202,93 @@ class ThumbnailTile(QFrame):
         bottom_layout.addLayout(middle_row)  # Rząd 2B: Nazwa pliku
         bottom_layout.addLayout(bottom_row)  # Rząd 2C: Gwiazdki
 
-        # Dodanie rzędów do głównego layoutu
+        # Dodanie do głównego layoutu
         layout.addWidget(self.thumbnail_container)  # Rząd 1: Miniaturka
-        layout.addLayout(bottom_layout)  # Rząd 2: 3 podrzędy
+        # Rząd 2: Wszystkie pozostałe elementy
+        layout.addLayout(bottom_layout)
 
         self.setLayout(layout)
 
-        # Ustawienie polityki rozmiaru
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-
-        # Stylowanie kafelka
+        # Ustawienie stylu kafelka
         self.setStyleSheet(
-            f"""
-            ThumbnailTile {{
+            """
+            QFrame {
                 background-color: #252526;
                 border: 1px solid #3F3F46;
                 border-radius: 6px;
                 padding: 0px;
-                min-width: {self.thumbnail_size + 20}px;
-                max-width: {self.thumbnail_size + 20}px;
-                min-height: {self.thumbnail_size + 100}px;
-                max-height: {self.thumbnail_size + 100}px;
-            }}
-            ThumbnailTile:hover {{
-                background-color: #2A2D2E;
+            }
+            QFrame:hover {
                 border-color: #007ACC;
-            }}
+                background-color: #2D2D30;
+            }
         """
         )
+
+        # Włącz obsługę drag and drop
+        self.setAcceptDrops(False)  # Kafelki nie przyjmują drop
+        self.setMouseTracking(True)
+
+    def mousePressEvent(self, event):
+        """Obsługa naciśnięcia myszy - rozpoczęcie drag and drop"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Sprawdź czy mamy dane asset-a
+            if self.asset_data:
+                # Rozpocznij drag and drop
+                self._start_drag(event)
+            else:
+                # Jeśli nie ma danych asset-a, przekaż event dalej
+                super().mousePressEvent(event)
+        else:
+            super().mousePressEvent(event)
+
+    def _start_drag(self, event):
+        """Rozpoczyna operację drag and drop"""
+        try:
+            # Utwórz obiekt drag
+            drag = QDrag(self)
+
+            # Utwórz MIME data z informacjami o asset
+            mime_data = QMimeData()
+
+            # Dodaj dane asset-a jako JSON string
+            import json
+
+            asset_json = json.dumps(self.asset_data)
+            mime_data.setData("application/x-cfab-asset", asset_json.encode("utf-8"))
+
+            # Dodaj tekst dla kompatybilności
+            asset_name = self.asset_data.get("name", "Unknown")
+            mime_data.setText(f"Asset: {asset_name}")
+
+            drag.setMimeData(mime_data)
+
+            # Ustaw ikonę drag (miniaturka)
+            if (
+                hasattr(self.thumbnail_container, "pixmap")
+                and self.thumbnail_container.pixmap()
+            ):
+                drag.setPixmap(self.thumbnail_container.pixmap())
+                drag.setHotSpot(self.thumbnail_container.pixmap().rect().center())
+
+            # Emituj sygnał rozpoczęcia drag
+            self.drag_started.emit(self.asset_data)
+
+            # Wykonaj drag
+            drag.exec(Qt.DropAction.MoveAction)
+
+        except Exception as e:
+            print(f"Błąd podczas rozpoczęcia drag: {e}")
+
+    def _on_thumbnail_clicked(self, ev):
+        """Obsługa kliknięcia w miniaturkę"""
+        if self.asset_data:
+            self.thumbnail_clicked.emit(self.asset_data.get("name", ""))
+
+    def _on_filename_clicked(self, ev):
+        """Obsługa kliknięcia w nazwę pliku"""
+        if self.asset_data:
+            self.filename_clicked.emit(self.asset_data.get("name", ""))
 
     def _create_placeholder_thumbnail(self):
         """Tworzy placeholder miniaturki z tekstem"""
@@ -349,16 +409,6 @@ class ThumbnailTile(QFrame):
             }}
         """
         )
-
-    def _on_thumbnail_clicked(self, ev):
-        """Obsługa kliknięcia w miniaturkę"""
-        if ev.button() == Qt.MouseButton.LeftButton:
-            self.thumbnail_clicked.emit(self.filename)
-
-    def _on_filename_clicked(self, ev):
-        """Obsługa kliknięcia w nazwę pliku"""
-        if ev.button() == Qt.MouseButton.LeftButton:
-            self.filename_clicked.emit(self.filename)
 
 
 class PreviewWindow(QDialog):

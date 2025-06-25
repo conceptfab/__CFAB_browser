@@ -496,6 +496,100 @@ class AssetScanner(QThread):
         return True
 
 
+class FolderButton(QPushButton):
+    """Przycisk folderu z obsługą drag and drop"""
+
+    def __init__(self, text, folder_path, parent=None):
+        super().__init__(text, parent)
+        self.folder_path = folder_path
+        self.setAcceptDrops(True)
+
+        # Normalny styl
+        self.normal_style = """
+            QPushButton {
+                color: #CCCCCC;
+                font-size: 11px;
+                padding: 4px 8px;
+                font-family: 'Segoe UI', Arial, sans-serif;
+                text-align: left;
+                border: none;
+                background: transparent;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #3F3F46;
+                color: #FFFFFF;
+            }
+            QPushButton:pressed {
+                background-color: #007ACC;
+                color: #FFFFFF;
+            }
+        """
+
+        # Styl podczas drag
+        self.drag_style = """
+            QPushButton {
+                color: #FFFFFF;
+                font-size: 11px;
+                padding: 4px 8px;
+                font-family: 'Segoe UI', Arial, sans-serif;
+                text-align: left;
+                border: 2px solid #007ACC;
+                background-color: #007ACC;
+                border-radius: 4px;
+            }
+        """
+
+        self.setStyleSheet(self.normal_style)
+
+    def dragEnterEvent(self, event):
+        """Obsługa wejścia drag nad folderem"""
+        try:
+            # Sprawdź czy MIME data zawiera dane asset-a
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                event.acceptProposedAction()
+                # Podświetl przycisk
+                self.setStyleSheet(self.drag_style)
+            else:
+                event.ignore()
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag enter: {e}")
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        """Obsługa wyjścia drag z folderu"""
+        try:
+            # Przywróć normalny styl
+            self.setStyleSheet(self.normal_style)
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag leave: {e}")
+
+    def dropEvent(self, event):
+        """Obsługa upuszczenia asset-a na folder"""
+        try:
+            # Sprawdź czy MIME data zawiera dane asset-a
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                # Pobierz dane asset-a
+                asset_data_bytes = event.mimeData().data("application/x-cfab-asset")
+                asset_data = json.loads(asset_data_bytes.data().decode("utf-8"))
+
+                # Emituj sygnał do parent widget
+                if hasattr(self.parent(), "_on_folder_drop"):
+                    self.parent()._on_folder_drop(asset_data, self.folder_path)
+
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+
+        except Exception as e:
+            logger.error(f"Błąd obsługi drop: {e}")
+            event.ignore()
+
+        finally:
+            # Przywróć normalny styl
+            self.setStyleSheet(self.normal_style)
+
+
 class GalleryTab(QWidget):
     def __init__(self):
         super().__init__()
@@ -1013,7 +1107,7 @@ class GalleryTab(QWidget):
                 # Użyj nazwy jeśli jest dostępna, w przeciwnym razie domyślną
                 button_text = folder_name if folder_name else f"Folder {i}"
 
-                button = QPushButton(button_text)
+                button = FolderButton(button_text, folder_path)
                 button.setFixedHeight(22)
                 button.setEnabled(bool(folder_path))
 
@@ -1169,34 +1263,8 @@ class GalleryTab(QWidget):
                 display_text = f"{indent}└─ 📂 {folder_name}"
 
             # Twórz klikalny przycisk zamiast QLabel
-            from PyQt6.QtWidgets import QPushButton
-
-            folder_button = QPushButton(display_text)
+            folder_button = FolderButton(display_text, folder_path)
             folder_button.setFixedHeight(24)
-
-            # Profesjonalne stylowanie przycisków folderów
-            folder_button.setStyleSheet(
-                """
-                QPushButton {
-                    color: #CCCCCC;
-                    font-size: 11px;
-                    padding: 4px 8px;
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    text-align: left;
-                    border: none;
-                    background: transparent;
-                    border-radius: 4px;
-                }
-                QPushButton:hover {
-                    background-color: #3F3F46;
-                    color: #FFFFFF;
-                }
-                QPushButton:pressed {
-                    background-color: #007ACC;
-                    color: #FFFFFF;
-                }
-            """
-            )
 
             # Podłącz kliknięcie do handle_folder_click workera
             folder_button.clicked.connect(
@@ -1311,6 +1379,190 @@ class GalleryTab(QWidget):
             logger.info(f"Skanowanie folderu zakończone: {folder_path}")
         except Exception as e:
             logger.error(f"Błąd obsługi zakończenia skanowania folderu: {e}")
+
+    def _on_folder_drag_enter(self, event, folder_path):
+        """Obsługa wejścia drag nad folderem"""
+        try:
+            # Sprawdź czy MIME data zawiera dane asset-a
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                event.acceptProposedAction()
+
+                # Podświetl przycisk folderu - używamy widget() z event
+                widget = event.source()
+                if widget:
+                    widget.setStyleSheet(
+                        """
+                        QPushButton {
+                            color: #FFFFFF;
+                            font-size: 11px;
+                            padding: 4px 8px;
+                            font-family: 'Segoe UI', Arial, sans-serif;
+                            text-align: left;
+                            border: 2px solid #007ACC;
+                            background-color: #007ACC;
+                            border-radius: 4px;
+                        }
+                    """
+                    )
+            else:
+                event.ignore()
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag enter: {e}")
+            event.ignore()
+
+    def _on_folder_drag_leave(self, event, folder_path):
+        """Obsługa wyjścia drag z folderu"""
+        try:
+            # Przywróć normalny styl przycisku
+            widget = event.source()
+            if widget:
+                widget.setStyleSheet(
+                    """
+                    QPushButton {
+                        color: #CCCCCC;
+                        font-size: 11px;
+                        padding: 4px 8px;
+                        font-family: 'Segoe UI', Arial, sans-serif;
+                        text-align: left;
+                        border: none;
+                        background: transparent;
+                        border-radius: 4px;
+                    }
+                    QPushButton:hover {
+                        background-color: #3F3F46;
+                        color: #FFFFFF;
+                    }
+                    QPushButton:pressed {
+                        background-color: #007ACC;
+                        color: #FFFFFF;
+                    }
+                """
+                )
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag leave: {e}")
+
+    def _on_folder_drop(self, asset_data, folder_path):
+        """Obsługa upuszczenia asset-a na folder"""
+        try:
+            # Wykonaj przeniesienie asset-a
+            self._move_asset_to_folder(asset_data, folder_path)
+        except Exception as e:
+            logger.error(f"Błąd obsługi drop: {e}")
+
+    def _move_asset_to_folder(self, asset_data, target_folder_path):
+        """Przenosi asset do nowego folderu"""
+        try:
+            logger.info(
+                f"Przenoszenie asset-a {asset_data.get('name')} do {target_folder_path}"
+            )
+
+            # Sprawdź czy folder docelowy istnieje
+            if not os.path.exists(target_folder_path):
+                logger.error(f"Folder docelowy nie istnieje: {target_folder_path}")
+                return
+
+            # Pobierz ścieżkę do folderu źródłowego (aktualnie wyświetlanego)
+            source_folder_path = self.grid_manager.current_folder_path
+            if not source_folder_path:
+                logger.error("Brak ścieżki do folderu źródłowego")
+                return
+
+            # Sprawdź czy folder docelowy nie jest tym samym co źródłowy
+            if source_folder_path == target_folder_path:
+                logger.info("Folder docelowy jest tym samym co źródłowy")
+                return
+
+            # Pobierz nazwę asset-a
+            asset_name = asset_data.get("name")
+            if not asset_name:
+                logger.error("Brak nazwy asset-a")
+                return
+
+            # Lista plików do przeniesienia
+            files_to_move = []
+
+            # 1. Plik archiwum
+            archive_filename = asset_data.get("archive")
+            if archive_filename:
+                archive_path = os.path.join(source_folder_path, archive_filename)
+                if os.path.exists(archive_path):
+                    files_to_move.append(("archive", archive_path, archive_filename))
+
+            # 2. Plik podglądu
+            preview_filename = asset_data.get("preview")
+            if preview_filename:
+                preview_path = os.path.join(source_folder_path, preview_filename)
+                if os.path.exists(preview_path):
+                    files_to_move.append(("preview", preview_path, preview_filename))
+
+            # 3. Plik asset
+            asset_filename = f"{asset_name}.asset"
+            asset_path = os.path.join(source_folder_path, asset_filename)
+            if os.path.exists(asset_path):
+                files_to_move.append(("asset", asset_path, asset_filename))
+
+            # 4. Plik thumbnail
+            cache_folder = os.path.join(source_folder_path, ".cache")
+            thumb_filename = f"{asset_name}.thumb"
+            thumb_path = os.path.join(cache_folder, thumb_filename)
+            if os.path.exists(thumb_path):
+                files_to_move.append(("thumbnail", thumb_path, thumb_filename))
+
+            # Sprawdź czy wszystkie pliki istnieją
+            if len(files_to_move) < 4:
+                logger.warning(
+                    f"Nie wszystkie pliki asset-a {asset_name} zostały znalezione"
+                )
+
+            # Przenieś pliki
+            moved_files = []
+            for file_type, source_path, filename in files_to_move:
+                try:
+                    target_path = os.path.join(target_folder_path, filename)
+
+                    # Dla thumbnail, utwórz folder .cache w folderze docelowym
+                    if file_type == "thumbnail":
+                        target_cache_folder = os.path.join(target_folder_path, ".cache")
+                        if not os.path.exists(target_cache_folder):
+                            os.makedirs(target_cache_folder)
+                        target_path = os.path.join(target_cache_folder, filename)
+
+                    # Przenieś plik
+                    import shutil
+
+                    shutil.move(source_path, target_path)
+                    moved_files.append((file_type, filename))
+                    logger.info(f"Przeniesiono {file_type}: {filename}")
+
+                except Exception as e:
+                    logger.error(f"Błąd przenoszenia {file_type} {filename}: {e}")
+
+            # Aktualizuj galerię po przeniesieniu
+            if moved_files:
+                logger.info(
+                    f"Przeniesiono {len(moved_files)} plików asset-a {asset_name}"
+                )
+                # Odśwież galerię
+                self._refresh_gallery_after_move()
+            else:
+                logger.error(
+                    f"Nie udało się przenieść żadnych plików asset-a {asset_name}"
+                )
+
+        except Exception as e:
+            logger.error(f"Błąd przenoszenia asset-a: {e}")
+
+    def _refresh_gallery_after_move(self):
+        """Odświeża galerię po przeniesieniu asset-a"""
+        try:
+            # Sprawdź czy mamy aktywny folder scanner
+            if hasattr(self, "folder_scanner") and self.folder_scanner:
+                # Wywołaj ponownie handle_folder_click dla aktualnego folderu
+                current_folder = self.grid_manager.current_folder_path
+                if current_folder:
+                    self.folder_scanner.handle_folder_click(current_folder)
+        except Exception as e:
+            logger.error(f"Błąd odświeżania galerii: {e}")
 
 
 if __name__ == "__main__":
