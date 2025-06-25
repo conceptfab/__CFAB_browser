@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import subprocess
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
@@ -19,7 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.folder_scanner_worker import FolderStructureScanner
-from core.thumbnail_tile import ThumbnailTile
+from core.thumbnail_tile import PreviewWindow, ThumbnailTile
 
 # Dodanie loggera dla modułu
 logger = logging.getLogger(__name__)
@@ -120,6 +121,7 @@ class GridManager:
         self.scroll_area = scroll_area
         self.current_tiles = []
         self.tile_spacing = 10
+        self.current_folder_path = ""  # Dodane: ścieżka do aktualnego folderu
 
         # Debouncing timer
         self.grid_recreation_timer = QTimer()
@@ -132,16 +134,18 @@ class GridManager:
         self._last_tile_size = 0
         self._cached_columns = 4
 
-    def request_grid_recreation(self, assets, thumbnail_size):
+    def request_grid_recreation(self, assets, thumbnail_size, folder_path=""):
         """
         Żąda recreacji grid z debouncing
 
         Args:
             assets (list): Lista assetów
             thumbnail_size (int): Rozmiar kafelków
+            folder_path (str): Ścieżka do folderu z assetami
         """
         self.pending_assets = assets
         self.pending_thumbnail_size = thumbnail_size
+        self.current_folder_path = folder_path  # Zapamiętaj ścieżkę
 
         # Restart timer (debouncing)
         self.grid_recreation_timer.stop()
@@ -215,27 +219,22 @@ class GridManager:
             logger.error(f"Błąd czyszczenia galerii: {e}")
 
     def _calculate_columns_cached(self, thumbnail_size):
-        """Oblicza kolumny z cache'owaniem dla performance"""
-        current_width = self.scroll_area.width()
-
-        # Użyj cache jeśli parametry się nie zmieniły
-        if current_width == self._last_width and thumbnail_size == self._last_tile_size:
+        """Oblicza ilość kolumn z cache'owaniem"""
+        try:
+            current_width = self.scroll_area.viewport().width()
+            if (
+                current_width != self._last_width
+                or thumbnail_size != self._last_tile_size
+            ):
+                # Przelicz tylko jeśli zmienił się rozmiar
+                tile_width = thumbnail_size + 20  # 20px na marginesy
+                self._cached_columns = max(1, current_width // tile_width)
+                self._last_width = current_width
+                self._last_tile_size = thumbnail_size
             return self._cached_columns
-
-        # Oblicz nową wartość
-        available_width = current_width - 40  # marginesy
-        tile_width = thumbnail_size + 20  # padding
-
-        columns = max(
-            1, (available_width + self.tile_spacing) // (tile_width + self.tile_spacing)
-        )
-
-        # Zapisz do cache
-        self._last_width = current_width
-        self._last_tile_size = thumbnail_size
-        self._cached_columns = columns
-
-        return columns
+        except Exception as e:
+            logger.error(f"Błąd obliczania kolumn: {e}")
+            return 4
 
     def _create_asset_tile_safe(self, asset, tile_number, total_tiles, thumbnail_size):
         """Bezpiecznie tworzy kafelek asset"""
@@ -243,17 +242,26 @@ class GridManager:
             display_name = f"{asset['name']} ({asset['size_mb']:.1f} MB)"
             tile = ThumbnailTile(thumbnail_size, display_name, tile_number, total_tiles)
 
+            # Ustaw dane asset-a dla dostępu do ścieżek
+            tile.set_asset_data(asset)
+
             # Ustaw gwiazdki jeśli są w asset
             if asset.get("stars") is not None:
                 tile.set_star_rating(asset["stars"])
 
             # Załaduj thumbnail z .cache jeśli dostępny
-            if asset.get("thumbnail") is True:
-                work_folder = self._get_work_folder_path()
-                if work_folder:
-                    cache_folder = os.path.join(work_folder, ".cache")
-                    asset_name = asset["name"]
-                    tile.load_thumbnail_from_cache(asset_name, cache_folder)
+            if asset.get("thumbnail") is True and self.current_folder_path:
+                cache_folder = os.path.join(self.current_folder_path, ".cache")
+                asset_name = asset["name"]
+                tile.load_thumbnail_from_cache(asset_name, cache_folder)
+
+            # Połącz sygnały kliknięć
+            tile.thumbnail_clicked.connect(
+                lambda filename: self._on_thumbnail_clicked(asset)
+            )
+            tile.filename_clicked.connect(
+                lambda filename: self._on_filename_clicked(asset)
+            )
 
             return tile
 
@@ -308,6 +316,55 @@ class GridManager:
                     tile.update_thumbnail_size(new_size)
         except Exception as e:
             logger.error(f"Błąd aktualizacji rozmiarów kafelków: {e}")
+
+    def _on_thumbnail_clicked(self, asset):
+        """Obsługa kliknięcia w miniaturkę - otwiera podgląd"""
+        try:
+            if not asset or "preview" not in asset:
+                logger.warning("Brak ścieżki do podglądu w asset")
+                return
+
+            # Skonstruuj pełną ścieżkę do pliku podglądu
+            preview_filename = asset["preview"]
+            if self.current_folder_path:
+                preview_path = os.path.join(self.current_folder_path, preview_filename)
+
+                if os.path.exists(preview_path):
+                    # Otwórz okno podglądu (pokazuje się automatycznie)
+                    PreviewWindow(preview_path, self.gallery_widget)
+                else:
+                    logger.warning(f"Plik podglądu nie istnieje: {preview_path}")
+            else:
+                logger.warning("Brak ścieżki do folderu")
+
+        except Exception as e:
+            logger.error(f"Błąd otwierania podglądu: {e}")
+
+    def _on_filename_clicked(self, asset):
+        """Obsługa kliknięcia w nazwę pliku - otwiera archiwum"""
+        try:
+            if not asset or "archive" not in asset:
+                logger.warning("Brak ścieżki do archiwum w asset")
+                return
+
+            # Skonstruuj pełną ścieżkę do pliku archiwum
+            archive_filename = asset["archive"]
+            if self.current_folder_path:
+                archive_path = os.path.join(self.current_folder_path, archive_filename)
+
+                if os.path.exists(archive_path):
+                    # Otwórz archiwum w domyślnej aplikacji
+                    if os.name == "nt":  # Windows
+                        os.startfile(archive_path)
+                    else:  # Linux/Mac
+                        subprocess.run(["xdg-open", archive_path])
+                else:
+                    logger.warning(f"Plik archiwum nie istnieje: {archive_path}")
+            else:
+                logger.warning("Brak ścieżki do folderu")
+
+        except Exception as e:
+            logger.error(f"Błąd otwierania archiwum: {e}")
 
 
 class AssetScanner(QThread):
@@ -506,14 +563,70 @@ class GalleryTab(QWidget):
         self.splitter.setSizes([200, 800])  # 20:80 ratio
 
     def _create_folder_panel(self):
-        """Tworzy lewy panel folderów"""
+        """Tworzy lewy panel folderów z profesjonalnym wyglądem"""
         self.folder_tree_panel = QFrame()
-        self.folder_tree_panel.setFrameStyle(QFrame.Shape.Box)
-        self.folder_tree_panel.setMinimumWidth(200)
-        self.folder_tree_panel.setMaximumWidth(300)
+        self.folder_tree_panel.setFrameStyle(QFrame.Shape.NoFrame)
+        self.folder_tree_panel.setMinimumWidth(250)
+        self.folder_tree_panel.setMaximumWidth(350)
+        self.folder_tree_panel.setStyleSheet(
+            """
+            QFrame {
+                background-color: #1E1E1E;
+                border-right: 1px solid #3F3F46;
+            }
+        """
+        )
 
         folder_layout = QVBoxLayout()
-        folder_layout.addWidget(QLabel("Drzewo folderów"))
+        folder_layout.setContentsMargins(0, 0, 0, 0)
+        folder_layout.setSpacing(0)
+
+        # Nagłówek panelu
+        header_frame = QFrame()
+        header_frame.setFixedHeight(40)
+        header_frame.setStyleSheet(
+            """
+            QFrame {
+                background-color: #252526;
+                border-bottom: 1px solid #3F3F46;
+            }
+        """
+        )
+
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(12, 8, 12, 8)
+
+        # Ikona folderów
+        folder_icon = QLabel("📁")
+        folder_icon.setStyleSheet(
+            """
+            QLabel {
+                color: #007ACC;
+                font-size: 16px;
+                padding: 0px;
+            }
+        """
+        )
+
+        # Tytuł
+        title_label = QLabel("Eksplorator folderów")
+        title_label.setStyleSheet(
+            """
+            QLabel {
+                color: #CCCCCC;
+                font-size: 13px;
+                font-weight: bold;
+                padding: 0px;
+            }
+        """
+        )
+
+        header_layout.addWidget(folder_icon)
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
+
+        header_frame.setLayout(header_layout)
+        folder_layout.addWidget(header_frame)
 
         # Scroll area dla struktury folderów
         self.folder_scroll_area = QScrollArea()
@@ -524,21 +637,49 @@ class GalleryTab(QWidget):
         self.folder_scroll_area.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
+        self.folder_scroll_area.setStyleSheet(
+            """
+            QScrollArea {
+                background-color: #1E1E1E;
+                border: none;
+            }
+            QScrollBar:vertical {
+                background-color: #1E1E1E;
+                width: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #3F3F46;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #52525B;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+        """
+        )
 
         # Widget dla struktury folderów
         self.folder_structure_widget = QWidget()
         self.folder_structure_layout = QVBoxLayout()
-        self.folder_structure_layout.setContentsMargins(5, 5, 5, 5)
+        self.folder_structure_layout.setContentsMargins(8, 8, 8, 8)
         self.folder_structure_layout.setSpacing(2)
 
         # Początkowy komunikat
         initial_label = QLabel("Wybierz folder aby wyświetlić strukturę")
+        initial_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         initial_label.setStyleSheet(
             """
             QLabel {
                 color: #888888;
                 font-size: 11px;
-                padding: 10px;
+                padding: 20px;
+                background-color: #252526;
+                border-radius: 6px;
+                margin: 8px;
             }
         """
         )
@@ -550,8 +691,8 @@ class GalleryTab(QWidget):
 
         folder_layout.addWidget(self.folder_scroll_area)
 
-        # Dodanie przycisków folderów na dole
-        self._create_folder_buttons(folder_layout)
+        # Panel przycisków folderów na dole
+        self._create_folder_buttons_panel(folder_layout)
 
         self.folder_tree_panel.setLayout(folder_layout)
         self.splitter.addWidget(self.folder_tree_panel)
@@ -666,25 +807,30 @@ class GalleryTab(QWidget):
             logger.error(f"Błąd aktualizacji postępu: {e}")
 
     def _on_assets_found(self, assets: list):
-        """Obsługuje znalezione asset-y - thread safe"""
+        """Obsługuje znalezienie asset-ów - aktualizuje galerię"""
         try:
             self.assets = assets
-            logger.info(f"Znaleziono {len(assets)} asset-ów")
+            current_size = self.thumbnail_size_slider.value()
+
+            # Przekaż ścieżkę do folderu z assetami
+            folder_path = getattr(self.scanner, "work_folder_path", "")
+            self.grid_manager.request_grid_recreation(
+                self.assets, current_size, folder_path
+            )
+
         except Exception as e:
-            logger.error(f"Błąd przetwarzania znalezionych assetów: {e}")
+            logger.error(f"Błąd aktualizacji galerii: {e}")
 
     def _on_scan_finished(self):
-        """Obsługuje zakończenie skanowania - thread safe"""
+        """Obsługuje zakończenie skanowania"""
         try:
             self.progress_bar.setValue(0)
-            if self.grid_manager:
-                current_size = self.thumbnail_size_slider.value()
-                self.grid_manager.request_grid_recreation(self.assets, current_size)
+            logger.info("Skanowanie zakończone")
         except Exception as e:
             logger.error(f"Błąd finalizacji skanowania: {e}")
 
     def _on_scan_error(self, error_message: str):
-        """Obsługuje błędy skanowania - thread safe"""
+        """Obsługuje błędy skanowania"""
         try:
             self.progress_bar.setValue(0)
             self._show_error_message(error_message)
@@ -692,36 +838,35 @@ class GalleryTab(QWidget):
             logger.error(f"Błąd obsługi błędu skanowania: {e}")
 
     def _on_slider_changed(self, value):
-        """Obsługuje zmianę wartości suwaka z debouncing"""
+        """Obsługuje zmianę rozmiaru miniaturek"""
         try:
-            if self.grid_manager and self.assets:
-                # Update tile sizes immediately for responsive feedback
-                self.grid_manager.update_tile_sizes_safe(value)
+            # Aktualizuj rozmiar wszystkich kafelków
+            self.grid_manager.update_tile_sizes_safe(value)
 
-                # Request grid recreation with debouncing
-                self.grid_manager.request_grid_recreation(self.assets, value)
+            # Przekaż ścieżkę do folderu z assetami
+            folder_path = getattr(self.scanner, "work_folder_path", "")
+            self.grid_manager.request_grid_recreation(self.assets, value, folder_path)
 
         except Exception as e:
-            logger.error(f"Błąd obsługi slidera: {e}")
+            logger.error(f"Błąd zmiany rozmiaru miniaturek: {e}")
 
     def resizeEvent(self, event):
-        """Obsługuje zmianę rozmiaru okna z thread safety"""
+        """Obsługuje zmianę rozmiaru okna"""
         try:
             super().resizeEvent(event)
 
-            # Tylko jeśli grid manager jest gotowy i mamy assety
-            if (
-                hasattr(self, "grid_manager")
-                and self.grid_manager
-                and hasattr(self, "assets")
-                and self.assets
-            ):
-
+            # Przelicz grid po zmianie rozmiaru
+            if hasattr(self, "assets") and self.assets:
                 current_size = self.thumbnail_size_slider.value()
-                self.grid_manager.request_grid_recreation(self.assets, current_size)
+
+                # Przekaż ścieżkę do folderu z assetami
+                folder_path = getattr(self.scanner, "work_folder_path", "")
+                self.grid_manager.request_grid_recreation(
+                    self.assets, current_size, folder_path
+                )
 
         except Exception as e:
-            logger.error(f"Błąd resize event: {e}")
+            logger.error(f"Błąd obsługi zmiany rozmiaru: {e}")
 
     def _show_error_message(self, error_text):
         """Pokazuje komunikat o błędzie w galerii"""
@@ -823,9 +968,39 @@ class GalleryTab(QWidget):
         """
         )
 
-    def _create_folder_buttons(self, folder_layout):
-        """Tworzy 5 przycisków folderów na dole panelu"""
+    def _create_folder_buttons_panel(self, folder_layout):
+        """Tworzy panel przycisków folderów na dole"""
         try:
+            # Panel przycisków
+            buttons_frame = QFrame()
+            buttons_frame.setFixedHeight(140)
+            buttons_frame.setStyleSheet(
+                """
+                QFrame {
+                    background-color: #252526;
+                    border-top: 1px solid #3F3F46;
+                }
+            """
+            )
+
+            buttons_layout = QVBoxLayout()
+            buttons_layout.setContentsMargins(8, 8, 8, 8)
+            buttons_layout.setSpacing(4)
+
+            # Nagłówek przycisków
+            buttons_header = QLabel("Szybki dostęp")
+            buttons_header.setStyleSheet(
+                """
+                QLabel {
+                    color: #CCCCCC;
+                    font-size: 11px;
+                    font-weight: bold;
+                    padding: 4px 0px;
+                }
+            """
+            )
+            buttons_layout.addWidget(buttons_header)
+
             config_manager = ConfigManager()
             config = config_manager.get_config()
 
@@ -839,21 +1014,71 @@ class GalleryTab(QWidget):
                 button_text = folder_name if folder_name else f"Folder {i}"
 
                 button = QPushButton(button_text)
-                button.setFixedHeight(24)
-                button.setEnabled(bool(folder_path))  # Aktywny tylko gdy jest ścieżka
+                button.setFixedHeight(22)
+                button.setEnabled(bool(folder_path))
 
-                # Podłącz sygnał z przekazaniem ścieżki
+                # Profesjonalne stylowanie przycisków
                 if folder_path:
+                    button.setStyleSheet(
+                        """
+                        QPushButton {
+                            background-color: #2D2D30;
+                            color: #CCCCCC;
+                            border: 1px solid #3F3F46;
+                            border-radius: 4px;
+                            font-size: 10px;
+                            padding: 4px 8px;
+                            text-align: left;
+                        }
+                        QPushButton:hover {
+                            background-color: #3F3F46;
+                            border-color: #007ACC;
+                        }
+                        QPushButton:pressed {
+                            background-color: #007ACC;
+                            color: #FFFFFF;
+                        }
+                        QPushButton:disabled {
+                            background-color: #1E1E1E;
+                            color: #666666;
+                            border-color: #2D2D30;
+                        }
+                    """
+                    )
+
+                    # Podłącz sygnał z przekazaniem ścieżki
                     button.clicked.connect(
                         lambda checked, path=folder_path: self._on_folder_button_clicked(
                             path
                         )
                     )
+                else:
+                    button.setStyleSheet(
+                        """
+                        QPushButton {
+                            background-color: #1E1E1E;
+                            color: #666666;
+                            border: 1px solid #2D2D30;
+                            border-radius: 4px;
+                            font-size: 10px;
+                            padding: 4px 8px;
+                            text-align: left;
+                        }
+                        QPushButton:disabled {
+                            background-color: #1E1E1E;
+                            color: #666666;
+                            border-color: #2D2D30;
+                        }
+                    """
+                    )
 
-                folder_layout.addWidget(button)
+                buttons_layout.addWidget(button)
+
+            buttons_frame.setLayout(buttons_layout)
+            folder_layout.addWidget(buttons_frame)
 
         except Exception as e:
-            logger.error(f"Błąd tworzenia przycisków folderów: {e}")
+            logger.error(f"Błąd tworzenia panelu przycisków folderów: {e}")
 
     def _on_folder_button_clicked(self, folder_path):
         """Obsługuje kliknięcie przycisku folderu - uruchamia skanowanie struktury"""
@@ -888,6 +1113,8 @@ class GalleryTab(QWidget):
             self.folder_scanner.subfolders_only_found.connect(
                 self._on_subfolders_only_found
             )
+            self.folder_scanner.scanner_started.connect(self._on_scanner_started)
+            self.folder_scanner.scanner_finished.connect(self._on_scanner_finished)
             self.folder_scanner.finished_scanning.connect(self._on_folder_scan_finished)
             self.folder_scanner.error_occurred.connect(self._on_folder_scan_error)
 
@@ -930,7 +1157,7 @@ class GalleryTab(QWidget):
             logger.error(f"Błąd aktualizacji postępu skanowania folderów: {e}")
 
     def _on_folder_found(self, folder_path: str, level: int):
-        """Obsługuje znalezienie folderu - dodaje do lewego panelu"""
+        """Obsługuje znalezienie folderu - dodaje klikalny przycisk do lewego panelu"""
         try:
             folder_name = os.path.basename(folder_path)
 
@@ -941,19 +1168,39 @@ class GalleryTab(QWidget):
                 indent = "  " * (level - 1)
                 display_text = f"{indent}└─ 📂 {folder_name}"
 
-            folder_label = QLabel(display_text)
-            folder_label.setStyleSheet(
+            # Twórz klikalny przycisk zamiast QLabel
+            from PyQt6.QtWidgets import QPushButton
+
+            folder_button = QPushButton(display_text)
+            folder_button.setFixedHeight(24)
+
+            # Profesjonalne stylowanie przycisków folderów
+            folder_button.setStyleSheet(
                 """
-                QLabel {
+                QPushButton {
                     color: #CCCCCC;
-                    font-size: 10px;
-                    padding: 1px 5px;
-                    font-family: monospace;
+                    font-size: 11px;
+                    padding: 4px 8px;
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    text-align: left;
+                    border: none;
+                    background: transparent;
+                    border-radius: 4px;
                 }
-                QLabel:hover {
+                QPushButton:hover {
                     background-color: #3F3F46;
+                    color: #FFFFFF;
+                }
+                QPushButton:pressed {
+                    background-color: #007ACC;
+                    color: #FFFFFF;
                 }
             """
+            )
+
+            # Podłącz kliknięcie do handle_folder_click workera
+            folder_button.clicked.connect(
+                lambda checked, path=folder_path: self._on_folder_click(path)
             )
 
             # Usuń komunikat o ładowaniu jeśli to pierwszy folder
@@ -963,10 +1210,25 @@ class GalleryTab(QWidget):
                     first_item.widget().deleteLater()
 
             # Dodaj do layoutu
-            self.folder_structure_layout.addWidget(folder_label)
+            self.folder_structure_layout.addWidget(folder_button)
 
         except Exception as e:
             logger.error(f"Błąd dodawania folderu do wyświetlania: {e}")
+
+    def _on_folder_click(self, folder_path: str):
+        """Obsługuje kliknięcie w folder w strukturze - wywołuje handle_folder_click workera"""
+        try:
+            logger.info(f"Kliknięto folder w strukturze: {folder_path}")
+
+            # Wywołaj handle_folder_click workera
+            if hasattr(self, "folder_scanner") and self.folder_scanner:
+                self.folder_scanner.handle_folder_click(folder_path)
+            else:
+                logger.warning("Folder scanner nie jest dostępny")
+
+        except Exception as e:
+            logger.error(f"Błąd obsługi kliknięcia folderu: {e}")
+            self._show_error_message(f"Błąd obsługi folderu: {e}")
 
     def _on_folder_scan_finished(self):
         """Obsługuje zakończenie skanowania folderów"""
@@ -1035,6 +1297,20 @@ class GalleryTab(QWidget):
 
         except Exception as e:
             logger.error(f"Błąd obsługi folderu z podfolderami: {e}")
+
+    def _on_scanner_started(self, folder_path: str):
+        """Obsługuje rozpoczęcie skanowania folderu"""
+        try:
+            logger.info(f"Rozpoczęto skanowanie folderu: {folder_path}")
+        except Exception as e:
+            logger.error(f"Błąd obsługi rozpoczęcia skanowania folderu: {e}")
+
+    def _on_scanner_finished(self, folder_path: str):
+        """Obsługuje zakończenie skanowania folderu"""
+        try:
+            logger.info(f"Skanowanie folderu zakończone: {folder_path}")
+        except Exception as e:
+            logger.error(f"Błąd obsługi zakończenia skanowania folderu: {e}")
 
 
 if __name__ == "__main__":

@@ -3,6 +3,9 @@ import os
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from core.rules import FolderClickRules
+from core.scanner import find_and_create_assets
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,6 +16,8 @@ class FolderStructureScanner(QThread):
     folder_found = pyqtSignal(str, int)  # Sygnał z folderem (ścieżka, poziom)
     assets_folder_found = pyqtSignal(str)  # Sygnał gdy folder zawiera pliki asset
     subfolders_only_found = pyqtSignal(str)  # Sygnał gdy folder ma tylko podfoldery
+    scanner_started = pyqtSignal(str)  # Sygnał uruchomienia scannera
+    scanner_finished = pyqtSignal(str)  # Sygnał zakończenia scannera
     finished_scanning = pyqtSignal()  # Sygnał zakończenia
     error_occurred = pyqtSignal(str)  # Sygnał błędu
 
@@ -43,8 +48,8 @@ class FolderStructureScanner(QThread):
                 self.finished_scanning.emit()
                 return
 
-            # Sprawdź główny folder najpierw
-            self._check_folder_content(self.folder_path)
+            # NIE sprawdzaj głównego folderu automatycznie - tylko po kliknięciu użytkownika
+            # self.handle_folder_click(self.folder_path)  # USUNIĘTE!
 
             # Najpierw policz wszystkie foldery dla postępu
             self._count_total_folders()
@@ -66,56 +71,42 @@ class FolderStructureScanner(QThread):
         finally:
             self.finished_scanning.emit()
 
-    def _check_folder_content(self, folder_path: str):
+    def _run_scanner(self, folder_path: str):
         """
-        Sprawdza zawartość folderu i wysyła odpowiedni sygnał
+        Uruchamia scanner w określonym folderze
 
         Args:
-            folder_path (str): Ścieżka do folderu do sprawdzenia
+            folder_path (str): Ścieżka do folderu do przeskanowania
         """
         try:
-            # Pobierz listę plików i folderów
-            items = os.listdir(folder_path)
+            logger.info(f"Uruchamianie scannera w folderze: {folder_path}")
+            self.scanner_started.emit(folder_path)
 
-            # Znajdź pliki asset
-            asset_files = [
-                item
-                for item in items
-                if item.endswith(".asset") and not item.startswith(".")
-            ]
+            # Uruchom scanner z callbackiem postępu
+            def progress_callback(current, total, message):
+                if total > 0:
+                    progress = int((current / total) * 100)
+                    self.progress_updated.emit(min(progress, 100))
+                logger.debug(f"Scanner progress: {message}")
 
-            # Znajdź podfoldery (bez ukrytych)
-            subfolders = [
-                item
-                for item in items
-                if not item.startswith(".")
-                and os.path.isdir(os.path.join(folder_path, item))
-            ]
+            # Uruchom scanner
+            created_assets = find_and_create_assets(folder_path, progress_callback)
 
-            logger.debug(
-                f"Folder {folder_path}: {len(asset_files)} plików asset, "
-                f"{len(subfolders)} podfolderów"
-            )
-
-            # Decyzja na podstawie zawartości
-            if asset_files:
-                # Folder zawiera pliki asset - wyślij sygnał do galerii
+            if created_assets:
                 logger.info(
-                    f"Znaleziono {len(asset_files)} plików asset w: {folder_path}"
+                    f"Scanner zakończony, utworzono {len(created_assets)} "
+                    f"plików asset w: {folder_path}"
                 )
+                # Po zakończeniu scannera wyślij sygnał do galerii
+                self.scanner_finished.emit(folder_path)
                 self.assets_folder_found.emit(folder_path)
-            elif subfolders:
-                # Folder zawiera tylko podfoldery - czekaj na reakcję użytkownika
-                logger.info(f"Znaleziono tylko podfoldery w: {folder_path}")
-                self.subfolders_only_found.emit(folder_path)
             else:
-                # Folder pusty lub zawiera tylko inne pliki
-                logger.info(f"Folder pusty lub bez asset/podfolderów: {folder_path}")
+                logger.warning(f"Scanner nie utworzył plików asset w: {folder_path}")
 
-        except PermissionError:
-            logger.warning(f"Brak uprawnień do folderu: {folder_path}")
         except Exception as e:
-            logger.error(f"Błąd sprawdzania zawartości folderu {folder_path}: {e}")
+            error_msg = f"Błąd podczas uruchamiania scannera w {folder_path}: {e}"
+            logger.error(error_msg)
+            self.error_occurred.emit(error_msg)
 
     def _count_total_folders(self):
         """Liczy wszystkie foldery dla obliczenia postępu"""
@@ -157,11 +148,13 @@ class FolderStructureScanner(QThread):
                 # Sortuj foldery alfabetycznie
                 subfolders.sort()
 
-                # Rekurencyjnie skanuj każdy podfolder
+                # REKURENCYJNIE SKANUJ KAŻDY PODFOLDER
+                # DRZEWO MA BYĆ ZAWSZE WIDOCZNE!
                 for subfolder_path in subfolders:
-                    # Sprawdź zawartość każdego podfolderu
-                    self._check_folder_content(subfolder_path)
                     self._scan_folder_structure(subfolder_path, level + 1)
+
+                # NIE sprawdzaj zawartości folderu automatycznie - tylko po kliknięciu użytkownika
+                # self.handle_folder_click(current_path)  # USUNIĘTE!
 
             except PermissionError:
                 logger.warning(f"Brak uprawnień do folderu: {current_path}")
@@ -170,3 +163,41 @@ class FolderStructureScanner(QThread):
 
         except Exception as e:
             logger.error(f"Błąd w _scan_folder_structure: {e}")
+
+    def handle_folder_click(self, folder_path: str):
+        """
+        Obsługuje kliknięcie użytkownika w folder używając logiki z rules.py
+
+        Ta metoda używa FolderClickRules.decide_action() do podjęcia decyzji
+        o tym, jaką akcję wykonać dla danego folderu.
+
+        Args:
+            folder_path (str): Ścieżka do folderu do analizy
+        """
+        try:
+            logger.info(f"Obsługa kliknięcia folderu: {folder_path}")
+
+            # Użyj logiki z rules.py do podjęcia decyzji
+            result = FolderClickRules.decide_action(folder_path)
+            action = result.get("action")
+            message = result.get("message", "")
+            condition = result.get("condition", "")
+
+            logger.info(f"Decyzja rules.py: {action} - {message} ({condition})")
+
+            # Wykonaj akcję na podstawie decyzji z rules.py
+            if action == "run_scanner":
+                self._run_scanner(folder_path)
+            elif action == "show_gallery":
+                self.assets_folder_found.emit(folder_path)
+            elif action == "error":
+                self.error_occurred.emit(message)
+            elif action == "no_action":
+                logger.info(f"Brak akcji dla folderu: {message}")
+            else:
+                logger.warning(f"Nieznana akcja: {action}")
+
+        except Exception as e:
+            error_msg = f"Błąd obsługi kliknięcia folderu {folder_path}: {e}"
+            logger.error(error_msg)
+            self.error_occurred.emit(error_msg)
