@@ -3,7 +3,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Callable
 
 from PIL import Image, ImageFile, UnidentifiedImageError
 
@@ -298,6 +298,10 @@ class ThumbnailProcessor:
         quality = config["quality"]
         output_format = config["format"]
 
+        # Upewnij się że cache_manager jest zainicjalizowany
+        if self.cache_manager is None:
+            self.cache_manager = ThumbnailCacheManager(config["cache_dir_name"])
+
         # Określ ścieżki
         thumbnail_path = self.cache_manager.get_thumbnail_path(image_path)
         temp_path = thumbnail_path.with_suffix(".tmp")
@@ -334,20 +338,16 @@ class ThumbnailProcessor:
             raise RuntimeError(f"Image processing error: {e}")
 
     def _convert_image_format(self, img: Image.Image) -> Image.Image:
-        """Konwertuje obraz do odpowiedniego formatu"""
-        # Konwertuj do RGB jeśli to obraz z przezroczystością lub palettą
-        if img.mode in ("RGBA", "LA", "P"):
-            # Dla obrazów z przezroczystością, użyj białego tła
-            if img.mode == "RGBA":
-                background = Image.new("RGB", img.size, (255, 255, 255))
-                background.paste(
-                    img, mask=img.split()[-1]
-                )  # Użyj alpha channel jako mask
-                return background
-            else:
-                return img.convert("RGB")
+        """Konwertuje obraz do odpowiedniego formatu z zachowaniem przezroczystości"""
+        # Zachowaj przezroczystość dla formatów które ją obsługują
+        if img.mode in ("RGBA", "LA"):
+            # RGBA i LA już mają alpha channel - zachowaj jak jest
+            return img
+        elif img.mode == "P":
+            # Konwertuj palette do RGBA aby zachować przezroczystość
+            return img.convert("RGBA")
         elif img.mode == "L":
-            # Grayscale to RGB
+            # Grayscale konwertuj do RGB (nie ma alpha)
             return img.convert("RGB")
         elif img.mode not in ("RGB", "RGBA"):
             # Inne formaty konwertuj do RGB
@@ -399,7 +399,7 @@ class ThumbnailProcessor:
         output_format: str,
         quality: int,
     ):
-        """Zapisuje thumbnail atomically"""
+        """Zapisuje thumbnail atomically z obsługą przezroczystości"""
         try:
             # Zapisz do temp file
             save_kwargs = {"format": output_format, "quality": quality}
@@ -407,9 +407,13 @@ class ThumbnailProcessor:
             if output_format.upper() == "WEBP":
                 save_kwargs["method"] = 6  # Najlepsza kompresja WebP
                 save_kwargs["lossless"] = False
+                # WebP obsługuje przezroczystość - nie dodawaj dodatkowych parametrów
+                # które mogłyby ją zniszczyć
             elif output_format.upper() in ("JPEG", "JPG"):
                 save_kwargs["optimize"] = True
                 save_kwargs["progressive"] = True
+                # JPEG nie obsługuje przezroczystości - jeśli obraz ma alpha,
+                # PIL automatycznie użyje białego tła
 
             img.save(temp_path, **save_kwargs)
 
@@ -468,7 +472,7 @@ def process_thumbnail(filename: str) -> Tuple[str, int]:
 
 
 def process_thumbnails_batch(
-    filenames: list[str], progress_callback: Optional[callable] = None
+    filenames: list[str], progress_callback: Optional[Callable] = None
 ) -> list[Tuple[str, int, bool]]:
     """
     Przetwarza wiele thumbnails w batch z progress tracking
