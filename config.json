@@ -1,7 +1,7 @@
 {
   "work_folder1": {
-    "path": "W:/3Dsky",
-    "name": "3DSky",
+    "path": "W:___3dsky_V1",
+    "name": "3DSky V1",
     "icon": "",
     "color": ""
   },
@@ -18,8 +18,8 @@
     "color": ""
   },
   "work_folder4": {
-    "path": "",
-    "name": "",
+    "path": "I:/___3dsky_V2",
+    "name": "3DSky V2",
     "icon": "",
     "color": ""
   },
@@ -42,6 +42,12 @@
     "color": ""
   },
   "work_folder8": {
+    "path": "",
+    "name": "",
+    "icon": "",
+    "color": ""
+  },
+  "work_folder9": {
     "path": "",
     "name": "",
     "icon": "",

@@ -869,6 +869,28 @@ class GalleryTab(QWidget):
             logger.error(f"Błąd rozpoczynania skanowania: {e}")
             self._show_error_message(f"Nie można rozpocząć skanowania: {e}")
 
+    def _refresh_gallery_for_folder(self, folder_path: str):
+        """Odświeża galerię dla określonego folderu"""
+        try:
+            logger.info(f"Odświeżanie galerii dla folderu: {folder_path}")
+            
+            # Zatrzymaj poprzedni scanner jeśli działa
+            if hasattr(self, "scanner") and self.scanner and self.scanner.isRunning():
+                self.scanner.quit()
+                self.scanner.wait()
+
+            # Utwórz i uruchom asset scanner dla tego folderu
+            self.scanner = AssetScanner(folder_path)
+            self.scanner.progress_updated.connect(self._on_scan_progress)
+            self.scanner.assets_found.connect(self._on_assets_found)
+            self.scanner.finished_scanning.connect(self._on_scan_finished)
+            self.scanner.error_occurred.connect(self._on_scan_error)
+            self.scanner.start()
+
+        except Exception as e:
+            logger.error(f"Błąd odświeżania galerii dla folderu {folder_path}: {e}")
+            self._show_error_message(f"Błąd odświeżania galerii: {e}")
+
     def _on_scan_progress(self, progress: int):
         """Obsługuje aktualizację postępu skanowania - thread safe"""
         try:
@@ -1053,14 +1075,16 @@ class GalleryTab(QWidget):
             """
             )
 
-            buttons_layout = QVBoxLayout()
+            # Zmiana na QGridLayout dla 2 rzędów po 4 przyciski
+            buttons_layout = QGridLayout()
             buttons_layout.setContentsMargins(8, 8, 8, 8)
             buttons_layout.setSpacing(4)
 
             config_manager = ConfigManager()
             config = config_manager.get_config()
 
-            for i in range(1, 6):
+            # 9 przycisków w 3 rzędach po 3
+            for i in range(1, 10):
                 folder_key = f"work_folder{i}"
                 folder_config = config.get(folder_key, {})
                 folder_path = folder_config.get("path", "")
@@ -1084,7 +1108,7 @@ class GalleryTab(QWidget):
                             border: 1px solid #3F3F46;
                             border-radius: 4px;
                             font-size: 10px;
-                            padding: 1px 12px;
+                            padding: 1px 4px;
                             text-align: center;
                         }
                         QPushButton:hover {
@@ -1118,7 +1142,7 @@ class GalleryTab(QWidget):
                             border: 1px solid #2D2D30;
                             border-radius: 4px;
                             font-size: 10px;
-                            padding: 1px 12px;
+                            padding: 1px 4px;
                             text-align: center;
                         }
                         QPushButton:disabled {
@@ -1129,7 +1153,10 @@ class GalleryTab(QWidget):
                     """
                     )
 
-                buttons_layout.addWidget(button)
+                # Umieść przycisk w siatce: 3 rzędy po 3 kolumny
+                row = (i - 1) // 3  # 0, 1 lub 2
+                col = (i - 1) % 3   # 0, 1, 2
+                buttons_layout.addWidget(button, row, col)
 
             buttons_frame.setLayout(buttons_layout)
             folder_layout.addWidget(buttons_frame)
@@ -1372,8 +1399,13 @@ class GalleryTab(QWidget):
             if errors:
                 self._show_error_message("Błędy podczas przenoszenia plików:\n" + "\n".join(errors))
             else:
-                # Odśwież galerię (usunie przeniesiony kafel z bieżącego folderu)
-                self._start_asset_scanning()
+                # Odśwież galerię - użyj aktualnego folderu galerii, nie konfiguracji
+                current_folder = self.grid_manager.current_folder_path
+                if current_folder:
+                    self._refresh_gallery_for_folder(current_folder)
+                else:
+                    logger.warning("Brak aktualnego folderu galerii do odświeżenia")
+                
                 # Opcjonalnie: odśwież docelowy folder jeśli jest wyświetlany
                 logger.info(f"Przeniesiono asset '{asset_data.get('name', 'Unknown')}' do {folder_path}")
         except Exception as e:
