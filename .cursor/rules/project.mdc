@@ -3,5 +3,6 @@ description:
 globs: 
 alwaysApply: true
 ---
-avoid over-engineering,
-work only with PyQt6
+Follow my instructions precisely. Do not add new functionality without asking!
+Avoid over-engineering.
+Work only with PyQt6.
