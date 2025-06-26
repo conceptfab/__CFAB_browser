@@ -77,6 +77,47 @@ def _scan_folder_for_files(folder_path):
     return archive_by_name, image_by_name
 
 
+def _check_texture_folders_presence(folder_path):
+    """
+    Sprawdza obecność folderów tekstur w folderze roboczym
+
+    Args:
+        folder_path (str): Ścieżka do folderu roboczego
+
+    Returns:
+        bool: True jeśli NIE znaleziono folderów tekstur (tekstury są w archiwum),
+              False jeśli znaleziono foldery tekstur (tekstury są na zewnątrz)
+    """
+    if not folder_path or not isinstance(folder_path, str):
+        logger.warning(f"Invalid folder_path parameter: {folder_path}")
+        return True
+
+    if not os.path.exists(folder_path):
+        logger.warning(f"Folder does not exist: {folder_path}")
+        return True
+
+    # Lista nazw folderów do sprawdzenia
+    texture_folder_names = ["tex", "textures", "maps"]
+
+    try:
+        # Sprawdź każdy folder tekstur
+        for folder_name in texture_folder_names:
+            texture_folder_path = os.path.join(folder_path, folder_name)
+            if os.path.isdir(texture_folder_path):
+                logger.debug(f"Found texture folder: {folder_name}")
+                return False  # Znaleziono folder tekstur - tekstury są na zewnątrz
+
+        logger.debug("No texture folders found - textures are in archive")
+        return True  # Nie znaleziono folderów tekstur - tekstury są w archiwum
+
+    except PermissionError:
+        logger.error(f"Permission denied accessing folder: {folder_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Error checking texture folders in {folder_path}: {e}")
+        return True
+
+
 def _create_single_asset(name, archive_path, image_path, folder_path):
     """
     Tworzy pojedynczy plik .asset
@@ -96,6 +137,9 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
         # Pobierz rozmiar pliku archiwum w MB
         archive_size_mb = get_file_size_mb(archive_path)
 
+        # Sprawdź obecność folderów tekstur
+        textures_in_archive = _check_texture_folders_presence(folder_path)
+
         asset_data = {
             "name": name,
             "archive": os.path.basename(archive_path),
@@ -104,6 +148,7 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
             "thumbnail": None,
             "stars": None,
             "color": None,
+            "textures_in_the_archive": textures_in_archive,
             "meta": {},
         }
 
@@ -115,7 +160,7 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
         if not thumbnail_success:
             logger.warning(f"Failed to create thumbnail for asset: {name}")
 
-        logger.debug(f"Created asset file: {name}.asset")
+        logger.debug(f"Created asset file: {name}.asset with textures_in_the_archive: {textures_in_archive}")
         return asset_path
 
     except Exception as e:

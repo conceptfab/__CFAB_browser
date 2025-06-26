@@ -116,6 +116,13 @@ class ThumbnailTile(QFrame):
         self.filename_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.filename_label.mousePressEvent = self._on_filename_clicked
 
+        # Ikona texture (ukryta domyślnie)
+        self.texture_icon = QLabel()
+        self.texture_icon.setFixedSize(16, 16)
+        self.texture_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.texture_icon.setVisible(False)  # Ukryta domyślnie
+        self._load_texture_icon()
+
         # Dolny rząd z numerem, gwiazdkami i checkboxem
         bottom_row = QHBoxLayout()
         bottom_row.setSpacing(6)
@@ -172,6 +179,7 @@ class ThumbnailTile(QFrame):
         filename_container = QHBoxLayout()
         filename_container.addStretch()
         filename_container.addWidget(self.filename_label)
+        filename_container.addWidget(self.texture_icon)  # Ikona texture obok nazwy
         filename_container.addStretch()
         layout.addLayout(filename_container)
 
@@ -283,6 +291,19 @@ class ThumbnailTile(QFrame):
 
     def set_asset_data(self, asset_data: dict):
         self.asset_data = asset_data
+        # Pokaż ikonę texture jeśli tekstury są w archiwum
+        if asset_data and asset_data.get('textures_in_the_archive', False):
+            self.show_texture_icon()
+        else:
+            self.hide_texture_icon()
+
+    def show_texture_icon(self):
+        """Pokazuje ikonę texture"""
+        self.texture_icon.setVisible(True)
+
+    def hide_texture_icon(self):
+        """Ukrywa ikonę texture"""
+        self.texture_icon.setVisible(False)
 
     def set_tile_number(self, tile_number: int, total_tiles: int):
         self.tile_number = tile_number
@@ -306,6 +327,48 @@ class ThumbnailTile(QFrame):
     def clear_stars(self):
         for cb in self.star_checkboxes:
             cb.setChecked(False)
+
+    def _load_texture_icon(self):
+        """Ładuje ikonę texture"""
+        try:
+            # Ścieżka do ikony texture
+            icon_path = os.path.join(
+                os.path.dirname(__file__), "resources", "img", "texture.png"
+            )
+            
+            if os.path.exists(icon_path):
+                # Załaduj i przeskaluj ikonę
+                pixmap = QPixmap(icon_path)
+                if not pixmap.isNull():
+                    # Przeskaluj do rozmiaru 16x16
+                    scaled_pixmap = pixmap.scaled(
+                        16,
+                        16,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self.texture_icon.setPixmap(scaled_pixmap)
+                    # Nie pokazuj automatycznie - ikona zostanie pokazana gdy będzie potrzebna
+                else:
+                    self._create_fallback_texture_icon()
+            else:
+                self._create_fallback_texture_icon()
+                
+        except Exception as e:
+            print(f"Błąd ładowania ikony texture: {e}")
+            self._create_fallback_texture_icon()
+
+    def _create_fallback_texture_icon(self):
+        """Tworzy zapasową ikonę texture jako tekst"""
+        self.texture_icon.setText("🔳")
+        self.texture_icon.setStyleSheet(
+            """
+            QLabel {
+                font-size: 12px;
+                color: #888888;
+            }
+        """
+        )
 
 
 class FolderTile(QFrame):

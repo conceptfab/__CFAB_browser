@@ -3,6 +3,7 @@ import logging
 import os
 import subprocess
 import sys
+import shutil
 from pathlib import Path
 from typing import List, Optional
 
@@ -13,8 +14,9 @@ from PyQt6.QtCore import (
     pyqtSignal,
     QDir,
     QModelIndex,
+    QPoint,
 )
-from PyQt6.QtGui import QPixmap, QDrag, QDragEnterEvent, QDropEvent, QDragMoveEvent, QStandardItemModel, QStandardItem, QBrush, QColor, QPen
+from PyQt6.QtGui import QPixmap, QDrag, QDragEnterEvent, QDropEvent, QDragMoveEvent, QStandardItemModel, QStandardItem, QBrush, QColor, QPen, QAction
 from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -32,6 +34,7 @@ from PyQt6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QStyle,
+    QMenu,
 )
 
 from core.folder_scanner_worker import FolderStructureScanner
@@ -294,7 +297,9 @@ class GridManager:
     def _create_asset_tile_safe(self, asset, tile_number, total_tiles, thumbnail_size):
         """Bezpiecznie tworzy kafelek asset"""
         try:
+            # Podstawowa nazwa z rozmiarem
             display_name = f"{asset['name']} ({asset['size_mb']:.1f} MB)"
+            
             tile = ThumbnailTile(thumbnail_size, display_name, tile_number, total_tiles)
 
             # Ustaw dane asset-a dla dostępu do ścieżek
@@ -329,13 +334,6 @@ class GridManager:
                 f"Błąd tworzenia kafelka dla {asset.get('name', 'unknown')}: {e}"
             )
             return None
-
-    def _get_work_folder_path(self):
-        """Pobiera ścieżkę work_folder z parent GalleryTab"""
-        # Pobierz z parent window poprzez callback
-        if hasattr(self, "work_folder_callback") and self.work_folder_callback:
-            return self.work_folder_callback()
-        return ""
 
     def _create_no_assets_message(self):
         """Tworzy komunikat o braku assetów"""
@@ -487,7 +485,6 @@ class GridManager:
     def delete_selected_assets(self):
         """Usuwa zaznaczone assety (wszystkie 4 pliki)"""
         try:
-            import shutil
             deleted_count = 0
             selected_tiles = []
             
@@ -735,10 +732,98 @@ class AssetScanner(QThread):
         return True
 
 
+class AssetRebuilderThread(QThread):
+    """Worker dla przebudowy assetów w folderze"""
+
+    progress_updated = pyqtSignal(int, int, str)  # current, total, message
+    rebuild_finished = pyqtSignal(str)  # message
+    error_occurred = pyqtSignal(str)  # error message
+
+    def __init__(self, folder_path: str):
+        super().__init__()
+        self.folder_path = folder_path
+
+    def run(self):
+        """Główna metoda przebudowy assetów"""
+        try:
+            if not self.folder_path or not os.path.exists(self.folder_path):
+                self.error_occurred.emit(f"Nieprawidłowy folder: {self.folder_path}")
+                return
+
+            logger.info(f"Rozpoczęcie przebudowy assetów w folderze: {self.folder_path}")
+
+            # Krok 1: Usuwanie plików .asset
+            self.progress_updated.emit(0, 100, "Usuwanie starych plików .asset...")
+            self._remove_asset_files()
+
+            # Krok 2: Usuwanie folderu .cache
+            self.progress_updated.emit(25, 100, "Usuwanie folderu .cache...")
+            self._remove_cache_folder()
+
+            # Krok 3: Uruchamianie scanner.py
+            self.progress_updated.emit(50, 100, "Skanowanie i tworzenie nowych assetów...")
+            self._run_scanner()
+
+            self.progress_updated.emit(100, 100, "Przebudowa zakończona!")
+            self.rebuild_finished.emit(f"Pomyślnie przebudowano assety w folderze: {self.folder_path}")
+
+        except Exception as e:
+            error_msg = f"Błąd podczas przebudowy assetów: {e}"
+            logger.error(error_msg)
+            self.error_occurred.emit(error_msg)
+
+    def _remove_asset_files(self):
+        """Usuwa wszystkie pliki .asset z folderu"""
+        try:
+            asset_files = [f for f in os.listdir(self.folder_path) if f.endswith('.asset')]
+            for asset_file in asset_files:
+                file_path = os.path.join(self.folder_path, asset_file)
+                os.remove(file_path)
+                logger.debug(f"Usunięto plik asset: {asset_file}")
+            
+            logger.info(f"Usunięto {len(asset_files)} plików .asset")
+        except Exception as e:
+            logger.error(f"Błąd usuwania plików .asset: {e}")
+            raise
+
+    def _remove_cache_folder(self):
+        """Usuwa folder .cache jeśli istnieje"""
+        try:
+            cache_folder = os.path.join(self.folder_path, '.cache')
+            if os.path.exists(cache_folder) and os.path.isdir(cache_folder):
+                shutil.rmtree(cache_folder)
+                logger.info(f"Usunięto folder .cache: {cache_folder}")
+            else:
+                logger.debug("Folder .cache nie istnieje lub nie jest folderem")
+        except Exception as e:
+            logger.error(f"Błąd usuwania folderu .cache: {e}")
+            raise
+
+    def _run_scanner(self):
+        """Uruchamia scanner.py w folderze"""
+        try:
+            from core.scanner import find_and_create_assets
+            
+            def progress_callback(current, total, message):
+                if total > 0:
+                    # Mapuj postęp scanner-a na przedział 50-100%
+                    scanner_progress = int(50 + (current / total) * 50)
+                    self.progress_updated.emit(scanner_progress, 100, message)
+                else:
+                    self.progress_updated.emit(75, 100, message)
+
+            created_assets = find_and_create_assets(self.folder_path, progress_callback)
+            logger.info(f"Scanner utworzył {len(created_assets)} nowych assetów")
+            
+        except Exception as e:
+            logger.error(f"Błąd uruchamiania scanner-a: {e}")
+            raise
+
+
 class DropHighlightDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         is_drop_target = index.data(Qt.ItemDataRole.UserRole + 1)
-        if is_drop_target:
+        if is_drop_target and painter:
             painter.save()
             rect = option.rect
             painter.setBrush(QBrush(QColor("#007ACC")))
@@ -749,6 +834,117 @@ class DropHighlightDelegate(QStyledItemDelegate):
             super().paint(painter, option, index)
         else:
             super().paint(painter, option, index)
+
+
+class CustomTreeView(QTreeView):
+    """Rozszerzona klasa QTreeView z obsługą menu kontekstowego i drag-and-drop"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.gallery_tab = None  # Referencja do GalleryTab
+        self._highlighted_index = None
+        
+    def set_gallery_tab(self, gallery_tab):
+        """Ustawia referencję do GalleryTab"""
+        self.gallery_tab = gallery_tab
+    
+    def contextMenuEvent(self, event):
+        """Obsługuje menu kontekstowe"""
+        try:
+            index = self.indexAt(event.pos())
+            if index.isValid() and self.gallery_tab and isinstance(self.model(), QStandardItemModel):
+                item = self.model().itemFromIndex(index)
+                if item and hasattr(item, 'folder_path'):
+                    folder_path = getattr(item, 'folder_path')
+                    
+                    # Utwórz menu kontekstowe
+                    menu = QMenu(self)
+                    
+                    rebuild_action = QAction("Przebuduj assety", self)
+                    rebuild_action.triggered.connect(
+                        lambda: self.gallery_tab._rebuild_assets_in_folder(folder_path)
+                    )
+                    menu.addAction(rebuild_action)
+                    
+                    # Pokaż menu
+                    menu.exec(event.globalPos())
+                    
+        except Exception as e:
+            logger.error(f"Błąd obsługi menu kontekstowego: {e}")
+
+    def dragEnterEvent(self, event):
+        """Obsługuje wejście drag nad drzewem folderów"""
+        try:
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                event.acceptProposedAction()
+                pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+                self._highlight_folder_at_position(pos)
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag enter w drzewie: {e}")
+            event.ignore()
+
+    def dragLeaveEvent(self, event):
+        """Obsługuje wyjście drag z drzewa folderów"""
+        try:
+            # Usuń podświetlenie
+            self._clear_folder_highlight()
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag leave w drzewie: {e}")
+
+    def dragMoveEvent(self, event):
+        """Obsługuje przeciąganie elementów w drzewie folderów"""
+        try:
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                event.acceptProposedAction()
+                pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+                self._highlight_folder_at_position(pos)
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag move w drzewie: {e}")
+            event.ignore()
+
+    def dropEvent(self, event):
+        """Obsługuje drop na drzewie folderów"""
+        try:
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+                index = self.indexAt(pos)
+                if index.isValid() and isinstance(self.model(), QStandardItemModel):
+                    item = self.model().itemFromIndex(index)
+                    if item and hasattr(item, 'folder_path'):
+                        folder_path = item.folder_path
+                        if os.path.isdir(folder_path):
+                            # Obsłuż drop asset-a do folderu
+                            if self.gallery_tab:
+                                self.gallery_tab._handle_asset_drop_to_folder(folder_path, event.mimeData())
+                            event.acceptProposedAction()
+                # Usuń podświetlenie po drop
+                self._clear_folder_highlight()
+        except Exception as e:
+            logger.error(f"Błąd obsługi drop w drzewie: {e}")
+
+    def _highlight_folder_at_position(self, pos):
+        """Podświetla folder pod określoną pozycją"""
+        try:
+            index = self.folder_tree_view.indexAt(pos)
+            if index.isValid():
+                self._clear_folder_highlight()
+                item = self.folder_model.itemFromIndex(index)
+                if item:
+                    item.setData(True, Qt.ItemDataRole.UserRole + 1)
+                    self._highlighted_index = index
+        except Exception as e:
+            logger.error(f"Błąd podświetlania folderu: {e}")
+
+    def _clear_folder_highlight(self):
+        """Usuwa podświetlenie folderu (usuwa property dropTarget)"""
+        try:
+            if hasattr(self, '_highlighted_index') and self._highlighted_index:
+                item = self.folder_model.itemFromIndex(self._highlighted_index)
+                if item:
+                    item.setData(False, Qt.ItemDataRole.UserRole + 1)
+                self._highlighted_index = None
+        except Exception as e:
+            logger.error(f"Błąd usuwania podświetlenia: {e}")
 
 
 class GalleryTab(QWidget):
@@ -768,6 +964,7 @@ class GalleryTab(QWidget):
         # Dane
         self.assets = []
         self.scanner = None
+        self.asset_rebuilder = None  # Worker dla przebudowy assetów
 
         # Setup UI i połączenia
         try:
@@ -815,7 +1012,7 @@ class GalleryTab(QWidget):
     def _create_splitter(self):
         """Tworzy główny splitter"""
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.splitter.setSizes([200, 800])  # 20:80 ratio
+        self.splitter.setSizes([200, 800])  # 2:80 ratio
 
     def _create_folder_panel(self):
         """Tworzy lewy panel folderów z systemową kontrolką QTreeView"""
@@ -884,7 +1081,8 @@ class GalleryTab(QWidget):
         folder_layout.addWidget(header_frame)
 
         # Systemowa kontrolka drzewa folderów
-        self.folder_tree_view = QTreeView()
+        self.folder_tree_view = CustomTreeView()
+        self.folder_tree_view.set_gallery_tab(self)  # Ustaw referencję do GalleryTab
         self.folder_tree_view.setStyleSheet(
             """
             QTreeView {
@@ -959,12 +1157,8 @@ class GalleryTab(QWidget):
         # Podłącz sygnał kliknięcia
         self.folder_tree_view.clicked.connect(self._on_tree_item_clicked)
         
-        # Włącz obsługę drag and drop
+        # Włącz obsługę drag and drop - zastąp metody przez subklasę
         self.folder_tree_view.setAcceptDrops(True)
-        self.folder_tree_view.dragEnterEvent = self._on_tree_drag_enter
-        self.folder_tree_view.dragLeaveEvent = self._on_tree_drag_leave
-        self.folder_tree_view.dragMoveEvent = self._on_tree_drag_move
-        self.folder_tree_view.dropEvent = self._on_tree_drop
 
         # Ustaw własny delegate do podświetlania drop targetu
         self.folder_tree_view.setItemDelegate(DropHighlightDelegate(self.folder_tree_view))
@@ -1104,44 +1298,16 @@ class GalleryTab(QWidget):
         # Thumbnail size slider z etykietą
         self._create_thumbnail_slider()
 
-        # Etykieta progress bara
-        progress_label = QLabel("Postęp:")
-        progress_label.setStyleSheet(
-            """
-            QLabel {
-                color: #CCCCCC;
-                font-size: 11px;
-                font-weight: bold;
-                padding-right: 4px;
-            }
-        """
-        )
-
-        # Etykieta suwaka
-        slider_label = QLabel("Rozmiar:")
-        slider_label.setStyleSheet(
-            """
-            QLabel {
-                color: #CCCCCC;
-                font-size: 11px;
-                font-weight: bold;
-                padding-right: 4px;
-            }
-        """
-        )
-
         # Przyciski zarządzania zaznaczeniem
         self._create_selection_buttons()
 
-        # Dodanie kontrolek z etykietami
-        control_layout.addWidget(progress_label)
+        # Dodanie kontrolek bez etykiet
         control_layout.addWidget(self.progress_bar, 2)
         
         # Dodanie przycisków zarządzania
         for button in self.selection_buttons:
             control_layout.addWidget(button)
         
-        control_layout.addWidget(slider_label)
         control_layout.addWidget(self.thumbnail_size_slider, 2)
 
         self.control_panel.setLayout(control_layout)
@@ -1318,7 +1484,13 @@ class GalleryTab(QWidget):
         """Aktualizuje stan przycisków zarządzania zaznaczeniem"""
         try:
             if hasattr(self, 'move_selected_button'):
-                self.move_selected_button.setEnabled(has_selection)
+                # Sprawdź czy są foldery tekstur w aktualnym folderze
+                current_folder = getattr(self.grid_manager, 'current_folder_path', '') if hasattr(self, 'grid_manager') and self.grid_manager else ""
+                has_texture_folders = self._check_texture_folders_presence(current_folder) if current_folder else False
+                
+                # Przycisk przenoszenia aktywny tylko jeśli są zaznaczone assety I nie ma folderów tekstur
+                self.move_selected_button.setEnabled(has_selection and not has_texture_folders)
+                
             if hasattr(self, 'delete_selected_button'):
                 self.delete_selected_button.setEnabled(has_selection)
             if hasattr(self, 'deselect_all_button'):
@@ -1473,6 +1645,10 @@ class GalleryTab(QWidget):
             self.grid_manager.request_grid_recreation(
                 self.assets, current_size, folder_path
             )
+            
+            # Aktualizuj stan drag-and-drop na podstawie obecności folderów tekstur
+            if folder_path:
+                self._update_drag_drop_state(folder_path)
 
         except Exception as e:
             logger.error(f"Błąd aktualizacji galerii: {e}")
@@ -1759,6 +1935,9 @@ class GalleryTab(QWidget):
 
             # Uruchom skanowanie struktury folderów
             self._start_folder_scanning(folder_path)
+            
+            # Sprawdź foldery tekstur i zaktualizuj stan drag-and-drop
+            self._update_drag_drop_state(folder_path)
 
         except Exception as e:
             logger.error(f"Błąd obsługi kliknięcia przycisku folderu: {e}")
@@ -1901,7 +2080,7 @@ class GalleryTab(QWidget):
             logger.error(f"Błąd obsługi drop w drzewie: {e}")
 
     def _highlight_folder_at_position(self, pos):
-        """Podświetla folder pod określoną pozycją (przez property dropTarget)"""
+        """Podświetla folder pod określoną pozycją"""
         try:
             index = self.folder_tree_view.indexAt(pos)
             if index.isValid():
@@ -2145,6 +2324,138 @@ class GalleryTab(QWidget):
 
         except Exception as e:
             logger.error(f"Błąd wyświetlania assetów z folderu: {e}")
+
+    def _rebuild_assets_in_folder(self, folder_path: str):
+        """Przebudowuje assety w wybranym folderze"""
+        try:
+            # Pokaż dialog potwierdzenia
+            reply = QMessageBox.question(
+                self,
+                "Potwierdzenie przebudowy",
+                f"Czy na pewno chcesz przebudować assety w folderze:\n{folder_path}\n\n"
+                "Ta operacja usunie wszystkie pliki .asset, folder .cache i uruchomi ponowne skanowanie.",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                # Zatrzymaj poprzedni worker jeśli działa
+                if hasattr(self, "asset_rebuilder") and self.asset_rebuilder and self.asset_rebuilder.isRunning():
+                    self.asset_rebuilder.quit()
+                    self.asset_rebuilder.wait()
+
+                # Utwórz nowy worker dla przebudowy
+                self.asset_rebuilder = AssetRebuilderThread(folder_path)
+                
+                # Podłącz sygnały
+                self.asset_rebuilder.progress_updated.connect(self._on_rebuild_progress)
+                self.asset_rebuilder.rebuild_finished.connect(self._on_rebuild_finished)
+                self.asset_rebuilder.error_occurred.connect(self._on_rebuild_error)
+                
+                # Uruchom worker
+                self.asset_rebuilder.start()
+                
+                logger.info(f"Rozpoczęto przebudowę assetów w folderze: {folder_path}")
+                
+        except Exception as e:
+            logger.error(f"Błąd inicjalizacji przebudowy assetów: {e}")
+            QMessageBox.critical(
+                self,
+                "Błąd przebudowy",
+                f"Wystąpił błąd podczas inicjalizacji przebudowy:\n{str(e)}"
+            )
+
+    def _on_rebuild_progress(self, current: int, total: int, message: str):
+        """Obsługuje postęp przebudowy assetów"""
+        try:
+            if total > 0:
+                progress = int((current / total) * 100)
+                self.progress_bar.setValue(progress)
+            
+            logger.debug(f"Postęp przebudowy: {message}")
+        except Exception as e:
+            logger.error(f"Błąd aktualizacji postępu przebudowy: {e}")
+
+    def _on_rebuild_finished(self, message: str):
+        """Obsługuje zakończenie przebudowy assetów"""
+        try:
+            self.progress_bar.setValue(0)
+            
+            QMessageBox.information(
+                self,
+                "Przebudowa zakończona",
+                message
+            )
+            
+            # Odśwież galerię jeśli aktualny folder został przebudowany
+            if (hasattr(self, 'grid_manager') and self.grid_manager and 
+                hasattr(self.grid_manager, 'current_folder_path') and 
+                self.grid_manager.current_folder_path):
+                current_folder = self.grid_manager.current_folder_path
+                self._refresh_gallery_for_folder(current_folder)
+            
+            logger.info(f"Przebudowa zakończona: {message}")
+        except Exception as e:
+            logger.error(f"Błąd obsługi zakończenia przebudowy: {e}")
+
+    def _on_rebuild_error(self, error_message: str):
+        """Obsługuje błędy przebudowy assetów"""
+        try:
+            self.progress_bar.setValue(0)
+            
+            QMessageBox.critical(
+                self,
+                "Błąd przebudowy",
+                f"Wystąpił błąd podczas przebudowy assetów:\n{error_message}"
+            )
+            
+            logger.error(f"Błąd przebudowy assetów: {error_message}")
+        except Exception as e:
+            logger.error(f"Błąd obsługi błędu przebudowy: {e}")
+
+    def _check_texture_folders_presence(self, folder_path: str) -> bool:
+        """Sprawdza obecność folderów tekstur w folderze roboczym"""
+        try:
+            if not folder_path or not os.path.exists(folder_path):
+                return False
+                
+            texture_folder_names = ["tex", "textures", "maps"]
+            
+            for folder_name in texture_folder_names:
+                texture_folder_path = os.path.join(folder_path, folder_name)
+                if os.path.isdir(texture_folder_path):
+                    logger.debug(f"Znaleziono folder tekstur: {folder_name} w {folder_path}")
+                    return True
+                    
+            return False
+            
+        except Exception as e:
+            logger.error(f"Błąd sprawdzania folderów tekstur: {e}")
+            return False
+
+    def _update_drag_drop_state(self, folder_path: str):
+        """Aktualizuje stan drag-and-drop na podstawie obecności folderów tekstur"""
+        try:
+            has_texture_folders = self._check_texture_folders_presence(folder_path)
+            
+            # Dezaktywuj/aktywuj drag-and-drop w drzewie folderów
+            if hasattr(self, 'folder_tree_view'):
+                self.folder_tree_view.setAcceptDrops(not has_texture_folders)
+                if has_texture_folders:
+                    logger.info(f"Drag-and-drop wyłączone - znaleziono foldery tekstur w {folder_path}")
+                else:
+                    logger.info(f"Drag-and-drop włączone - brak folderów tekstur w {folder_path}")
+            
+            # Dezaktywuj/aktywuj przyciski masowego przenoszenia
+            if hasattr(self, 'move_selected_button'):
+                self.move_selected_button.setEnabled(not has_texture_folders)
+                if has_texture_folders:
+                    self.move_selected_button.setToolTip("Funkcja niedostępna - folder zawiera tekstury")
+                else:
+                    self.move_selected_button.setToolTip("Przenieś zaznaczone assety do innego folderu")
+                    
+        except Exception as e:
+            logger.error(f"Błąd aktualizacji stanu drag-and-drop: {e}")
 
 
 if __name__ == "__main__":
