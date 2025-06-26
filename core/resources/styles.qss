@@ -285,3 +285,11 @@ QStatusBar {
 QStatusBar::item {
     border: none;
 }
+
+QTreeView::item:selected, QTreeView::item[dropTarget="true"] {
+    background-color: #007ACC;
+    color: #FFFFFF;
+}
+QTreeView::item[dropTarget="true"] {
+    border: 2px solid #FFD700;
+}

@@ -29,6 +29,24 @@
     "icon": "",
     "color": ""
   },
+  "work_folder6": {
+    "path": "T:/___textures",
+    "name": "Textures",
+    "icon": "",
+    "color": ""
+  },
+  "work_folder7": {
+    "path": "",
+    "name": "",
+    "icon": "",
+    "color": ""
+  },
+  "work_folder8": {
+    "path": "",
+    "name": "",
+    "icon": "",
+    "color": ""
+  },
   "thumbnail": 256,
   "logger_level": "INFO",
   "use_styles": true

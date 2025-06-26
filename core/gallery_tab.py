@@ -3,8 +3,17 @@ import logging
 import os
 import subprocess
 from pathlib import Path
+from typing import List, Optional
 
-from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import (
+    Qt,
+    QThread,
+    QTimer,
+    pyqtSignal,
+    QDir,
+    QModelIndex,
+)
+from PyQt6.QtGui import QPixmap, QDrag, QDragEnterEvent, QDropEvent, QDragMoveEvent, QStandardItemModel, QStandardItem, QBrush, QColor, QPen
 from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -15,8 +24,13 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSlider,
     QSplitter,
-    QVBoxLayout,
     QWidget,
+    QTreeView,
+    QMessageBox,
+    QVBoxLayout,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QStyle,
 )
 
 from core.folder_scanner_worker import FolderStructureScanner
@@ -511,133 +525,20 @@ class AssetScanner(QThread):
         return True
 
 
-class FolderButton(QPushButton):
-    """Przycisk folderu z obsługą drag and drop"""
-
-    def __init__(self, text, folder_path, parent=None):
-        super().__init__(text, parent)
-        self.folder_path = folder_path
-        self.setAcceptDrops(True)
-
-        # Normalny styl
-        self.normal_style = """
-            QPushButton {
-                color: #CCCCCC;
-                font-size: 11px;
-                padding: 1px 8px;
-                font-family: 'Segoe UI', Arial, sans-serif;
-                text-align: left;
-                border: none;
-                background: transparent;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #3F3F46;
-                color: #FFFFFF;
-            }
-            QPushButton:pressed {
-                background-color: #007ACC;
-                color: #FFFFFF;
-            }
-        """
-
-        # Styl podczas drag
-        self.drag_style = """
-            QPushButton {
-                color: #FFFFFF;
-                font-size: 11px;
-                padding: 1px 8px;
-                font-family: 'Segoe UI', Arial, sans-serif;
-                text-align: left;
-                border: 2px solid #007ACC;
-                background-color: #007ACC;
-                border-radius: 4px;
-            }
-        """
-
-        self.setStyleSheet(self.normal_style)
-
-    def dragEnterEvent(self, event):
-        """Obsługa wejścia drag nad folderem"""
-        try:
-            print(f"DEBUG: dragEnterEvent - folder: {self.folder_path}")
-            print(f"DEBUG: MIME formats: {event.mimeData().formats()}")
-
-            # Sprawdź czy MIME data zawiera dane asset-a
-            if event.mimeData().hasFormat("application/x-cfab-asset"):
-                print(
-                    f"DEBUG: Akceptuję drag - format application/x-cfab-asset znaleziony"
-                )
-                event.acceptProposedAction()
-                # Podświetl przycisk
-                self.setStyleSheet(self.drag_style)
-            else:
-                print(f"DEBUG: Ignoruję drag - brak formatu application/x-cfab-asset")
-                event.ignore()
-        except Exception as e:
-            print(f"Błąd obsługi drag enter: {e}")
-            logger.error(f"Błąd obsługi drag enter: {e}")
-            event.ignore()
-
-    def dragLeaveEvent(self, event):
-        """Obsługa wyjścia drag z folderu"""
-        try:
-            print(f"DEBUG: dragLeaveEvent - folder: {self.folder_path}")
-            # Przywróć normalny styl
-            self.setStyleSheet(self.normal_style)
-        except Exception as e:
-            print(f"Błąd obsługi drag leave: {e}")
-            logger.error(f"Błąd obsługi drag leave: {e}")
-
-    def dropEvent(self, event):
-        """Obsługa upuszczenia asset-a na folder"""
-        try:
-            print(f"DEBUG: dropEvent - folder: {self.folder_path}")
-            print(f"DEBUG: MIME formats: {event.mimeData().formats()}")
-
-            # Sprawdź czy MIME data zawiera dane asset-a
-            if event.mimeData().hasFormat("application/x-cfab-asset"):
-                print(
-                    f"DEBUG: Przetwarzam drop - format application/x-cfab-asset znaleziony"
-                )
-
-                # Pobierz dane asset-a
-                asset_data_bytes = event.mimeData().data("application/x-cfab-asset")
-                asset_data = json.loads(asset_data_bytes.data().decode("utf-8"))
-                print(f"DEBUG: Asset data: {asset_data.get('name', 'Unknown')}")
-
-                # Emituj sygnał do parent widget
-                if hasattr(self.parent(), "_on_folder_drop"):
-                    print(f"DEBUG: Wywołuję _on_folder_drop")
-                    self.parent()._on_folder_drop(asset_data, self.folder_path)
-                else:
-                    print(f"DEBUG: BŁĄD - parent nie ma metody _on_folder_drop")
-                    # Spróbuj wywołać bezpośrednio na parent
-                    try:
-                        parent = self.parent()
-                        if parent and hasattr(parent, "_on_folder_drop"):
-                            parent._on_folder_drop(asset_data, self.folder_path)
-                        else:
-                            print(f"DEBUG: Parent type: {type(parent)}")
-                            print(
-                                f"DEBUG: Parent methods: {dir(parent) if parent else 'None'}"
-                            )
-                    except Exception as e:
-                        print(f"DEBUG: Błąd wywołania _on_folder_drop: {e}")
-
-                event.acceptProposedAction()
-            else:
-                print(f"DEBUG: Ignoruję drop - brak formatu application/x-cfab-asset")
-                event.ignore()
-
-        except Exception as e:
-            print(f"Błąd obsługi drop: {e}")
-            logger.error(f"Błąd obsługi drop: {e}")
-            event.ignore()
-
-        finally:
-            # Przywróć normalny styl
-            self.setStyleSheet(self.normal_style)
+class DropHighlightDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        is_drop_target = index.data(Qt.ItemDataRole.UserRole + 1)
+        if is_drop_target:
+            painter.save()
+            rect = option.rect
+            painter.setBrush(QBrush(QColor("#007ACC")))
+            painter.setPen(QPen(QColor("#FFD700"), 2))
+            painter.drawRect(rect.adjusted(1, 1, -2, -2))
+            painter.restore()
+            # Rysuj tekst normalnie - niebieskie tło i tak będzie widoczne
+            super().paint(painter, option, index)
+        else:
+            super().paint(painter, option, index)
 
 
 class GalleryTab(QWidget):
@@ -707,7 +608,7 @@ class GalleryTab(QWidget):
         self.splitter.setSizes([200, 800])  # 20:80 ratio
 
     def _create_folder_panel(self):
-        """Tworzy lewy panel folderów z profesjonalnym wyglądem"""
+        """Tworzy lewy panel folderów z systemową kontrolką QTreeView"""
         self.folder_tree_panel = QFrame()
         self.folder_tree_panel.setFrameStyle(QFrame.Shape.NoFrame)
         self.folder_tree_panel.setMinimumWidth(250)
@@ -772,20 +673,38 @@ class GalleryTab(QWidget):
         header_frame.setLayout(header_layout)
         folder_layout.addWidget(header_frame)
 
-        # Scroll area dla struktury folderów
-        self.folder_scroll_area = QScrollArea()
-        self.folder_scroll_area.setWidgetResizable(True)
-        self.folder_scroll_area.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
-        self.folder_scroll_area.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
-        self.folder_scroll_area.setStyleSheet(
+        # Systemowa kontrolka drzewa folderów
+        self.folder_tree_view = QTreeView()
+        self.folder_tree_view.setStyleSheet(
             """
-            QScrollArea {
+            QTreeView {
                 background-color: #1E1E1E;
+                color: #CCCCCC;
                 border: none;
+                outline: none;
+                font-size: 11px;
+            }
+            QTreeView::item {
+                padding: 2px;
+                border: none;
+            }
+            QTreeView::item:hover {
+                background-color: #3F3F46;
+            }
+            QTreeView::item:selected {
+                background-color: #007ACC;
+                color: #FFFFFF;
+            }
+            QTreeView::branch {
+                background-color: #1E1E1E;
+            }
+            QTreeView::branch:has-children:!has-siblings:closed,
+            QTreeView::branch:closed:has-children:has-siblings {
+                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTQgNkw4IDZMOSA2TDkgNUw4IDVMNCA1TDMgNUwzIDZMNCA2WiIgZmlsbD0iI0NDQ0NDQyIvPgo8L3N2Zz4K);
+            }
+            QTreeView::branch:open:has-children:!has-siblings,
+            QTreeView::branch:open:has-children:has-siblings {
+                image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTUgNEw1IDhMNiA4TDYgNEw1IDRaIiBmaWxsPSIjQ0NDQ0NDIi8+Cjwvc3ZnPgo=);
             }
             QScrollBar:vertical {
                 background-color: #1E1E1E;
@@ -806,34 +725,41 @@ class GalleryTab(QWidget):
         """
         )
 
-        # Widget dla struktury folderów
-        self.folder_structure_widget = QWidget()
-        self.folder_structure_layout = QVBoxLayout()
-        self.folder_structure_layout.setContentsMargins(8, 8, 8, 8)
-        self.folder_structure_layout.setSpacing(2)
+        # Model drzewa folderów
+        self.folder_model = QStandardItemModel()
+        self.folder_model.setHorizontalHeaderLabels(["Folders"])
+        
+        # Włącz obsługę drop dla każdego itemu
+        self.folder_tree_view.setDragDropMode(QTreeView.DragDropMode.DropOnly)
+        self.folder_tree_view.setDefaultDropAction(Qt.DropAction.CopyAction)
+        
+        # Ustaw model w widoku
+        self.folder_tree_view.setModel(self.folder_model)
+        
+        # Ukryj nagłówek
+        self.folder_tree_view.setHeaderHidden(True)
+        
+        # Włącz automatyczne rozwijanie folderów
+        self.folder_tree_view.setExpandsOnDoubleClick(True)
+        self.folder_tree_view.setItemsExpandable(True)
+        
+        # Wymuś ładowanie wszystkich elementów
+        self.folder_tree_view.setUniformRowHeights(False)
+        
+        # Podłącz sygnał kliknięcia
+        self.folder_tree_view.clicked.connect(self._on_tree_item_clicked)
+        
+        # Włącz obsługę drag and drop
+        self.folder_tree_view.setAcceptDrops(True)
+        self.folder_tree_view.dragEnterEvent = self._on_tree_drag_enter
+        self.folder_tree_view.dragLeaveEvent = self._on_tree_drag_leave
+        self.folder_tree_view.dragMoveEvent = self._on_tree_drag_move
+        self.folder_tree_view.dropEvent = self._on_tree_drop
 
-        # Początkowy komunikat
-        initial_label = QLabel("Wybierz folder aby wyświetlić strukturę")
-        initial_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        initial_label.setStyleSheet(
-            """
-            QLabel {
-                color: #888888;
-                font-size: 11px;
-                padding: 20px;
-                background-color: #252526;
-                border-radius: 6px;
-                margin: 8px;
-            }
-        """
-        )
-        self.folder_structure_layout.addWidget(initial_label)
-        self.folder_structure_layout.addStretch()
+        # Ustaw własny delegate do podświetlania drop targetu
+        self.folder_tree_view.setItemDelegate(DropHighlightDelegate(self.folder_tree_view))
 
-        self.folder_structure_widget.setLayout(self.folder_structure_layout)
-        self.folder_scroll_area.setWidget(self.folder_structure_widget)
-
-        folder_layout.addWidget(self.folder_scroll_area)
+        folder_layout.addWidget(self.folder_tree_view)
 
         # Panel przycisków folderów na dole
         self._create_folder_buttons_panel(folder_layout)
@@ -1143,27 +1069,10 @@ class GalleryTab(QWidget):
                 # Użyj nazwy jeśli jest dostępna, w przeciwnym razie domyślną
                 button_text = folder_name if folder_name else f"Folder {i}"
 
-                button = FolderButton(button_text, folder_path, self)
+                # Użyj zwykłego QPushButton zamiast FolderButton
+                button = QPushButton(button_text, self)
                 button.setFixedHeight(14)
                 button.setEnabled(bool(folder_path))
-
-                # Włącz obsługę drag and drop dla przycisków folderów w strukturze
-                button.setAcceptDrops(True)
-                button.dragEnterEvent = (
-                    lambda event, path=folder_path: self._on_folder_drag_enter(
-                        event, path
-                    )
-                )
-                button.dragLeaveEvent = (
-                    lambda event, path=folder_path: self._on_folder_drag_leave(
-                        event, path
-                    )
-                )
-                button.dropEvent = (
-                    lambda event, path=folder_path: self._on_folder_drop_event(
-                        event, path
-                    )
-                )
 
                 # Profesjonalne stylowanie przycisków
                 if folder_path:
@@ -1229,73 +1138,60 @@ class GalleryTab(QWidget):
             logger.error(f"Błąd tworzenia panelu przycisków folderów: {e}")
 
     def _on_folder_button_clicked(self, folder_path):
-        """Obsługuje kliknięcie przycisku folderu - uruchamia skanowanie struktury"""
+        """Obsługuje kliknięcie przycisku folderu"""
         try:
-            logger.info(f"Skanowanie struktury folderu: {folder_path}")
-
-            # Sprawdź czy ścieżka istnieje
-            if not os.path.exists(folder_path):
-                logger.warning(f"Ścieżka nie istnieje: {folder_path}")
-                self._show_error_message(f"Folder nie istnieje: {folder_path}")
+            if not folder_path or not os.path.exists(folder_path):
+                QMessageBox.warning(
+                    self,
+                    "Błąd",
+                    f"Folder nie istnieje: {folder_path}",
+                )
                 return
 
-            # Zatrzymaj poprzedni folder scanner jeśli działa
-            if (
-                hasattr(self, "folder_scanner")
-                and self.folder_scanner
-                and self.folder_scanner.isRunning()
-            ):
-                self.folder_scanner.quit()
-                self.folder_scanner.wait()
+            logger.info(f"Kliknięto przycisk folderu: {folder_path}")
 
-            # Wyczyść strukturę folderów w lewym panelu
-            self._clear_folder_structure()
+            # Ustaw folder w drzewie
+            self.set_root_folder(folder_path)
 
-            # Utwórz i uruchom folder scanner
-            self.folder_scanner = FolderStructureScanner(folder_path)
-            self.folder_scanner.progress_updated.connect(self._on_folder_scan_progress)
-            self.folder_scanner.folder_found.connect(self._on_folder_found)
-            self.folder_scanner.assets_folder_found.connect(
-                self._on_assets_folder_found
-            )
-            self.folder_scanner.subfolders_only_found.connect(
-                self._on_subfolders_only_found
-            )
-            self.folder_scanner.scanner_started.connect(self._on_scanner_started)
-            self.folder_scanner.scanner_finished.connect(self._on_scanner_finished)
-            self.folder_scanner.finished_scanning.connect(self._on_folder_scan_finished)
-            self.folder_scanner.error_occurred.connect(self._on_folder_scan_error)
-
-            self.folder_scanner.start()
+            # Uruchom skanowanie struktury folderów
+            self._start_folder_scanning(folder_path)
 
         except Exception as e:
             logger.error(f"Błąd obsługi kliknięcia przycisku folderu: {e}")
-            self._show_error_message(f"Błąd skanowania folderu: {e}")
 
-    def _clear_folder_structure(self):
-        """Czyści strukturę folderów w lewym panelu"""
+    def _start_folder_scanning(self, folder_path: str):
+        """Uruchamia skanowanie struktury folderów"""
         try:
-            # Usuń wszystkie widgety z layoutu
-            while self.folder_structure_layout.count():
-                child = self.folder_structure_layout.takeAt(0)
-                if child.widget():
-                    child.widget().deleteLater()
+            # Zatrzymaj poprzedni worker jeśli działa
+            if hasattr(self, "folder_scanner_worker") and self.folder_scanner_worker.isRunning():
+                self.folder_scanner_worker.quit()
+                self.folder_scanner_worker.wait()
 
-            # Dodaj komunikat o ładowaniu
-            loading_label = QLabel("Ładowanie struktury folderów...")
-            loading_label.setStyleSheet(
-                """
-                QLabel {
-                    color: #CCCCCC;
-                    font-size: 11px;
-                    padding: 5px;
-                }
-            """
-            )
-            self.folder_structure_layout.addWidget(loading_label)
+            # Utwórz nowy worker
+            self.folder_scanner_worker = FolderStructureScanner(folder_path)
+
+            # Podłącz sygnały
+            self.folder_scanner_worker.progress_updated.connect(self._on_folder_scan_progress)
+            self.folder_scanner_worker.folder_found.connect(self._on_folder_found)
+            self.folder_scanner_worker.assets_folder_found.connect(self._on_assets_folder_found)
+            self.folder_scanner_worker.scanner_started.connect(self._on_scanner_started)
+            self.folder_scanner_worker.scanner_finished.connect(self._on_scanner_finished)
+            self.folder_scanner_worker.finished_scanning.connect(self._on_finished_scanning)
+            self.folder_scanner_worker.error_occurred.connect(self._on_scan_error)
+
+            # Uruchom worker
+            self.folder_scanner_worker.start()
 
         except Exception as e:
-            logger.error(f"Błąd czyszczenia struktury folderów: {e}")
+            logger.error(f"Błąd uruchamiania skanowania folderów: {e}")
+
+    def _on_folder_found(self, folder_path: str, level: int):
+        """Obsługuje znalezienie folderu - teraz tylko loguje, bo drzewo jest systemowe"""
+        try:
+            logger.debug(f"Znaleziono folder: {folder_path} (poziom: {level})")
+            # Nie musimy już tworzyć przycisków, bo drzewo jest systemowe
+        except Exception as e:
+            logger.error(f"Błąd obsługi znalezienia folderu: {e}")
 
     def _on_folder_scan_progress(self, progress: int):
         """Obsługuje postęp skanowania folderów"""
@@ -1304,100 +1200,320 @@ class GalleryTab(QWidget):
         except Exception as e:
             logger.error(f"Błąd aktualizacji postępu skanowania folderów: {e}")
 
-    def _on_folder_found(self, folder_path: str, level: int):
-        """Obsługuje znalezienie folderu - dodaje klikalny przycisk do lewego panelu"""
+    def _on_scanner_started(self, folder_path: str):
+        """Obsługuje rozpoczęcie skanowania folderu"""
         try:
-            folder_name = os.path.basename(folder_path)
-
-            # Twórz wcięcie dla drzewa
-            if level == 0:
-                display_text = f"📁 {folder_name}"
-            else:
-                indent = "  " * (level - 1)
-                display_text = f"{indent}└─ 📂 {folder_name}"
-
-            # Twórz klikalny przycisk zamiast QLabel
-            folder_button = FolderButton(display_text, folder_path, self)
-            folder_button.setFixedHeight(14)
-
-            # Włącz obsługę drag and drop dla przycisków folderów w strukturze
-            folder_button.setAcceptDrops(True)
-            folder_button.dragEnterEvent = (
-                lambda event, path=folder_path: self._on_folder_drag_enter(event, path)
-            )
-            folder_button.dragLeaveEvent = (
-                lambda event, path=folder_path: self._on_folder_drag_leave(event, path)
-            )
-            folder_button.dropEvent = (
-                lambda event, path=folder_path: self._on_folder_drop_event(event, path)
-            )
-
-            # Podłącz kliknięcie do handle_folder_click workera
-            folder_button.clicked.connect(
-                lambda checked, path=folder_path: self._on_folder_click(path)
-            )
-
-            # Usuń komunikat o ładowaniu jeśli to pierwszy folder
-            if level == 0 and self.folder_structure_layout.count() > 0:
-                first_item = self.folder_structure_layout.itemAt(0)
-                if first_item and first_item.widget():
-                    first_item.widget().deleteLater()
-
-            # Dodaj do layoutu
-            self.folder_structure_layout.addWidget(folder_button)
-
+            logger.info(f"Rozpoczęto skanowanie folderu: {folder_path}")
         except Exception as e:
-            logger.error(f"Błąd dodawania folderu do wyświetlania: {e}")
+            logger.error(f"Błąd obsługi rozpoczęcia skanowania folderu: {e}")
 
-    def _on_folder_click(self, folder_path: str):
-        """Obsługuje kliknięcie w folder w strukturze - wywołuje handle_folder_click workera"""
+    def _on_scanner_finished(self, folder_path: str):
+        """Obsługuje zakończenie skanowania folderu"""
         try:
-            logger.info(f"Kliknięto folder w strukturze: {folder_path}")
-
-            # Wywołaj handle_folder_click workera
-            if hasattr(self, "folder_scanner") and self.folder_scanner:
-                self.folder_scanner.handle_folder_click(folder_path)
-            else:
-                logger.warning("Folder scanner nie jest dostępny")
-
+            logger.info(f"Skanowanie folderu zakończone: {folder_path}")
         except Exception as e:
-            logger.error(f"Błąd obsługi kliknięcia folderu: {e}")
-            self._show_error_message(f"Błąd obsługi folderu: {e}")
+            logger.error(f"Błąd obsługi zakończenia skanowania folderu: {e}")
 
-    def _on_folder_scan_finished(self):
+    def _on_finished_scanning(self):
         """Obsługuje zakończenie skanowania folderów"""
         try:
             self.progress_bar.setValue(0)
-
-            # Dodaj stretch na końcu
-            self.folder_structure_layout.addStretch()
-
             logger.info("Skanowanie struktury folderów zakończone")
         except Exception as e:
             logger.error(f"Błąd finalizacji skanowania folderów: {e}")
 
-    def _on_folder_scan_error(self, error_message: str):
+    def _on_scan_error(self, error_message: str):
         """Obsługuje błędy skanowania folderów"""
         try:
             self.progress_bar.setValue(0)
-
-            # Wyczyść i pokaż błąd w lewym panelu
-            self._clear_folder_structure()
-            error_label = QLabel(f"Błąd: {error_message}")
-            error_label.setStyleSheet(
-                """
-                QLabel {
-                    color: #FF6B6B;
-                    font-size: 10px;
-                    padding: 5px;
-                }
-            """
-            )
-            self.folder_structure_layout.addWidget(error_label)
-            self.folder_structure_layout.addStretch()
-
+            self._show_error_message(error_message)
         except Exception as e:
             logger.error(f"Błąd obsługi błędu skanowania folderów: {e}")
+
+    def _on_tree_item_clicked(self, index: QModelIndex):
+        """Obsługuje kliknięcie elementu w drzewie folderów"""
+        try:
+            item = self.folder_model.itemFromIndex(index)
+            if item and hasattr(item, 'folder_path'):
+                folder_path = item.folder_path
+                if os.path.isdir(folder_path):
+                    # Jeśli nie ma jeszcze dzieci, załaduj podfoldery
+                    if item.rowCount() == 0:
+                        self._load_subfolders(item, folder_path)
+                        self._expand_first_level_subfolders(index)
+                    logger.info(f"Kliknięto folder w drzewie: {folder_path}")
+                    self._on_folder_click(folder_path)
+        except Exception as e:
+            logger.error(f"Błąd obsługi kliknięcia w drzewie: {e}")
+
+    def _on_tree_drag_enter(self, event):
+        """Obsługuje wejście drag nad drzewem folderów"""
+        try:
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                event.acceptProposedAction()
+                # Poprawka: QDragEnterEvent nie ma pos(), użyj position()
+                pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+                self._highlight_folder_at_position(pos)
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag enter w drzewie: {e}")
+            event.ignore()
+
+    def _on_tree_drag_leave(self, event):
+        """Obsługuje wyjście drag z drzewa folderów"""
+        try:
+            # Usuń podświetlenie
+            self._clear_folder_highlight()
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag leave w drzewie: {e}")
+
+    def _on_tree_drag_move(self, event):
+        """Obsługuje przeciąganie elementów w drzewie folderów"""
+        try:
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                event.acceptProposedAction()
+                pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+                self._highlight_folder_at_position(pos)
+        except Exception as e:
+            logger.error(f"Błąd obsługi drag move w drzewie: {e}")
+            event.ignore()
+
+    def _on_tree_drop(self, event):
+        """Obsługuje drop na drzewie folderów"""
+        try:
+            if event.mimeData().hasFormat("application/x-cfab-asset"):
+                pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+                index = self.folder_tree_view.indexAt(pos)
+                if index.isValid():
+                    item = self.folder_model.itemFromIndex(index)
+                    if item and hasattr(item, 'folder_path'):
+                        folder_path = item.folder_path
+                        if os.path.isdir(folder_path):
+                            # Obsłuż drop asset-a do folderu
+                            self._handle_asset_drop_to_folder(folder_path, event.mimeData())
+                            event.acceptProposedAction()
+                # Usuń podświetlenie po drop
+                self._clear_folder_highlight()
+        except Exception as e:
+            logger.error(f"Błąd obsługi drop w drzewie: {e}")
+
+    def _highlight_folder_at_position(self, pos):
+        """Podświetla folder pod określoną pozycją (przez property dropTarget)"""
+        try:
+            index = self.folder_tree_view.indexAt(pos)
+            if index.isValid():
+                self._clear_folder_highlight()
+                item = self.folder_model.itemFromIndex(index)
+                if item:
+                    item.setData(True, Qt.ItemDataRole.UserRole + 1)
+                    self._highlighted_index = index
+        except Exception as e:
+            logger.error(f"Błąd podświetlania folderu: {e}")
+
+    def _clear_folder_highlight(self):
+        """Usuwa podświetlenie folderu (usuwa property dropTarget)"""
+        try:
+            if hasattr(self, '_highlighted_index') and self._highlighted_index:
+                item = self.folder_model.itemFromIndex(self._highlighted_index)
+                if item:
+                    item.setData(False, Qt.ItemDataRole.UserRole + 1)
+                self._highlighted_index = None
+        except Exception as e:
+            logger.error(f"Błąd usuwania podświetlenia: {e}")
+
+    def _handle_asset_drop_to_folder(self, folder_path: str, mime_data):
+        """Obsługuje drop asset-a do folderu"""
+        try:
+            import shutil
+            asset_data_bytes = mime_data.data("application/x-cfab-asset")
+            asset_data = json.loads(asset_data_bytes.data().decode("utf-8"))
+
+            logger.info(f"Drop asset-a '{asset_data.get('name', 'Unknown')}' do folderu: {folder_path}")
+
+            # Lista plików do przeniesienia
+            files_to_move = []
+            current_folder = self.grid_manager.current_folder_path
+            if not current_folder:
+                self._show_error_message("Nie można ustalić folderu źródłowego asseta!")
+                return
+
+            # Plik .asset
+            asset_file = os.path.join(current_folder, asset_data.get("name", "") + ".asset")
+            if os.path.exists(asset_file):
+                files_to_move.append(asset_file)
+            # Plik archiwum
+            archive_file = os.path.join(current_folder, asset_data.get("archive", ""))
+            if os.path.exists(archive_file):
+                files_to_move.append(archive_file)
+            # Plik podglądu
+            preview_file = os.path.join(current_folder, asset_data.get("preview", ""))
+            if os.path.exists(preview_file):
+                files_to_move.append(preview_file)
+            # Plik thumb (w .cache)
+            thumb_file = None
+            if asset_data.get("thumbnail") is True:
+                cache_folder = os.path.join(current_folder, ".cache")
+                thumb_file = os.path.join(cache_folder, asset_data.get("name", "") + ".thumb")
+                if os.path.exists(thumb_file):
+                    files_to_move.append(thumb_file)
+
+            # Przenoszenie plików
+            errors = []
+            for file_path in files_to_move:
+                try:
+                    dest_folder = folder_path
+                    # Jeśli thumb, to przenieś do .cache w folderze docelowym
+                    if thumb_file and file_path == thumb_file:
+                        dest_folder = os.path.join(folder_path, ".cache")
+                        os.makedirs(dest_folder, exist_ok=True)
+                    shutil.move(file_path, dest_folder)
+                except Exception as e:
+                    errors.append(f"{os.path.basename(file_path)}: {e}")
+
+            if errors:
+                self._show_error_message("Błędy podczas przenoszenia plików:\n" + "\n".join(errors))
+            else:
+                # Odśwież galerię (usunie przeniesiony kafel z bieżącego folderu)
+                self._start_asset_scanning()
+                # Opcjonalnie: odśwież docelowy folder jeśli jest wyświetlany
+                logger.info(f"Przeniesiono asset '{asset_data.get('name', 'Unknown')}' do {folder_path}")
+        except Exception as e:
+            logger.error(f"Błąd obsługi drop asset-a: {e}")
+            self._show_error_message(f"Błąd przenoszenia asseta: {e}")
+
+    def set_root_folder(self, folder_path: str):
+        """Ustawia główny folder w drzewie"""
+        try:
+            if folder_path and os.path.exists(folder_path):
+                # Wyczyść model
+                self.folder_model.clear()
+                
+                # Dodaj główny folder
+                root_item = self._create_folder_item(folder_path)
+                self.folder_model.appendRow(root_item)
+                
+                # Rozwiń główny folder
+                root_index = self.folder_model.indexFromItem(root_item)
+                self.folder_tree_view.expand(root_index)
+                
+                # Załaduj podfoldery
+                self._load_subfolders(root_item, folder_path)
+                
+                # Automatycznie rozwiń pierwszy poziom podfolderów
+                self._expand_first_level_subfolders(root_index)
+                
+                logger.info(f"Ustawiono główny folder w drzewie: {folder_path}")
+            else:
+                # Wyczyść drzewo
+                self.folder_model.clear()
+                logger.warning(f"Nieprawidłowa ścieżka folderu: {folder_path}")
+        except Exception as e:
+            logger.error(f"Błąd ustawiania głównego folderu: {e}")
+
+    def _create_folder_item(self, folder_path: str) -> QStandardItem:
+        """Tworzy element drzewa dla folderu"""
+        try:
+            folder_name = os.path.basename(folder_path)
+            item = QStandardItem(f"📁 {folder_name}")
+            item.folder_path = folder_path  # Dodaj ścieżkę jako atrybut
+            item.setEditable(False)
+            item.setDropEnabled(True)  # Włącz drop na itemie
+            return item
+        except Exception as e:
+            logger.error(f"Błąd tworzenia elementu folderu: {e}")
+            return QStandardItem("Error")
+
+    def _load_subfolders(self, parent_item: QStandardItem, folder_path: str):
+        """Ładuje podfoldery do elementu drzewa"""
+        try:
+            if not os.path.exists(folder_path):
+                logger.warning(f"Folder nie istnieje: {folder_path}")
+                return
+                
+            logger.info(f"Ładowanie podfolderów dla: {folder_path}")
+            
+            # Pobierz listę podfolderów
+            subfolders = []
+            for item_name in os.listdir(folder_path):
+                item_path = os.path.join(folder_path, item_name)
+                if os.path.isdir(item_path) and not item_name.startswith('.'):
+                    subfolders.append((item_name, item_path))
+            
+            logger.info(f"Znaleziono {len(subfolders)} podfolderów: {[name for name, path in subfolders]}")
+            
+            # Sortuj alfabetycznie
+            subfolders.sort(key=lambda x: x[0].lower())
+            
+            # Dodaj podfoldery do drzewa
+            for folder_name, subfolder_path in subfolders:
+                subfolder_item = self._create_folder_item(subfolder_path)
+                parent_item.appendRow(subfolder_item)
+                logger.debug(f"Dodano podfolder: {folder_name} -> {subfolder_path}")
+                
+                # Rekurencyjnie załaduj podfoldery (opcjonalnie)
+                # self._load_subfolders(subfolder_item, subfolder_path)
+                
+            logger.info(f"Załadowano {len(subfolders)} podfolderów dla: {folder_path}")
+            
+        except Exception as e:
+            logger.error(f"Błąd ładowania podfolderów: {e}")
+
+    def _expand_first_level_subfolders(self, parent_index: QModelIndex):
+        """Rozwija pierwszy poziom podfolderów"""
+        try:
+            # Poczekaj chwilę na załadowanie modelu
+            import time
+            time.sleep(0.1)
+            
+            item = self.folder_model.itemFromIndex(parent_index)
+            if item:
+                row_count = item.rowCount()
+                logger.debug(f"Znaleziono {row_count} elementów w folderze")
+                
+                for row in range(row_count):
+                    child_item = item.child(row)
+                    if child_item and hasattr(child_item, 'folder_path'):
+                        child_index = self.folder_model.indexFromItem(child_item)
+                        self.folder_tree_view.expand(child_index)
+                        logger.debug(f"Rozwinięto podfolder: {child_item.folder_path}")
+                        
+        except Exception as e:
+            logger.error(f"Błąd rozwijania podfolderów: {e}")
+
+    def _force_load_subfolders(self, folder_path: str):
+        """Wymusza ładowanie wszystkich podfolderów"""
+        try:
+            # Sprawdź czy folder istnieje
+            if not os.path.exists(folder_path):
+                return
+                
+            # Pobierz listę wszystkich podfolderów
+            subfolders = []
+            for item in os.listdir(folder_path):
+                item_path = os.path.join(folder_path, item)
+                if os.path.isdir(item_path) and not item.startswith('.'):
+                    subfolders.append(item_path)
+            
+            logger.info(f"Znaleziono {len(subfolders)} podfolderów w {folder_path}")
+            
+            # Podfoldery są już ładowane w _load_subfolders
+                
+        except Exception as e:
+            logger.error(f"Błąd wymuszania ładowania podfolderów: {e}")
+
+    def _on_folder_click(self, folder_path: str):
+        """Obsługuje kliknięcie w folder - wywołuje handle_folder_click workera"""
+        try:
+            logger.info(f"Kliknięto folder: {folder_path}")
+
+            # Wywołaj handle_folder_click workera
+            if hasattr(self, "folder_scanner_worker") and self.folder_scanner_worker:
+                self.folder_scanner_worker.handle_folder_click(folder_path)
+            else:
+                logger.warning("Folder scanner worker nie jest dostępny")
+
+        except Exception as e:
+            logger.error(f"Błąd obsługi kliknięcia folderu: {e}")
+            self._show_error_message(f"Błąd obsługi folderu: {e}")
 
     def _on_assets_folder_found(self, folder_path: str):
         """Obsługuje znalezienie folderu z plikami asset - wyświetla w galerii"""
@@ -1420,278 +1536,6 @@ class GalleryTab(QWidget):
 
         except Exception as e:
             logger.error(f"Błąd wyświetlania assetów z folderu: {e}")
-
-    def _on_subfolders_only_found(self, folder_path: str):
-        """Obsługuje znalezienie folderu tylko z podfolderami - czeka na reakcję"""
-        try:
-            logger.info(f"Folder zawiera tylko podfoldery: {folder_path}")
-
-            # Można tutaj dodać logikę oczekiwania na reakcję użytkownika
-            # Na razie logujemy informację
-
-        except Exception as e:
-            logger.error(f"Błąd obsługi folderu z podfolderami: {e}")
-
-    def _on_scanner_started(self, folder_path: str):
-        """Obsługuje rozpoczęcie skanowania folderu"""
-        try:
-            logger.info(f"Rozpoczęto skanowanie folderu: {folder_path}")
-        except Exception as e:
-            logger.error(f"Błąd obsługi rozpoczęcia skanowania folderu: {e}")
-
-    def _on_scanner_finished(self, folder_path: str):
-        """Obsługuje zakończenie skanowania folderu"""
-        try:
-            logger.info(f"Skanowanie folderu zakończone: {folder_path}")
-        except Exception as e:
-            logger.error(f"Błąd obsługi zakończenia skanowania folderu: {e}")
-
-    def _on_folder_drag_enter(self, event, folder_path):
-        """Obsługa wejścia drag nad folderem"""
-        try:
-            # Sprawdź czy MIME data zawiera dane asset-a
-            if event.mimeData().hasFormat("application/x-cfab-asset"):
-                event.acceptProposedAction()
-
-                # Podświetl przycisk folderu - znajdź widget po ścieżce
-                widget = self._find_folder_button_by_path(folder_path)
-
-                if widget:
-                    widget.setStyleSheet(
-                        """
-                        QPushButton {
-                            color: #FFFFFF;
-                            font-size: 11px;
-                            padding: 1px 8px;
-                            font-family: 'Segoe UI', Arial, sans-serif;
-                            text-align: left;
-                            border: 2px solid #007ACC;
-                            background-color: #007ACC;
-                            border-radius: 4px;
-                        }
-                    """
-                    )
-            else:
-                event.ignore()
-        except Exception as e:
-            logger.error(f"Błąd obsługi drag enter: {e}")
-            event.ignore()
-
-    def _on_folder_drag_leave(self, event, folder_path):
-        """Obsługa wyjścia drag z folderu"""
-        try:
-            # Przywróć normalny styl przycisku - znajdź widget po ścieżce
-            widget = self._find_folder_button_by_path(folder_path)
-
-            if widget:
-                widget.setStyleSheet(
-                    """
-                    QPushButton {
-                        color: #CCCCCC;
-                        font-size: 11px;
-                        padding: 1px 8px;
-                        font-family: 'Segoe UI', Arial, sans-serif;
-                        text-align: left;
-                        border: none;
-                        background: transparent;
-                        border-radius: 4px;
-                    }
-                    QPushButton:hover {
-                        background-color: #3F3F46;
-                        color: #FFFFFF;
-                    }
-                    QPushButton:pressed {
-                        background-color: #007ACC;
-                        color: #FFFFFF;
-                    }
-                """
-                )
-        except Exception as e:
-            logger.error(f"Błąd obsługi drag leave: {e}")
-
-    def _find_folder_button_by_path(self, folder_path):
-        """Znajduje przycisk folderu po ścieżce"""
-        try:
-            # Sprawdź w panelu szybkiego dostępu (folder_buttons_layout)
-            if hasattr(self, "folder_buttons_layout"):
-                for i in range(self.folder_buttons_layout.count()):
-                    item = self.folder_buttons_layout.itemAt(i)
-                    if item and item.widget():
-                        widget = item.widget()
-                        if (
-                            hasattr(widget, "folder_path")
-                            and widget.folder_path == folder_path
-                        ):
-                            return widget
-
-            # Sprawdź w strukturze folderów
-            for i in range(self.folder_structure_layout.count()):
-                item = self.folder_structure_layout.itemAt(i)
-                if item and item.widget():
-                    widget = item.widget()
-                    if (
-                        hasattr(widget, "folder_path")
-                        and widget.folder_path == folder_path
-                    ):
-                        return widget
-
-            return None
-        except Exception as e:
-            logger.error(f"Błąd wyszukiwania przycisku folderu: {e}")
-            return None
-
-    def _on_folder_drop(self, asset_data, folder_path):
-        """Obsługa upuszczenia asset-a na folder"""
-        try:
-            # Wykonaj przeniesienie asset-a
-            self._move_asset_to_folder(asset_data, folder_path)
-        except Exception as e:
-            logger.error(f"Błąd obsługi drop: {e}")
-
-    def _on_folder_drop_event(self, event, folder_path):
-        """Obsługa upuszczenia asset-a na folder (dla przycisków w panelu szybkiego dostępu)"""
-        try:
-            print(f"DEBUG: _on_folder_drop_event - folder: {folder_path}")
-            print(f"DEBUG: MIME formats: {event.mimeData().formats()}")
-
-            # Sprawdź czy MIME data zawiera dane asset-a
-            if event.mimeData().hasFormat("application/x-cfab-asset"):
-                print(
-                    f"DEBUG: Przetwarzam drop - format application/x-cfab-asset znaleziony"
-                )
-
-                # Pobierz dane asset-a
-                asset_data_bytes = event.mimeData().data("application/x-cfab-asset")
-                asset_data = json.loads(asset_data_bytes.data().decode("utf-8"))
-                print(f"DEBUG: Asset data: {asset_data.get('name', 'Unknown')}")
-
-                # Wykonaj przeniesienie asset-a
-                self._move_asset_to_folder(asset_data, folder_path)
-
-                event.acceptProposedAction()
-            else:
-                print(f"DEBUG: Ignoruję drop - brak formatu application/x-cfab-asset")
-                event.ignore()
-
-        except Exception as e:
-            print(f"Błąd obsługi drop: {e}")
-            logger.error(f"Błąd obsługi drop: {e}")
-            event.ignore()
-
-    def _move_asset_to_folder(self, asset_data, target_folder_path):
-        """Przenosi asset do nowego folderu"""
-        try:
-            logger.info(
-                f"Przenoszenie asset-a {asset_data.get('name')} do {target_folder_path}"
-            )
-
-            # Sprawdź czy folder docelowy istnieje
-            if not os.path.exists(target_folder_path):
-                logger.error(f"Folder docelowy nie istnieje: {target_folder_path}")
-                return
-
-            # Pobierz ścieżkę do folderu źródłowego (aktualnie wyświetlanego)
-            source_folder_path = self.grid_manager.current_folder_path
-            if not source_folder_path:
-                logger.error("Brak ścieżki do folderu źródłowego")
-                return
-
-            # Sprawdź czy folder docelowy nie jest tym samym co źródłowy
-            if source_folder_path == target_folder_path:
-                logger.info("Folder docelowy jest tym samym co źródłowy")
-                return
-
-            # Pobierz nazwę asset-a
-            asset_name = asset_data.get("name")
-            if not asset_name:
-                logger.error("Brak nazwy asset-a")
-                return
-
-            # Lista plików do przeniesienia
-            files_to_move = []
-
-            # 1. Plik archiwum
-            archive_filename = asset_data.get("archive")
-            if archive_filename:
-                archive_path = os.path.join(source_folder_path, archive_filename)
-                if os.path.exists(archive_path):
-                    files_to_move.append(("archive", archive_path, archive_filename))
-
-            # 2. Plik podglądu
-            preview_filename = asset_data.get("preview")
-            if preview_filename:
-                preview_path = os.path.join(source_folder_path, preview_filename)
-                if os.path.exists(preview_path):
-                    files_to_move.append(("preview", preview_path, preview_filename))
-
-            # 3. Plik asset
-            asset_filename = f"{asset_name}.asset"
-            asset_path = os.path.join(source_folder_path, asset_filename)
-            if os.path.exists(asset_path):
-                files_to_move.append(("asset", asset_path, asset_filename))
-
-            # 4. Plik thumbnail
-            cache_folder = os.path.join(source_folder_path, ".cache")
-            thumb_filename = f"{asset_name}.thumb"
-            thumb_path = os.path.join(cache_folder, thumb_filename)
-            if os.path.exists(thumb_path):
-                files_to_move.append(("thumbnail", thumb_path, thumb_filename))
-
-            # Sprawdź czy wszystkie pliki istnieją
-            if len(files_to_move) < 4:
-                logger.warning(
-                    f"Nie wszystkie pliki asset-a {asset_name} zostały znalezione"
-                )
-
-            # Przenieś pliki
-            moved_files = []
-            for file_type, source_path, filename in files_to_move:
-                try:
-                    target_path = os.path.join(target_folder_path, filename)
-
-                    # Dla thumbnail, utwórz folder .cache w folderze docelowym
-                    if file_type == "thumbnail":
-                        target_cache_folder = os.path.join(target_folder_path, ".cache")
-                        if not os.path.exists(target_cache_folder):
-                            os.makedirs(target_cache_folder)
-                        target_path = os.path.join(target_cache_folder, filename)
-
-                    # Przenieś plik
-                    import shutil
-
-                    shutil.move(source_path, target_path)
-                    moved_files.append((file_type, filename))
-                    logger.info(f"Przeniesiono {file_type}: {filename}")
-
-                except Exception as e:
-                    logger.error(f"Błąd przenoszenia {file_type} {filename}: {e}")
-
-            # Aktualizuj galerię po przeniesieniu
-            if moved_files:
-                logger.info(
-                    f"Przeniesiono {len(moved_files)} plików asset-a {asset_name}"
-                )
-                # Odśwież galerię
-                self._refresh_gallery_after_move()
-            else:
-                logger.error(
-                    f"Nie udało się przenieść żadnych plików asset-a {asset_name}"
-                )
-
-        except Exception as e:
-            logger.error(f"Błąd przenoszenia asset-a: {e}")
-
-    def _refresh_gallery_after_move(self):
-        """Odświeża galerię po przeniesieniu asset-a"""
-        try:
-            # Sprawdź czy mamy aktywny folder scanner
-            if hasattr(self, "folder_scanner") and self.folder_scanner:
-                # Wywołaj ponownie handle_folder_click dla aktualnego folderu
-                current_folder = self.grid_manager.current_folder_path
-                if current_folder:
-                    self.folder_scanner.handle_folder_click(current_folder)
-        except Exception as e:
-            logger.error(f"Błąd odświeżania galerii: {e}")
 
 
 if __name__ == "__main__":
