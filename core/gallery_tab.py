@@ -137,6 +137,7 @@ class GridManager:
         self.current_tiles = []
         self.tile_spacing = 10
         self.current_folder_path = ""  # Dodane: ścieżka do aktualnego folderu
+        self.selection_changed_callback = None  # Callback do aktualizacji przycisków
 
         # Debouncing timer
         self.grid_recreation_timer = QTimer()
@@ -316,6 +317,10 @@ class GridManager:
             tile.filename_clicked.connect(
                 lambda filename: self._on_filename_clicked(asset)
             )
+            
+            # Połącz sygnał zmiany zaznaczenia (jeśli istnieje)
+            if hasattr(tile, 'checkbox') and tile.checkbox:
+                tile.checkbox.stateChanged.connect(self._on_selection_changed)
 
             return tile
 
@@ -440,6 +445,126 @@ class GridManager:
 
         except Exception as e:
             logger.error(f"Błąd otwierania folderu: {e}")
+
+    def select_all_tiles(self):
+        """Zaznacza wszystkie kafelki assetów (pomija specjalne foldery)"""
+        try:
+            selected_count = 0
+            for tile in self.current_tiles:
+                if tile and hasattr(tile, 'set_checked') and hasattr(tile, 'asset_data'):
+                    # Zaznacz tylko zwykłe assety, nie specjalne foldery
+                    if tile.asset_data and tile.asset_data.get('type') != 'special_folder':
+                        tile.set_checked(True)
+                        selected_count += 1
+            return selected_count
+        except Exception as e:
+            logger.error(f"Błąd zaznaczania wszystkich kafelków: {e}")
+            return 0
+
+    def deselect_all_tiles(self):
+        """Odznacza wszystkie kafelki"""
+        try:
+            for tile in self.current_tiles:
+                if tile and hasattr(tile, 'set_checked'):
+                    tile.set_checked(False)
+        except Exception as e:
+            logger.error(f"Błąd odznaczania kafelków: {e}")
+
+    def get_selected_assets(self):
+        """Pobiera listę zaznaczonych assetów"""
+        try:
+            selected_assets = []
+            for tile in self.current_tiles:
+                if (tile and hasattr(tile, 'is_checked') and hasattr(tile, 'asset_data') and 
+                    tile.is_checked() and tile.asset_data and 
+                    tile.asset_data.get('type') != 'special_folder'):
+                    selected_assets.append(tile.asset_data)
+            return selected_assets
+        except Exception as e:
+            logger.error(f"Błąd pobierania zaznaczonych assetów: {e}")
+            return []
+
+    def delete_selected_assets(self):
+        """Usuwa zaznaczone assety (wszystkie 4 pliki)"""
+        try:
+            import shutil
+            deleted_count = 0
+            selected_tiles = []
+            
+            # Zbierz zaznaczone kafelki
+            for tile in self.current_tiles:
+                if (tile and hasattr(tile, 'is_checked') and hasattr(tile, 'asset_data') and 
+                    tile.is_checked() and tile.asset_data and 
+                    tile.asset_data.get('type') != 'special_folder'):
+                    selected_tiles.append(tile)
+            
+            # Usuń pliki dla każdego zaznaczonego asseta
+            for tile in selected_tiles:
+                try:
+                    asset_data = tile.asset_data
+                    asset_name = asset_data.get('name', '')
+                    
+                    if not self.current_folder_path:
+                        logger.warning("Brak ścieżki do aktualnego folderu")
+                        continue
+                    
+                    files_to_delete = []
+                    
+                    # 1. Plik .asset
+                    asset_file = os.path.join(self.current_folder_path, f"{asset_name}.asset")
+                    if os.path.exists(asset_file):
+                        files_to_delete.append(asset_file)
+                    
+                    # 2. Plik archiwum
+                    archive_file = os.path.join(self.current_folder_path, asset_data.get('archive', ''))
+                    if os.path.exists(archive_file):
+                        files_to_delete.append(archive_file)
+                    
+                    # 3. Plik podglądu
+                    preview_file = os.path.join(self.current_folder_path, asset_data.get('preview', ''))
+                    if os.path.exists(preview_file):
+                        files_to_delete.append(preview_file)
+                    
+                    # 4. Plik thumb w .cache
+                    cache_folder = os.path.join(self.current_folder_path, '.cache')
+                    thumb_file = os.path.join(cache_folder, f"{asset_name}.thumb")
+                    if os.path.exists(thumb_file):
+                        files_to_delete.append(thumb_file)
+                    
+                    # Usuń wszystkie pliki
+                    for file_path in files_to_delete:
+                        try:
+                            os.remove(file_path)
+                            logger.debug(f"Usunięto plik: {file_path}")
+                        except Exception as e:
+                            logger.error(f"Błąd usuwania pliku {file_path}: {e}")
+                    
+                    if files_to_delete:
+                        deleted_count += 1
+                        logger.info(f"Usunięto asset: {asset_name}")
+                    
+                except Exception as e:
+                    logger.error(f"Błąd usuwania asseta: {e}")
+            
+            return deleted_count
+            
+        except Exception as e:
+            logger.error(f"Błąd usuwania zaznaczonych assetów: {e}")
+            return 0
+
+    def _on_selection_changed(self):
+        """Obsługuje zmianę zaznaczenia kafelka"""
+        try:
+            if self.selection_changed_callback:
+                # Sprawdź czy są zaznaczone kafelki
+                has_selection = any(
+                    tile.is_checked() for tile in self.current_tiles 
+                    if tile and hasattr(tile, 'is_checked') and hasattr(tile, 'asset_data') 
+                    and tile.asset_data and tile.asset_data.get('type') != 'special_folder'
+                )
+                self.selection_changed_callback(has_selection)
+        except Exception as e:
+            logger.error(f"Błąd obsługi zmiany zaznaczenia: {e}")
 
 
 class AssetScanner(QThread):
@@ -661,8 +786,8 @@ class GalleryTab(QWidget):
             self.grid_manager = GridManager(
                 self.gallery_widget, self.gallery_layout, self.scroll_area
             )
-            # Przekaż callback do pobierania work_folder_path
-            self.grid_manager.work_folder_callback = lambda: self.work_folder_path
+            # Przekaż callback do aktualizacji przycisków zaznaczenia
+            self.grid_manager.selection_changed_callback = self._update_selection_buttons_state
         else:
             raise RuntimeError("UI components not initialized before GridManager")
 
@@ -855,10 +980,18 @@ class GalleryTab(QWidget):
     def _create_gallery_panel(self):
         """Tworzy prawy panel galerii"""
         self.gallery_panel = QFrame()
-        self.gallery_panel.setFrameStyle(QFrame.Shape.Box)
+        self.gallery_panel.setFrameStyle(QFrame.Shape.NoFrame)
+        self.gallery_panel.setStyleSheet(
+            """
+            QFrame {
+                background-color: #1E1E1E;
+                border: none;
+            }
+        """
+        )
 
         gallery_vertical_layout = QVBoxLayout()
-        gallery_vertical_layout.setSpacing(4)
+        gallery_vertical_layout.setSpacing(0)
         gallery_vertical_layout.setContentsMargins(0, 0, 0, 0)
 
         # Scroll area
@@ -884,6 +1017,57 @@ class GalleryTab(QWidget):
         self.scroll_area.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
+        self.scroll_area.setFrameStyle(QScrollArea.Shape.NoFrame)
+        self.scroll_area.setStyleSheet(
+            """
+            QScrollArea {
+                background-color: #1E1E1E;
+                border: none;
+            }
+            QScrollBar:vertical {
+                background-color: #2D2D30;
+                width: 12px;
+                border-radius: 6px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #424242;
+                border-radius: 6px;
+                min-height: 20px;
+                margin: 2px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #535353;
+            }
+            QScrollBar::handle:vertical:pressed {
+                background-color: #007ACC;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar:horizontal {
+                background-color: #2D2D30;
+                height: 12px;
+                border-radius: 6px;
+                margin: 0px;
+            }
+            QScrollBar::handle:horizontal {
+                background-color: #424242;
+                border-radius: 6px;
+                min-width: 20px;
+                margin: 2px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background-color: #535353;
+            }
+            QScrollBar::handle:horizontal:pressed {
+                background-color: #007ACC;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0px;
+            }
+        """
+        )
 
         # Gallery widget
         self.gallery_widget = QWidget()
@@ -900,7 +1084,7 @@ class GalleryTab(QWidget):
     def _create_control_panel(self):
         """Tworzy dolny panel kontrolny"""
         self.control_panel = QFrame()
-        self.control_panel.setFixedHeight(18)
+        self.control_panel.setFixedHeight(50)
         self.control_panel.setStyleSheet(
             """
             QFrame {
@@ -911,19 +1095,120 @@ class GalleryTab(QWidget):
         )
 
         control_layout = QHBoxLayout()
-        control_layout.setContentsMargins(8, 2, 8, 2)
-        control_layout.setSpacing(8)
+        control_layout.setContentsMargins(12, 6, 12, 6)
+        control_layout.setSpacing(16)
 
-        # Progress bar
+        # Progress bar z etykietą
         self._create_progress_bar()
 
-        # Thumbnail size slider
+        # Thumbnail size slider z etykietą
         self._create_thumbnail_slider()
 
-        control_layout.addWidget(self.progress_bar, 1)
-        control_layout.addWidget(self.thumbnail_size_slider, 1)
+        # Etykieta progress bara
+        progress_label = QLabel("Postęp:")
+        progress_label.setStyleSheet(
+            """
+            QLabel {
+                color: #CCCCCC;
+                font-size: 11px;
+                font-weight: bold;
+                padding-right: 4px;
+            }
+        """
+        )
+
+        # Etykieta suwaka
+        slider_label = QLabel("Rozmiar:")
+        slider_label.setStyleSheet(
+            """
+            QLabel {
+                color: #CCCCCC;
+                font-size: 11px;
+                font-weight: bold;
+                padding-right: 4px;
+            }
+        """
+        )
+
+        # Przyciski zarządzania zaznaczeniem
+        self._create_selection_buttons()
+
+        # Dodanie kontrolek z etykietami
+        control_layout.addWidget(progress_label)
+        control_layout.addWidget(self.progress_bar, 2)
+        
+        # Dodanie przycisków zarządzania
+        for button in self.selection_buttons:
+            control_layout.addWidget(button)
+        
+        control_layout.addWidget(slider_label)
+        control_layout.addWidget(self.thumbnail_size_slider, 2)
 
         self.control_panel.setLayout(control_layout)
+
+    def _create_selection_buttons(self):
+        """Tworzy przyciski zarządzania zaznaczeniem"""
+        self.selection_buttons = []
+        
+        # Style dla przycisków
+        button_style = """
+            QPushButton {
+                background-color: #3C3C3C;
+                color: #CCCCCC;
+                border: 1px solid #555555;
+                border-radius: 4px;
+                font-size: 10px;
+                font-weight: bold;
+                padding: 4px 8px;
+                min-width: 120px;
+                max-height: 40px;
+            }
+            QPushButton:hover {
+                background-color: #4A4A4A;
+                border-color: #007ACC;
+                color: #FFFFFF;
+            }
+            QPushButton:pressed {
+                background-color: #007ACC;
+                color: #FFFFFF;
+            }
+            QPushButton:disabled {
+                background-color: #2A2A2A;
+                color: #666666;
+                border-color: #3C3C3C;
+            }
+        """
+        
+        # Przycisk "Zaznacz wszystkie"
+        self.select_all_button = QPushButton("Zaznacz wszystkie")
+        self.select_all_button.setStyleSheet(button_style)
+        self.select_all_button.setMinimumWidth(120)  # Wymusza szerokość
+        self.select_all_button.clicked.connect(self._on_select_all)
+        self.selection_buttons.append(self.select_all_button)
+        
+        # Przycisk "Przenieś zaznaczone"
+        self.move_selected_button = QPushButton("Przenieś zaznaczone")
+        self.move_selected_button.setStyleSheet(button_style)
+        self.move_selected_button.setMinimumWidth(120)  # Wymusza szerokość
+        self.move_selected_button.clicked.connect(self._on_move_selected)
+        self.move_selected_button.setEnabled(False)
+        self.selection_buttons.append(self.move_selected_button)
+        
+        # Przycisk "Usuń zaznaczone"
+        self.delete_selected_button = QPushButton("Usuń zaznaczone")
+        self.delete_selected_button.setStyleSheet(button_style)
+        self.delete_selected_button.setMinimumWidth(120)  # Wymusza szerokość
+        self.delete_selected_button.clicked.connect(self._on_delete_selected)
+        self.delete_selected_button.setEnabled(False)
+        self.selection_buttons.append(self.delete_selected_button)
+        
+        # Przycisk "Odznacz wszystkie"
+        self.deselect_all_button = QPushButton("Odznacz wszystkie")
+        self.deselect_all_button.setStyleSheet(button_style)
+        self.deselect_all_button.setMinimumWidth(120)  # Wymusza szerokość
+        self.deselect_all_button.clicked.connect(self._on_deselect_all)
+        self.deselect_all_button.setEnabled(False)
+        self.selection_buttons.append(self.deselect_all_button)
 
     def _connect_signals(self):
         """Podłącza sygnały z thread safety"""
@@ -933,6 +1218,200 @@ class GalleryTab(QWidget):
 
         except Exception as e:
             logger.error(f"Błąd podłączania sygnałów: {e}")
+
+    def _on_select_all(self):
+        """Zaznacza wszystkie kafelki assetów"""
+        try:
+            if hasattr(self, 'grid_manager') and self.grid_manager:
+                selected_count = self.grid_manager.select_all_tiles()
+                self._update_selection_buttons_state(selected_count > 0)
+                logger.info(f"Zaznaczono {selected_count} kafelków")
+        except Exception as e:
+            logger.error(f"Błąd zaznaczania wszystkich kafelków: {e}")
+
+    def _on_deselect_all(self):
+        """Odznacza wszystkie kafelki"""
+        try:
+            if hasattr(self, 'grid_manager') and self.grid_manager:
+                self.grid_manager.deselect_all_tiles()
+                self._update_selection_buttons_state(False)
+                logger.info("Odznaczono wszystkie kafelki")
+        except Exception as e:
+            logger.error(f"Błąd odznaczania kafelków: {e}")
+
+    def _on_move_selected(self):
+        """Przenosi zaznaczone kafelki do wybranego folderu"""
+        try:
+            if hasattr(self, 'grid_manager') and self.grid_manager:
+                selected_assets = self.grid_manager.get_selected_assets()
+                if selected_assets:
+                    # Pokaż dialog wyboru folderu docelowego
+                    from PyQt6.QtWidgets import QFileDialog
+                    
+                    # Pobierz aktualny folder jako punkt startowy
+                    current_folder = getattr(self.grid_manager, 'current_folder_path', '')
+                    start_folder = os.path.dirname(current_folder) if current_folder else ""
+                    
+                    # Dialog wyboru folderu
+                    target_folder = QFileDialog.getExistingDirectory(
+                        self,
+                        "Wybierz folder docelowy",
+                        start_folder,
+                        QFileDialog.Option.ShowDirsOnly
+                    )
+                    
+                    if target_folder:
+                        # Przenoszenie każdego zaznaczonego asseta
+                        self._move_selected_assets_to_folder(selected_assets, target_folder)
+                        
+                        # Odznacz wszystkie po przeniesieniu
+                        self.grid_manager.deselect_all_tiles()
+                        self._update_selection_buttons_state(False)
+                        
+                        # Odśwież galerię
+                        if current_folder:
+                            self._refresh_gallery_for_folder(current_folder)
+                    
+        except Exception as e:
+            logger.error(f"Błąd przenoszenia zaznaczonych kafelków: {e}")
+            QMessageBox.critical(
+                self,
+                "Błąd przenoszenia",
+                f"Wystąpił błąd podczas przenoszenia assetów:\n{str(e)}"
+            )
+
+    def _on_delete_selected(self):
+        """Usuwa zaznaczone kafelki"""
+        try:
+            if hasattr(self, 'grid_manager') and self.grid_manager:
+                selected_assets = self.grid_manager.get_selected_assets()
+                if selected_assets:
+                    # Pokaż dialog potwierdzenia
+                    reply = QMessageBox.question(
+                        self,
+                        "Potwierdzenie usunięcia",
+                        f"Czy na pewno chcesz usunąć {len(selected_assets)} zaznaczonych assetów?\n"
+                        "Ta operacja jest nieodwracalna!",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                        QMessageBox.StandardButton.No
+                    )
+                    
+                    if reply == QMessageBox.StandardButton.Yes:
+                        deleted_count = self.grid_manager.delete_selected_assets()
+                        self._update_selection_buttons_state(False)
+                        
+                        # Odśwież galerię
+                        current_folder = getattr(self.grid_manager, 'current_folder_path', '')
+                        if current_folder:
+                            self._refresh_gallery_for_folder(current_folder)
+                        
+                        QMessageBox.information(
+                            self,
+                            "Usunięcie zakończone",
+                            f"Usunięto {deleted_count} assetów."
+                        )
+                        logger.info(f"Usunięto {deleted_count} zaznaczonych assetów")
+        except Exception as e:
+            logger.error(f"Błąd usuwania zaznaczonych kafelków: {e}")
+
+    def _update_selection_buttons_state(self, has_selection):
+        """Aktualizuje stan przycisków zarządzania zaznaczeniem"""
+        try:
+            if hasattr(self, 'move_selected_button'):
+                self.move_selected_button.setEnabled(has_selection)
+            if hasattr(self, 'delete_selected_button'):
+                self.delete_selected_button.setEnabled(has_selection)
+            if hasattr(self, 'deselect_all_button'):
+                self.deselect_all_button.setEnabled(has_selection)
+        except Exception as e:
+            logger.error(f"Błąd aktualizacji stanu przycisków: {e}")
+
+    def _move_selected_assets_to_folder(self, selected_assets, target_folder):
+        """Przenosi listę assetów do docelowego folderu"""
+        try:
+            import shutil
+            moved_count = 0
+            errors = []
+            current_folder = getattr(self.grid_manager, 'current_folder_path', '')
+            
+            if not current_folder:
+                raise Exception("Nie można ustalić folderu źródłowego assetów!")
+            
+            for asset_data in selected_assets:
+                try:
+                    asset_name = asset_data.get('name', '')
+                    if not asset_name:
+                        continue
+                    
+                    files_to_move = []
+                    
+                    # 1. Plik .asset
+                    asset_file = os.path.join(current_folder, f"{asset_name}.asset")
+                    if os.path.exists(asset_file):
+                        files_to_move.append(asset_file)
+                    
+                    # 2. Plik archiwum
+                    archive_file = os.path.join(current_folder, asset_data.get('archive', ''))
+                    if os.path.exists(archive_file):
+                        files_to_move.append(archive_file)
+                    
+                    # 3. Plik podglądu
+                    preview_file = os.path.join(current_folder, asset_data.get('preview', ''))
+                    if os.path.exists(preview_file):
+                        files_to_move.append(preview_file)
+                    
+                    # 4. Plik thumb (w .cache)
+                    if asset_data.get("thumbnail") is True:
+                        cache_folder = os.path.join(current_folder, ".cache")
+                        thumb_file = os.path.join(cache_folder, f"{asset_name}.thumb")
+                        if os.path.exists(thumb_file):
+                            # Upewnij się że folder .cache istnieje w docelowym folderze
+                            target_cache = os.path.join(target_folder, ".cache")
+                            os.makedirs(target_cache, exist_ok=True)
+                            files_to_move.append((thumb_file, target_cache))
+                    
+                    # Przenoszenie plików
+                    for file_info in files_to_move:
+                        if isinstance(file_info, tuple):
+                            # Specjalne przetwarzanie dla pliku thumb
+                            file_path, dest_folder = file_info
+                            shutil.move(file_path, dest_folder)
+                        else:
+                            # Zwykłe pliki - przenieś do głównego folderu docelowego
+                            shutil.move(file_info, target_folder)
+                    
+                    if files_to_move:
+                        moved_count += 1
+                        logger.info(f"Przeniesiono asset: {asset_name} do {target_folder}")
+                    
+                except Exception as e:
+                    error_msg = f"Asset '{asset_data.get('name', 'Unknown')}': {str(e)}"
+                    errors.append(error_msg)
+                    logger.error(f"Błąd przenoszenia asseta: {error_msg}")
+            
+            # Pokaż wyniki
+            if errors:
+                error_text = "\n".join(errors[:5])  # Pokaż max 5 błędów
+                if len(errors) > 5:
+                    error_text += f"\n... i {len(errors) - 5} innych błędów"
+                    
+                QMessageBox.warning(
+                    self,
+                    "Przenoszenie z błędami",
+                    f"Przeniesiono {moved_count} assetów.\n\nBłędy:\n{error_text}"
+                )
+            else:
+                QMessageBox.information(
+                    self,
+                    "Przenoszenie zakończone",
+                    f"Pomyślnie przeniesiono {moved_count} assetów do:\n{target_folder}"
+                )
+                
+            logger.info(f"Przenoszenie zakończone: {moved_count} assetów, {len(errors)} błędów")
+            
+        except Exception as e:
+            logger.error(f"Błąd globalny podczas przenoszenia assetów: {e}")
+            raise
 
     def _start_asset_scanning(self):
         """Rozpoczyna skanowanie asset-ów w tle z error handling"""
@@ -1106,13 +1585,18 @@ class GalleryTab(QWidget):
         self.progress_bar.setStyleSheet(
             """
             QProgressBar {
-                border: 1px solid #3F3F46;
-                background-color: #1C1C1C;
+                border: 1px solid #555555;
+                background-color: #2D2D30;
                 text-align: center;
-                color: #CCCCCC;
+                color: #FFFFFF;
+                border-radius: 10px;
+                font-size: 11px;
+                font-weight: bold;
             }
             QProgressBar::chunk {
-                background-color: #007ACC;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #007ACC, stop:1 #1C97EA);
+                border-radius: 9px;
             }
         """
         )
@@ -1127,20 +1611,28 @@ class GalleryTab(QWidget):
         self.thumbnail_size_slider.setStyleSheet(
             """
             QSlider::groove:horizontal {
-                border: 1px solid #3F3F46;
-                height: 8px;
-                background: #1C1C1C;
-                border-radius: 4px;
+                border: 1px solid #555555;
+                height: 10px;
+                background: #2D2D30;
+                border-radius: 5px;
             }
             QSlider::handle:horizontal {
-                background: #007ACC;
-                border: 1px solid #007ACC;
-                width: 16px;
-                margin: -4px 0;
-                border-radius: 8px;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #1C97EA, stop:1 #007ACC);
+                border: 2px solid #FFFFFF;
+                width: 18px;
+                margin: -5px 0;
+                border-radius: 9px;
             }
             QSlider::handle:horizontal:hover {
-                background: #1C97EA;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #3BA3F0, stop:1 #1C97EA);
+                border: 2px solid #FFD700;
+            }
+            QSlider::handle:horizontal:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #0B7EC8, stop:1 #005A9E);
+                border: 2px solid #FF6B6B;
             }
         """
         )

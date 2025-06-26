@@ -241,3 +241,287 @@ def _move_asset_to_folder(self, asset_data, target_folder_path):
 - Funkcjonalność działa z istniejącą logiką aplikacji
 - Nie wpływa na inne funkcjonalności (kliknięcia, podgląd, otwieranie archiwów)
 - Zachowuje wszystkie istniejące sygnały i sloty
+
+---
+
+# Nowa funkcjonalność: Kafelki specjalnych folderów
+
+## Opis funkcjonalności
+
+Dodano możliwość wyświetlania specjalnych folderów (`tex`, `textures`, `maps`) na początku galerii jako dedykowane kafelki z ikoną folderu. Po kliknięciu w kafelek, folder otwiera się w eksploratorze systemu.
+
+## Implementacja
+
+### Plik: `core/thumbnail_tile.py`
+
+**Dodana nowa klasa `FolderTile`:**
+
+- **Specjalne stylowanie** - niebieska kolorystyka odróżniająca od zwykłych assetów
+- **Ikona folderu** - ładuje ikonę z `core/resources/img/folder.png` lub używa emoji 📁 jako fallback
+- **Sygnał `folder_clicked`** - emitowany przy kliknięciu, przekazuje ścieżkę do folderu
+- **Metoda `update_thumbnail_size`** - obsługuje zmianę rozmiaru podobnie do zwykłych kafelków
+
+**Kluczowe zmiany:**
+
+```python
+class FolderTile(QFrame):
+    folder_clicked = pyqtSignal(str)  # Sygnał z ścieżką do folderu
+
+    def __init__(self, thumbnail_size: int, folder_name: str, folder_path: str):
+        # Stylowanie niebieskie odróżniające od assetów
+        # Ładowanie ikony folderu
+        # Setup layoutu z ikoną i nazwą
+
+    def _load_folder_icon(self):
+        # Ładuje folder.png z resources/img/
+        # Fallback na emoji 📁
+
+    def _on_folder_clicked(self, event):
+        # Emituje sygnał folder_clicked z ścieżką
+```
+
+### Plik: `core/gallery_tab.py`
+
+**Zmodyfikowana klasa `AssetScanner`:**
+
+- **Metoda `_scan_special_folders`** - skanuje foldery `tex`, `textures`, `maps`
+- **Struktura danych specjalnych folderów** - kompatybilna z istniejącym systemem assetów
+- **Priorytet wyświetlania** - specjalne foldery dodawane na początek listy
+
+**Zmodyfikowana klasa `GridManager`:**
+
+- **Metoda `_create_folder_tile_safe`** - tworzy kafelki folderów z obsługą błędów
+- **Metoda `_on_folder_tile_clicked`** - obsługuje kliknięcia w kafelki folderów
+- **Wsparcie dla różnych systemów** - Windows (`os.startfile`), macOS (`open`), Linux (`xdg-open`)
+- **Zmodyfikowana `_create_thumbnail_grid`** - rozpoznaje typ asset-a i tworzy odpowiedni kafelek
+
+**Kluczowe zmiany:**
+
+```python
+# AssetScanner - skanowanie specjalnych folderów
+def _scan_special_folders(self):
+    special_folders = []
+    special_folder_names = ["tex", "textures", "maps"]
+
+    for folder_name in special_folder_names:
+        folder_path = os.path.join(self.work_folder_path, folder_name)
+        if os.path.isdir(folder_path):
+            folder_data = {
+                "type": "special_folder",
+                "name": folder_name,
+                "folder_path": folder_path,
+                # ... inne pola kompatybilne z assetami
+            }
+            special_folders.append(folder_data)
+
+# GridManager - tworzenie kafelków folderów
+def _create_thumbnail_grid(self, assets, thumbnail_size):
+    for i, asset in enumerate(assets):
+        if asset.get("type") == "special_folder":
+            tile = self._create_folder_tile_safe(asset, thumbnail_size)
+        else:
+            tile = self._create_asset_tile_safe(asset, i + 1, len(assets), thumbnail_size)
+
+# Obsługa kliknięć w foldery
+def _on_folder_tile_clicked(self, folder_path):
+    if os.name == "nt":  # Windows
+        os.startfile(folder_path)
+    elif os.name == "posix":  # Linux/Mac
+        if sys.platform == "darwin":  # macOS
+            subprocess.run(["open", folder_path])
+        else:  # Linux
+            subprocess.run(["xdg-open", folder_path])
+```
+
+## Funkcjonalność wizualna
+
+### Wyświetlanie specjalnych folderów
+
+- **Pozycja** - specjalne foldery wyświetlane na początku galerii (przed assetami)
+- **Stylowanie** - niebieska kolorystyka (#2D3E50, #34495E, #3498DB) odróżniająca od assetów
+- **Ikona** - ikona folderu z pliku `folder.png` lub emoji 📁 jako fallback
+- **Hover efekt** - podświetlenie na niebiesko przy najechaniu myszą
+
+### Zachowanie kafelków
+
+- **Rozmiar** - dopasowuje się do ustawionego rozmiaru thumbnail z dodatkowym miejscem na tekst
+- **Layout** - ikona na górze, nazwa folderu poniżej, wycentrowane
+- **Kliknięcie** - otwiera folder w eksploratorze systemu
+
+## Logika skanowania
+
+### Priorytet folderów
+
+1. **Specjalne foldery** - skanowane jako pierwsze i dodawane na początek listy
+2. **Zwykłe assety** - dodawane po specjalnych folderach
+3. **Pusty folder** - jeśli brak assetów i specjalnych folderów, wyświetla komunikat
+
+### Wykrywane foldery
+
+- `tex` - folder z teksturami
+- `textures` - alternatywna nazwa dla tekstur
+- `maps` - folder z mapami/teksturami
+
+### Struktura danych
+
+```json
+{
+  "type": "special_folder",
+  "name": "tex",
+  "folder_path": "/path/to/tex",
+  "size_mb": 0.0,
+  "thumbnail": false,
+  "archive": "",
+  "preview": "",
+  "stars": null
+}
+```
+
+## Kompatybilność
+
+- **Istniejące funkcjonalności** - nie wpływa na obsługę zwykłych assetów
+- **Slider rozmiaru** - kafelki folderów reagują na zmianę rozmiaru thumbnail
+- **Drag and drop** - foldery nie obsługują drag (nie są assetami)
+- **System operacyjny** - działa na Windows, macOS i Linux
+
+## Bezpieczeństwo
+
+- **Walidacja ścieżek** - sprawdzanie czy folder istnieje przed otwarciem
+- **Obsługa błędów** - logowanie błędów przy problemach z otwieraniem folderów
+- **Fallback ikony** - graceful degradation przy problemach z ładowaniem ikony
+
+## Użycie
+
+1. **Wykrywanie** - aplikacja automatycznie wykrywa specjalne foldery w folderze roboczym
+2. **Wyświetlanie** - kafelki folderów pojawiają się na początku galerii
+3. **Kliknięcie** - kliknij kafelek aby otworzyć folder w eksploratorze
+4. **Zmiana rozmiaru** - użyj suwaka rozmiaru thumbnail aby dostosować rozmiar kafelków
+
+---
+
+# Poprawki wyglądu UI
+
+## Opis zmian
+
+Poprawiono wygląd interfejsu użytkownika, usuwając jasne ramki wokół galerii oraz poprawiając widoczność progress bara i suwaka rozmiaru.
+
+## Zmiany w `core/gallery_tab.py`
+
+### Usunięcie ramek galerii
+
+**Panel galerii:**
+
+- Zmiana z `QFrame.Shape.Box` na `QFrame.Shape.NoFrame`
+- Dodano ciemne tło `#1E1E1E` bez ramek
+- Zredukowano spacing do 0
+
+**Scroll area:**
+
+- Usunięto ramkę (`QScrollArea.Shape.NoFrame`)
+- Dodano stylowanie scrollbarów:
+  - Ciemne tło `#2D2D30`
+  - Zaokrąglone uchwyty `#424242`
+  - Hover efekt `#535353`
+  - Pressed efekt `#007ACC`
+
+### Poprawa dolnego panelu kontrolnego
+
+**Panel kontrolny:**
+
+- Zwiększenie wysokości z 18px do 32px
+- Większe marginesy (12px, 6px) i spacing (16px)
+- Dodano etykiety "Postęp:" i "Rozmiar:" dla lepszej czytelności
+
+### Poprawa progress bara
+
+**Stylowanie:**
+
+```css
+QProgressBar {
+  border: 1px solid #555555;
+  background-color: #2d2d30;
+  color: #ffffff;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+}
+QProgressBar::chunk {
+  background-color: qlineargradient(
+    x1: 0,
+    y1: 0,
+    x2: 1,
+    y2: 0,
+    stop: 0 #007acc,
+    stop: 1 #1c97ea
+  );
+  border-radius: 9px;
+}
+```
+
+**Poprawki:**
+
+- Większy kontrast (ciemniejsze tło, jaśniejszy tekst)
+- Gradient na pasku postępu
+- Zaokrąglone narożniki
+- Pogrubiona czcionka
+
+### Poprawa suwaka rozmiaru
+
+**Stylowanie:**
+
+```css
+QSlider::groove:horizontal {
+  border: 1px solid #555555;
+  height: 10px;
+  background: #2d2d30;
+  border-radius: 5px;
+}
+QSlider::handle:horizontal {
+  background: qlineargradient(...);
+  border: 2px solid #ffffff;
+  width: 18px;
+  border-radius: 9px;
+}
+```
+
+**Poprawki:**
+
+- Większy i bardziej widoczny uchwyt (18px)
+- Gradient na uchwycie
+- Biała ramka dla kontrastu
+- Różne kolory dla hover (#FFD700) i pressed (#FF6B6B)
+- Grubszy track (10px)
+
+### Scrollbary
+
+**Stylowanie pionowych i poziomych:**
+
+- Ciemne tło `#2D2D30`
+- Zaokrąglone uchwyty `border-radius: 6px`
+- Smooth hover efekty
+- Usunięte strzałki (height/width: 0px)
+- Marginesy 2px dla lepszego wyglądu
+
+## Efekt wizualny
+
+### Przed zmianami:
+
+- Jasne ramki wokół galerii
+- Słabo widoczny progress bar
+- Mały, trudno chwytany suwak
+- Brak etykiet kontrolek
+
+### Po zmianach:
+
+- Czysta galeria bez ramek
+- Wyraźny progress bar z gradientem
+- Duży, łatwy w użyciu suwak z gradientem
+- Czytelne etykiety "Postęp:" i "Rozmiar:"
+- Profesjonalne scrollbary
+
+## Kompatybilność
+
+- Wszystkie zmiany są tylko kosmetyczne
+- Nie wpływają na funkcjonalność aplikacji
+- Zachowana responsywność i interaktywność
+- Poprawiony kontrast dla lepszej dostępności
