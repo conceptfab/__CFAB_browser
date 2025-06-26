@@ -51,23 +51,25 @@ def _scan_folder_for_files(folder_path):
     archive_files = _get_files_by_extensions(folder_path, FILE_EXTENSIONS["archives"])
     image_files = _get_files_by_extensions(folder_path, FILE_EXTENSIONS["images"])
 
-    # Słownik do przechowywania plików według nazwy (bez rozszerzenia)
+    # Słownik do przechowywania plików według nazwy (bez rozszerzenia) - case-insensitive
     archive_by_name = {}
     image_by_name = {}
 
-    # Grupuj pliki archiwum według nazwy
+    # Grupuj pliki archiwum według nazwy (case-insensitive)
     for archive_file in archive_files:
         name_without_ext = os.path.splitext(os.path.basename(archive_file))[0]
-        if name_without_ext in archive_by_name:
-            logger.warning(f"Duplicate archive name found: {name_without_ext}")
-        archive_by_name[name_without_ext] = archive_file
+        name_lower = name_without_ext.lower()  # Konwertuj na małe litery dla porównania
+        if name_lower in archive_by_name:
+            logger.warning(f"Duplicate archive name found (case-insensitive): {name_without_ext}")
+        archive_by_name[name_lower] = archive_file
 
-    # Grupuj pliki obrazów według nazwy
+    # Grupuj pliki obrazów według nazwy (case-insensitive)
     for image_file in image_files:
         name_without_ext = os.path.splitext(os.path.basename(image_file))[0]
-        if name_without_ext in image_by_name:
-            logger.warning(f"Duplicate image name found: {name_without_ext}")
-        image_by_name[name_without_ext] = image_file
+        name_lower = name_without_ext.lower()  # Konwertuj na małe litery dla porównania
+        if name_lower in image_by_name:
+            logger.warning(f"Duplicate image name found (case-insensitive): {name_without_ext}")
+        image_by_name[name_lower] = image_file
 
     logger.info(
         f"Found {len(archive_files)} archive files and {len(image_files)} image files"
@@ -343,25 +345,28 @@ def find_and_create_assets(folder_path, progress_callback=None):
         current_operation = 0
 
         # Dla każdej pary utwórz plik .asset
-        for name in sorted(common_names):  # Sortowanie dla konsystencji
+        for name_lower in sorted(common_names):  # Sortowanie dla konsystencji
             current_operation += 1
 
             if progress_callback:
                 progress_callback(
-                    current_operation, total_operations, f"Przetwarzanie: {name}"
+                    current_operation, total_operations, f"Przetwarzanie: {name_lower}"
                 )
 
-            archive_path = archive_by_name[name]
-            image_path = image_by_name[name]
+            archive_path = archive_by_name[name_lower]
+            image_path = image_by_name[name_lower]
+
+            # Użyj oryginalnej nazwy pliku (z zachowaniem wielkości liter) z pliku archiwum
+            original_name = os.path.splitext(os.path.basename(archive_path))[0]
 
             # Utwórz plik .asset
             asset_path = _create_single_asset(
-                name, archive_path, image_path, folder_path
+                original_name, archive_path, image_path, folder_path
             )
             if asset_path:
                 created_assets.append(asset_path)
             else:
-                logger.warning(f"Failed to create asset for: {name}")
+                logger.warning(f"Failed to create asset for: {original_name}")
 
         # Utwórz plik z plikami bez pary
         if progress_callback:

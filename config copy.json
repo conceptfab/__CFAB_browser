@@ -1,19 +1,19 @@
 {
   "work_folder1": {
-    "path": "W:/3Dsky",
-    "name": "3DSky",
+    "path": "C:/_cloud/___TEST_FOLDER/Tree Grass etc",
+    "name": "test",
     "icon": "",
     "color": ""
   },
   "work_folder2": {
-    "path": "W:/_SBSAR_LIB",
-    "name": "SBSAR",
+    "path": "C:/_cloud/___TEST_FOLDER/",
+    "name": "ASD",
     "icon": "",
     "color": ""
   },
   "work_folder3": {
-    "path": "T:/___textures",
-    "name": "Textures",
+    "path": "",
+    "name": "",
     "icon": "",
     "color": ""
   },
