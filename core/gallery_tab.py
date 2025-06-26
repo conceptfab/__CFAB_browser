@@ -985,9 +985,13 @@ class CustomTreeView(QTreeView):
         """Podświetla folder pod określoną pozycją"""
         try:
             index = self.indexAt(pos)
-            if index.isValid():
+            if (
+                index.isValid()
+                and self.gallery_tab
+                and isinstance(self.model(), QStandardItemModel)
+            ):
                 self._clear_folder_highlight()
-                item = self.gallery_tab.folder_model.itemFromIndex(index)
+                item = self.model().itemFromIndex(index)
                 if item:
                     item.setData(True, Qt.ItemDataRole.UserRole + 1)
                     self._highlighted_index = index
@@ -997,10 +1001,13 @@ class CustomTreeView(QTreeView):
     def _clear_folder_highlight(self):
         """Usuwa podświetlenie folderu (usuwa property dropTarget)"""
         try:
-            if hasattr(self, "_highlighted_index") and self._highlighted_index:
-                item = self.gallery_tab.folder_model.itemFromIndex(
-                    self._highlighted_index
-                )
+            if (
+                hasattr(self, "_highlighted_index")
+                and self._highlighted_index
+                and self.gallery_tab
+                and isinstance(self.model(), QStandardItemModel)
+            ):
+                item = self.model().itemFromIndex(self._highlighted_index)
                 if item:
                     item.setData(False, Qt.ItemDataRole.UserRole + 1)
                 self._highlighted_index = None
@@ -2187,9 +2194,10 @@ class GalleryTab(QWidget):
                         folder_path = item.folder_path
                         if os.path.isdir(folder_path):
                             # Obsłuż drop asset-a do folderu
-                            self._handle_asset_drop_to_folder(
-                                folder_path, event.mimeData()
-                            )
+                            if self.gallery_tab:
+                                self.gallery_tab._handle_asset_drop_to_folder(
+                                    folder_path, event.mimeData()
+                                )
                             event.acceptProposedAction()
                 # Usuń podświetlenie po drop
                 self._clear_folder_highlight()
@@ -2200,9 +2208,13 @@ class GalleryTab(QWidget):
         """Podświetla folder pod określoną pozycją"""
         try:
             index = self.indexAt(pos)
-            if index.isValid():
+            if (
+                index.isValid()
+                and self.gallery_tab
+                and isinstance(self.model(), QStandardItemModel)
+            ):
                 self._clear_folder_highlight()
-                item = self.gallery_tab.folder_model.itemFromIndex(index)
+                item = self.model().itemFromIndex(index)
                 if item:
                     item.setData(True, Qt.ItemDataRole.UserRole + 1)
                     self._highlighted_index = index
@@ -2212,10 +2224,13 @@ class GalleryTab(QWidget):
     def _clear_folder_highlight(self):
         """Usuwa podświetlenie folderu (usuwa property dropTarget)"""
         try:
-            if hasattr(self, "_highlighted_index") and self._highlighted_index:
-                item = self.gallery_tab.folder_model.itemFromIndex(
-                    self._highlighted_index
-                )
+            if (
+                hasattr(self, "_highlighted_index")
+                and self._highlighted_index
+                and self.gallery_tab
+                and isinstance(self.model(), QStandardItemModel)
+            ):
+                item = self.model().itemFromIndex(self._highlighted_index)
                 if item:
                     item.setData(False, Qt.ItemDataRole.UserRole + 1)
                 self._highlighted_index = None
