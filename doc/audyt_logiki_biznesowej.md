@@ -38,6 +38,9 @@ Ten audyt opiera się na trzech kluczowych filarach, które stanowią najwyższe
 
 **WAŻNE: Proces prezentacji danych w interfejsie użytkownika jest RÓWNIE WAŻNY jak główne procesy biznesowe!**
 
+**WAŻNE: Kod aplikacji znajduje się w folderze CORE/, plik startowy jest w głównym katalogu -> cfab_browser.py. Nie przeszukuj innych folderów, nie trać czasu!!!**
+
+
 **⚠️ KRYTYCZNE: Część funkcji jest wyłączona z audytu - informacja jest zawarta w opisie funkcji!**
 
 #### 🎯 **Dlaczego UI to Logika Biznesowa**

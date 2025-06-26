@@ -96,18 +96,39 @@ __tools/
 
 ### 📄 main_window.py
 
-- **Status:** ✅ UKOŃCZONA ANALIZA
-- **Data ukończenia:** 2024-05-22
-- **Business impact:** Poprawiono solidność i bezpieczeństwo ładowania konfiguracji poprzez wprowadzenie klasy `AppConfig` z walidacją typów. Uspójniono logowanie, co ułatwi diagnozowanie problemów.
+- **Status:** ✅ UKOŃCZONA ANALIZA i REFRAKTORYZACJA
+- **Data ukończenia:** 2024-07-27
+- **Business impact:** Naprawiono krytyczny błąd uniemożliwiający uruchomienie aplikacji. Wprowadzono poprawne wstrzykiwanie zależności (konfiguracji) do kluczowej zakładki `GalleryTab`, co jest fundamentalne dla jej działania.
 - **Pliki wynikowe:**
   - `AUDYT/corrections/main_window_correction.md`
   - `AUDYT/patches/main_window_patch_code.md`
 
 ### 📄 scanner.py
 
+- **Status:** ⏳ DO ANALIZY
+- **Opis:** ⚫⚫⚫⚫ **KRYTYCZNE** - Centralny komponent odpowiedzialny za skanowanie folderów, identyfikację i walidację zasobów (assetów). Jego wydajność i poprawność logiki są kluczowe dla całej aplikacji, ponieważ to on dostarcza dane do galerii. Błędy w tym module mogą prowadzić do niekompletnych lub nieprawidłowych danych w UI.
+
+### 📄 gallery_tab.py
+
+- **Status:** ✅ UKOŃCZONA ANALIZA I REFAKTORYZACJA STRUKTURALNA
+- **Data ukończenia:** 2024-05-22
+- **Wpływ na biznes:** Przeprowadzono krytyczną refaktoryzację strukturalną, dzieląc plik na mniejsze moduły (`grid_manager`, `workers`, `widgets`). Usunięto antywzorzec singletonu `ConfigManager`. Poprawia to drastycznie utrzymywalność kodu i przygotowuje grunt pod dalsze optymalizacje wydajnościowe.
+- **Pliki wynikowe:**
+  - `AUDYT/corrections/gallery_tab_correction.md`
+  - `(Refaktoryzacja zastąpiła plik patch)`
+
+### 📄 pairing_tab.py
+
 - **Status:** ✅ UKOŃCZONA ANALIZA
 - **Data ukończenia:** 2024-05-22
-- **Business impact:** Poprawa wydajności skanowania, zwiększenie niezawodności parowania plików i wprowadzenie transakcyjności przy tworzeniu zasobów, co zapobiega niespójnym stanom.
+- **Wpływ na biznes:** Zidentyfikowano, że komponent jest jedynie szkieletem bez zaimplementowanej logiki biznesowej. Nie wymaga poprawek, ale jego stan odnotowano. Priorytet zmieniono na NISKI.
 - **Pliki wynikowe:**
-  - `AUDYT/corrections/scanner_correction.md`
-  - `AUDYT/patches/scanner_patch_code.md`
+  - `(Brak - plik jest pustym szkieletem)`
+
+### 📄 tools_tab.py
+
+- **Status:** ✅ UKOŃCZONA ANALIZA
+- **Data ukończenia:** 2024-05-22
+- **Wpływ na biznes:** Zidentyfikowano, że komponent jest jedynie szkieletem bez zaimplementowanej logiki biznesowej. Nie wymaga poprawek, ale jego stan odnotowano. Priorytet zmieniono na NISKI.
+- **Pliki wynikowe:**
+  - `(Brak - plik jest pustym szkieletem)`
