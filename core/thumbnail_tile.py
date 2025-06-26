@@ -308,7 +308,159 @@ class ThumbnailTile(QFrame):
             cb.setChecked(False)
 
 
-# Klasa PreviewWindow bez zmian
+class FolderTile(QFrame):
+    """
+    Kafelek dla specjalnych folderów (tex, textures, maps)
+    """
+
+    folder_clicked = pyqtSignal(str)  # Sygnał z ścieżką do folderu
+
+    def __init__(self, thumbnail_size: int, folder_name: str, folder_path: str):
+        super().__init__()
+        self.thumbnail_size = thumbnail_size
+        self.folder_name = folder_name
+        self.folder_path = folder_path
+        self.margins_size = 8
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup wyglądu kafelka folderu"""
+        self.setStyleSheet(
+            """
+            FolderTile {
+                background-color: #2D3E50;
+                border: 1px solid #34495E;
+                border-radius: 6px;
+            }
+            FolderTile:hover {
+                border-color: #3498DB;
+                background-color: #34495E;
+            }
+        """
+        )
+
+        # Polityka rozmiaru - stała szerokość
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setFixedWidth(self.thumbnail_size + (2 * self.margins_size))
+        self.setFixedHeight(self.thumbnail_size + 60)  # Dodatkowe miejsce na tekst
+
+        # Główny layout pionowy
+        layout = QVBoxLayout(self)
+        layout.setSpacing(8)
+        layout.setContentsMargins(
+            self.margins_size, self.margins_size, self.margins_size, self.margins_size
+        )
+
+        # Ikona folderu
+        self.folder_icon = QLabel()
+        self.folder_icon.setFixedSize(self.thumbnail_size, self.thumbnail_size)
+        self.folder_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.folder_icon.setStyleSheet(
+            """
+            QLabel {
+                background-color: #34495E;
+                border: 2px solid transparent;
+                border-radius: 4px;
+            }
+            QLabel:hover {
+                border-color: #3498DB;
+            }
+        """
+        )
+        self.folder_icon.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.folder_icon.mousePressEvent = self._on_folder_clicked
+        self._load_folder_icon()
+
+        # Nazwa folderu
+        self.folder_label = QLabel(self.folder_name)
+        self.folder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.folder_label.setWordWrap(True)
+        self.folder_label.setStyleSheet(
+            """
+            QLabel {
+                color: #ECF0F1; 
+                background-color: transparent; 
+                font-size: 11px;
+                font-weight: bold;
+                padding: 2px;
+            }
+            QLabel:hover {
+                color: #3498DB;
+            }
+        """
+        )
+        self.folder_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.folder_label.mousePressEvent = self._on_folder_clicked
+
+        # Dodanie elementów do layoutu
+        layout.addWidget(self.folder_icon)
+        
+        # Wycentrowanie nazwy folderu
+        filename_container = QHBoxLayout()
+        filename_container.addStretch()
+        filename_container.addWidget(self.folder_label)
+        filename_container.addStretch()
+        layout.addLayout(filename_container)
+
+        layout.addStretch()
+
+    def _load_folder_icon(self):
+        """Ładuje ikonę folderu z resources"""
+        try:
+            # Ścieżka do ikony folderu
+            icon_path = os.path.join(
+                os.path.dirname(__file__), "resources", "img", "folder.png"
+            )
+            
+            if os.path.exists(icon_path):
+                # Załaduj i przeskaluj ikonę
+                pixmap = QPixmap(icon_path)
+                if not pixmap.isNull():
+                    # Przeskaluj do rozmiaru thumbnail z zachowaniem proporcji
+                    scaled_pixmap = pixmap.scaled(
+                        self.thumbnail_size - 20,  # Lekko mniejsza niż kontener
+                        self.thumbnail_size - 20,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self.folder_icon.setPixmap(scaled_pixmap)
+                else:
+                    self._create_fallback_icon()
+            else:
+                self._create_fallback_icon()
+                
+        except Exception as e:
+            print(f"Błąd ładowania ikony folderu: {e}")
+            self._create_fallback_icon()
+
+    def _create_fallback_icon(self):
+        """Tworzy zapasową ikonę folderu jako tekst"""
+        self.folder_icon.setText("📁")
+        self.folder_icon.setStyleSheet(
+            self.folder_icon.styleSheet() + """
+            QLabel {
+                font-size: 48px;
+                color: #3498DB;
+            }
+        """
+        )
+
+    def _on_folder_clicked(self, event):
+        """Obsługa kliknięcia w folder - emituje sygnał"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.folder_clicked.emit(self.folder_path)
+
+    def update_thumbnail_size(self, new_size: int):
+        """Aktualizuje rozmiar kafelka folderu"""
+        self.thumbnail_size = new_size
+        self.setFixedWidth(new_size + (2 * self.margins_size))
+        self.setFixedHeight(new_size + 60)
+        self.folder_icon.setFixedSize(new_size, new_size)
+        
+        # Ponownie załaduj ikonę w nowym rozmiarze
+        self._load_folder_icon()
+
+
 class PreviewWindow(QDialog):
     def __init__(self, image_path: str, parent=None):
         super().__init__(parent)

@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -34,7 +35,7 @@ from PyQt6.QtWidgets import (
 )
 
 from core.folder_scanner_worker import FolderStructureScanner
-from core.thumbnail_tile import PreviewWindow, ThumbnailTile
+from core.thumbnail_tile import PreviewWindow, ThumbnailTile, FolderTile
 
 # Dodanie loggera dla modułu
 logger = logging.getLogger(__name__)
@@ -192,9 +193,14 @@ class GridManager:
                 row = i // columns
                 col = i % columns
 
-                tile = self._create_asset_tile_safe(
-                    asset, i + 1, len(assets), thumbnail_size
-                )
+                # Sprawdź czy to specjalny folder
+                if asset.get("type") == "special_folder":
+                    tile = self._create_folder_tile_safe(asset, thumbnail_size)
+                else:
+                    tile = self._create_asset_tile_safe(
+                        asset, i + 1, len(assets), thumbnail_size
+                    )
+                
                 if tile:
                     self.gallery_layout.addWidget(tile, row, col)
                     self.current_tiles.append(tile)
@@ -264,6 +270,25 @@ class GridManager:
         except Exception as e:
             logger.error(f"Błąd obliczania kolumn: {e}")
             return 4
+
+    def _create_folder_tile_safe(self, folder_asset, thumbnail_size):
+        """Bezpiecznie tworzy kafelek specjalnego folderu"""
+        try:
+            folder_name = folder_asset["name"]
+            folder_path = folder_asset["folder_path"]
+            
+            tile = FolderTile(thumbnail_size, folder_name, folder_path)
+            
+            # Połącz sygnał kliknięcia
+            tile.folder_clicked.connect(self._on_folder_tile_clicked)
+            
+            return tile
+
+        except Exception as e:
+            logger.error(
+                f"Błąd tworzenia kafelka folderu dla {folder_asset.get('name', 'unknown')}: {e}"
+            )
+            return None
 
     def _create_asset_tile_safe(self, asset, tile_number, total_tiles, thumbnail_size):
         """Bezpiecznie tworzy kafelek asset"""
@@ -395,6 +420,27 @@ class GridManager:
         except Exception as e:
             logger.error(f"Błąd otwierania archiwum: {e}")
 
+    def _on_folder_tile_clicked(self, folder_path):
+        """Obsługa kliknięcia w kafelek specjalnego folderu - otwiera folder w eksploratorze"""
+        try:
+            if not folder_path or not os.path.exists(folder_path):
+                logger.warning(f"Folder nie istnieje: {folder_path}")
+                return
+
+            logger.info(f"Otwieranie folderu w eksploratorze: {folder_path}")
+
+            # Otwórz folder w eksploratorze systemu
+            if os.name == "nt":  # Windows
+                os.startfile(folder_path)
+            elif os.name == "posix":  # Linux/Mac
+                if sys.platform == "darwin":  # macOS
+                    subprocess.run(["open", folder_path])
+                else:  # Linux
+                    subprocess.run(["xdg-open", folder_path])
+
+        except Exception as e:
+            logger.error(f"Błąd otwierania folderu: {e}")
+
 
 class AssetScanner(QThread):
     """Worker dla skanowania plików asset w folderze roboczym"""
@@ -428,18 +474,29 @@ class AssetScanner(QThread):
                 self.finished_scanning.emit()
                 return
 
-            # Bezpieczne skanowanie plików
+            # Najpierw sprawdź specjalne foldery
+            special_folders = self._scan_special_folders()
+            
+            # Dodaj specjalne foldery na początek listy
+            for folder_data in special_folders:
+                self.assets.append(folder_data)
+
+            # Bezpieczne skanowanie plików asset
             asset_files = self._scan_asset_files()
 
-            if not asset_files:
-                logger.info("Nie znaleziono plików .asset w folderze")
+            if not asset_files and not special_folders:
+                logger.info("Nie znaleziono plików .asset ani specjalnych folderów")
                 self.finished_scanning.emit()
                 return
 
-            logger.info(f"Znaleziono {len(asset_files)} plików .asset")
+            logger.info(f"Znaleziono {len(asset_files)} plików .asset i {len(special_folders)} specjalnych folderów")
 
             # Przetwarzaj każdy plik asset z progress tracking
-            self._process_asset_files(asset_files)
+            if asset_files:
+                self._process_asset_files(asset_files)
+            else:
+                # Jeśli tylko specjalne foldery, prześlij wyniki natychmiast
+                self.assets_found.emit(self.assets)
 
         except Exception as e:
             error_msg = f"Nieoczekiwany błąd podczas skanowania: {e}"
@@ -447,6 +504,34 @@ class AssetScanner(QThread):
             self.error_occurred.emit(error_msg)
         finally:
             self.finished_scanning.emit()
+
+    def _scan_special_folders(self):
+        """Skanuje specjalne foldery (tex, textures, maps)"""
+        special_folders = []
+        special_folder_names = ["tex", "textures", "maps"]
+        
+        try:
+            for folder_name in special_folder_names:
+                folder_path = os.path.join(self.work_folder_path, folder_name)
+                if os.path.isdir(folder_path):
+                    folder_data = {
+                        "type": "special_folder",
+                        "name": folder_name,
+                        "folder_path": folder_path,
+                        "size_mb": 0.0,  # Foldery nie mają rozmiaru
+                        "thumbnail": False,
+                        "archive": "",
+                        "preview": "",
+                        "stars": None
+                    }
+                    special_folders.append(folder_data)
+                    logger.info(f"Znaleziono specjalny folder: {folder_name}")
+            
+            return special_folders
+            
+        except Exception as e:
+            logger.error(f"Błąd skanowania specjalnych folderów: {e}")
+            return []
 
     def _scan_asset_files(self):
         """Bezpiecznie skanuje pliki .asset w folderze"""
