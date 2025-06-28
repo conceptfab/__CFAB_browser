@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Callable, Optional, Tuple
 
 from PIL import Image, ImageFile, UnidentifiedImageError
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
+from PyQt6.QtGui import QPixmap
 
 from core.json_utils import load_from_file
 
@@ -19,6 +21,86 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 # Obsługiwane formaty obrazów
 SUPPORTED_FORMATS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tga"}
+
+
+class ThumbnailLoaderWorker(QObject):
+    """Worker do asynchronicznego ładowania i skalowania miniatur"""
+
+    thumbnail_loaded = pyqtSignal(str, QPixmap)  # path, pixmap
+    loading_error = pyqtSignal(str, str)  # path, error_message
+
+    def __init__(self):
+        super().__init__()
+
+    def load_thumbnail(self, path: str, size: int):
+        """Ładuje i skaluje miniaturkę asynchronicznie"""
+        try:
+            if not os.path.exists(path):
+                self.loading_error.emit(path, f"Plik nie istnieje: {path}")
+                return
+
+            pixmap = QPixmap(path)
+            if pixmap.isNull():
+                self.loading_error.emit(path, f"Nie można załadować obrazu: {path}")
+                return
+
+            scaled_pixmap = pixmap.scaled(
+                size,
+                size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            self.thumbnail_loaded.emit(path, scaled_pixmap)
+            logger.debug(f"Załadowano i przeskalowano miniaturkę: {path}")
+        except Exception as e:
+            logger.error(f"Błąd podczas ładowania miniaturki {path}: {e}")
+            self.loading_error.emit(path, f"Błąd ładowania miniaturki: {e}")
+
+
+class ThumbnailCache:
+    """LRU cache dla załadowanych miniatur QPixmap"""
+
+    def __init__(self, maxsize=100):
+        self._cache = {}
+        self._maxsize = maxsize
+        self._access_order = []
+
+    def get(self, key: str) -> Optional[QPixmap]:
+        """Pobiera miniaturkę z cache"""
+        if key in self._cache:
+            # Przenieś na koniec listy (ostatnio używane)
+            self._access_order.remove(key)
+            self._access_order.append(key)
+            return self._cache[key]
+        return None
+
+    def put(self, key: str, pixmap: QPixmap):
+        """Dodaje miniaturkę do cache"""
+        if key in self._cache:
+            # Aktualizuj pozycję w liście
+            self._access_order.remove(key)
+        else:
+            # Sprawdź czy cache jest pełny
+            if len(self._cache) >= self._maxsize:
+                # Usuń najstarszy element
+                oldest_key = self._access_order.pop(0)
+                del self._cache[oldest_key]
+
+        self._cache[key] = pixmap
+        self._access_order.append(key)
+
+    def clear(self):
+        """Czyści cache"""
+        self._cache.clear()
+        self._access_order.clear()
+
+    def size(self) -> int:
+        """Zwraca rozmiar cache"""
+        return len(self._cache)
+
+
+# Globalna instancja cache
+_thumbnail_cache = ThumbnailCache(maxsize=200)
 
 
 class ThumbnailConfigManager:
