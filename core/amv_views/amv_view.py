@@ -454,24 +454,19 @@ class AmvView(QWidget):
         self.thumbnail_size_slider.setStyleSheet(
             """
             QSlider::groove:horizontal {
-                border: 1px solid #555555; height: 10px;
-                background: #2D2D30; border-radius: 5px;
+                border: 1px solid #3F3F46;
+                height: 4px;
+                background: #3F3F46;
+                margin: 2px 0;
+                border-radius: 2px;
             }
             QSlider::handle:horizontal {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #1C97EA, stop:1 #007ACC);
-                border: 2px solid #FFFFFF; width: 18px;
-                margin: -5px 0; border-radius: 9px;
-            }
-            QSlider::handle:horizontal:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #3BA3F0, stop:1 #1C97EA);
-                border: 2px solid #FFD700;
-            }
-            QSlider::handle:horizontal:pressed {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #0B7EC8, stop:1 #005A9E);
-                border: 2px solid #FF6B6B;
+                background-color: #007ACC;
+                border: 1px solid #007ACC;
+                width: 14px;
+                height: 14px;
+                margin: -6px 0;
+                border-radius: 8px;
             }
         """
         )
