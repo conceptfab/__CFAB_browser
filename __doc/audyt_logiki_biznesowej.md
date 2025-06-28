@@ -40,7 +40,6 @@ Ten audyt opiera się na trzech kluczowych filarach, które stanowią najwyższe
 
 **WAŻNE: Kod aplikacji znajduje się w folderze CORE/, plik startowy jest w głównym katalogu -> cfab_browser.py. Nie przeszukuj innych folderów, nie trać czasu!!!**
 
-
 **⚠️ KRYTYCZNE: Część funkcji jest wyłączona z audytu - informacja jest zawarta w opisie funkcji!**
 
 #### 🎯 **Dlaczego UI to Logika Biznesowa**
@@ -108,7 +107,7 @@ Ten audyt opiera się na trzech kluczowych filarach, które stanowią najwyższe
 
 ### 📜 ZASADY I PROCEDURY
 
-**Wszystkie szczegółowe zasady, procedury i checklisty zostały zebrane w pliku `doc/refactoring_rules.md`. Należy się z nim zapoznać przed rozpoczęciem pracy.**
+**Wszystkie szczegółowe zasady, procedury i checklisty zostały zebrane w pliku `__doc/refactoring_rules.md`. Należy się z nim zapoznać przed rozpoczęciem pracy.**
 
 ---
 
@@ -569,7 +568,7 @@ Przeanalizuj **WSZYSTKIE** pliki logiki biznesowej pod kątem:
 
 **Kluczem do spójności i efektywności audytu jest używanie przygotowanych szablonów.** Zamiast tworzyć strukturę plików od zera, **należy kopiować i wypełniać** odpowiednie szablony.
 
-**W folderze `_BASE_/` znajdują się szablony:**
+**W folderze `__doc/` znajdują się szablony:**
 
 - `refactoring_rules.md` - Główne zasady, do których linkują pozostałe dokumenty.
 - `correction_template.md` - Szablon dla plików `*_correction.md`.
@@ -578,9 +577,9 @@ Przeanalizuj **WSZYSTKIE** pliki logiki biznesowej pod kątem:
 **Procedura tworzenia plików wynikowych:**
 
 1.  **Dla każdego analizowanego pliku logiki biznesowej `[nazwa_pliku].py`:**
-    - Skopiuj `_BASE_/correction_template.md` do `AUDYT/corrections/[nazwa_pliku]_correction.md`.
+    - Skopiuj `__doc/correction_template.md` do `AUDYT/corrections/[nazwa_pliku]_correction.md`.
     - Wypełnij skopiowany plik zgodnie z wynikami analizy logiki biznesowej.
-    - Skopiuj `_BASE_/patch_code_template.md` do `AUDYT/patches/[nazwa_pliku]_patch_code.md`.
+    - Skopiuj `__doc/patch_code_template.md` do `AUDYT/patches/[nazwa_pliku]_patch_code.md`.
     - Wypełnij plik patch fragmentami kodu z optymalizacjami logiki biznesowej.
 
 ### 🚫 ZASADA INDYWIDUALNEGO GENEROWANIA DOKUMENTÓW

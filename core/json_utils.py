@@ -69,14 +69,30 @@ def load_from_file(file_path):
         file_path: Ścieżka do pliku
 
     Returns:
-        dict: Zdekodowane dane
+        dict: Zdekodowane dane lub None w przypadku błędu
     """
-    if HAS_ORJSON:
-        with open(file_path, "rb") as f:
-            return orjson.loads(f.read())
-    else:
-        with open(file_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+    try:
+        if HAS_ORJSON:
+            with open(file_path, "rb") as f:
+                return orjson.loads(f.read())
+        else:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except PermissionError as e:
+        logger.error(f"Brak uprawnień do odczytu pliku {file_path}: {e}")
+        return None
+    except FileNotFoundError as e:
+        logger.error(f"Plik nie istnieje {file_path}: {e}")
+        return None
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.error(f"Nieprawidłowy format JSON w pliku {file_path}: {e}")
+        return None
+    except UnicodeDecodeError as e:
+        logger.error(f"Błąd kodowania pliku {file_path}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Nieoczekiwany błąd podczas ładowania pliku {file_path}: {e}")
+        return None
 
 
 def save_to_file(obj, file_path, indent=True):
