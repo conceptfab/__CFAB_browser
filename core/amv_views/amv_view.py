@@ -9,6 +9,7 @@ import os
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -422,13 +423,14 @@ class AmvView(QWidget):
 
     def _create_control_panel(self):
         self.control_panel = QFrame()
-        self.control_panel.setFixedHeight(50)
+        self.control_panel.setFixedHeight(32)
         self.control_panel.setStyleSheet(
-            "QFrame { background-color: #252526; " "border-top: 1px solid #3F3F46; }"
+            "QFrame { background-color: #252526; border-top: 1px solid #3F3F46; }"
         )
         control_layout = QHBoxLayout()
-        control_layout.setContentsMargins(12, 6, 12, 6)
-        control_layout.setSpacing(16)
+        control_layout.setContentsMargins(0, 0, 0, 0)
+        control_layout.setSpacing(8)
+        control_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self.progress_bar = QProgressBar()
         self.progress_bar.setFixedHeight(20)
         self.progress_bar.setValue(0)
@@ -481,6 +483,7 @@ class AmvView(QWidget):
                 font-size: 9px;
                 font-weight: bold;
                 padding: 0px 4px;
+                margin-bottom: 5px;
                 text-align: center;
                 min-width: 120px;
                 max-height: 14px;
@@ -527,9 +530,41 @@ class AmvView(QWidget):
         self.deselect_all_button.setFixedHeight(14)
         self.deselect_all_button.setEnabled(False)
         self.selection_buttons.append(self.deselect_all_button)
+
+        # 5 gwiazdek po przycisku "Odznacz wszystkie"
+        self.star_checkboxes = []
+        for i in range(5):
+            star_cb = QCheckBox("★")
+            star_cb.setStyleSheet(
+                """
+                QCheckBox { 
+                    spacing: 0px; 
+                    color: #888888; 
+                    font-size: 12px; 
+                    background: transparent;
+                    border: none;
+                }
+                QCheckBox::indicator { 
+                    width: 0px; 
+                    height: 0px; 
+                    border: none; 
+                }
+                QCheckBox:checked { 
+                    color: #FFD700; 
+                    font-weight: bold; 
+                }
+                QCheckBox:hover { 
+                    color: #FFA500; 
+                }
+            """
+            )
+            self.star_checkboxes.append(star_cb)
+
         control_layout.addWidget(self.progress_bar, 2)
         for button in self.selection_buttons:
             control_layout.addWidget(button)
+        for star_cb in self.star_checkboxes:
+            control_layout.addWidget(star_cb)
         control_layout.addWidget(self.thumbnail_size_slider, 2)
         self.control_panel.setLayout(control_layout)
 
