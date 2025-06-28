@@ -523,14 +523,11 @@ class AmvController(QObject):
 
     def _on_deselect_all_clicked(self):
         """Obsługuje kliknięcie przycisku 'Odznacz wszystkie'."""
-        logger.debug("Controller: Deselect all clicked")
-        self.model.selection_model.clear_selection()
-
-        # Aktualizuj wizualnie wszystkie kafelki
-        for tile in self.asset_tiles:
-            tile.set_checked(False)
-
-        logger.info("Odznaczono wszystkie assety")
+        if self.model.selection_model.get_selected_asset_ids():
+            self.model.selection_model.clear_selection()
+            logger.debug("Deselect all button clicked, selection cleared.")
+            # Ręczne wywołanie aktualizacji stanu przycisków
+            self._on_control_panel_selection_state_changed(has_selection=False)
 
     def _on_selection_changed(self, selected_asset_ids: list):
         """Obsługuje zmianę zaznaczenia w SelectionModel i aktualizuje ControlPanelModel."""
@@ -539,15 +536,24 @@ class AmvController(QObject):
 
     def _on_control_panel_selection_state_changed(self, has_selection: bool):
         """Aktualizuje stan przycisków 'Przenieś' i 'Usuń' w widoku."""
-        logger.debug(
-            "AmvController: _on_control_panel_selection_state_changed "
-            "called with: %s",
-            has_selection,
+        selected_count = len(self.model.selection_model.get_selected_asset_ids())
+        total_assets = len(self.model.asset_grid_model.get_assets())
+
+        has_any_selection = selected_count > 0
+        all_assets_selected = (selected_count == total_assets) and (total_assets > 0)
+
+        self.view.move_selected_button.setEnabled(has_any_selection)
+        self.view.delete_selected_button.setEnabled(has_any_selection)
+        self.view.deselect_all_button.setEnabled(has_any_selection)
+        self.view.select_all_button.setEnabled(not all_assets_selected)
+
+        logger.critical(
+            "BUTTON STATE UPDATE: Selected: %s, Total: %s, HasSelection: %s, AllSelected: %s",
+            selected_count,
+            total_assets,
+            has_any_selection,
+            all_assets_selected,
         )
-        self.view.move_selected_button.setEnabled(has_selection)
-        self.view.delete_selected_button.setEnabled(has_selection)
-        self.view.deselect_all_button.setEnabled(has_selection)
-        logger.debug("Control panel buttons updated. Has selection: %s", has_selection)
 
     def _on_move_selected_clicked(self):
         """Obsługuje kliknięcie przycisku 'Przenieś zaznaczone'."""

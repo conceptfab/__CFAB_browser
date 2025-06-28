@@ -35,9 +35,7 @@ class AmvView(QWidget):
     splitter_moved = pyqtSignal(list)
     toggle_panel_requested = pyqtSignal()
     workspace_folder_clicked = pyqtSignal(str)  # ETAP 7
-    gallery_viewport_resized = pyqtSignal(
-        int
-    )  # Nowy sygnał dla szerokości viewportu
+    gallery_viewport_resized = pyqtSignal(int)  # Nowy sygnał dla szerokości viewportu
     collapse_tree_requested = pyqtSignal()  # Sygnał do zwijania drzewa
     expand_tree_requested = pyqtSignal()  # Sygnał do rozwijania drzewa
 
@@ -99,26 +97,91 @@ class AmvView(QWidget):
         )
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(12, 8, 12, 8)
+
+        # Przyciski Zwiń i Rozwiń - szersze o 80%, bardzo niskie
         self.collapse_button = QPushButton("Zwiń")
         self.collapse_button.setObjectName("collapseButton")
-        self.collapse_button.setFixedSize(40, 24)
+        # 40 * 1.8 = 72 szerokość, wysokość 14px
+        self.collapse_button.setFixedSize(72, 14)
         self.collapse_button.clicked.connect(self._on_collapse_tree_clicked)
+        self.collapse_button.setStyleSheet(
+            """
+            QPushButton#collapseButton {
+                background-color: #2D2D30;
+                color: #CCCCCC;
+                border: 1px solid #3F3F46;
+                border-radius: 2px;
+                font-size: 9px;
+                font-weight: bold;
+                padding: 0px 4px;
+                text-align: center;
+            }
+            QPushButton#collapseButton:hover {
+                background-color: #3F3F46;
+                border-color: #007ACC;
+                color: #FFFFFF;
+            }
+            QPushButton#collapseButton:pressed {
+                background-color: #007ACC;
+                color: #FFFFFF;
+                border-color: #005A9E;
+            }
+            QPushButton#collapseButton:disabled {
+                background-color: #1E1E1E;
+                color: #666666;
+                border-color: #3F3F46;
+            }
+        """
+        )
+
         self.expand_button = QPushButton("Rozwiń")
         self.expand_button.setObjectName("expandButton")
-        self.expand_button.setFixedSize(40, 24)
+        # 40 * 1.8 = 72 szerokość, wysokość 14px
+        self.expand_button.setFixedSize(72, 14)
         self.expand_button.clicked.connect(self._on_expand_tree_clicked)
+        self.expand_button.setStyleSheet(
+            """
+            QPushButton#expandButton {
+                background-color: #2D2D30;
+                color: #CCCCCC;
+                border: 1px solid #3F3F46;
+                border-radius: 2px;
+                font-size: 9px;
+                font-weight: bold;
+                padding: 0px 4px;
+                text-align: center;
+            }
+            QPushButton#expandButton:hover {
+                background-color: #3F3F46;
+                border-color: #007ACC;
+                color: #FFFFFF;
+            }
+            QPushButton#expandButton:pressed {
+                background-color: #007ACC;
+                color: #FFFFFF;
+                border-color: #005A9E;
+            }
+            QPushButton#expandButton:disabled {
+                background-color: #1E1E1E;
+                color: #666666;
+                border-color: #3F3F46;
+            }
+        """
+        )
+
         self.toggle_button = QPushButton()
         self.toggle_button.setObjectName("panelToggleButton")  # ID dla QSS
         self.toggle_button.setFixedSize(24, 24)
         self.toggle_button.setToolTip("Zamknij panel")
         self.toggle_button.setIcon(self.collapse_icon)
         self.toggle_button.setIconSize(QSize(18, 18))
-        self.toggle_button.clicked.connect(
-            lambda: self.toggle_panel_requested.emit()
-        )
+        self.toggle_button.clicked.connect(lambda: self.toggle_panel_requested.emit())
+
+        # Centrowanie przycisków Zwiń i Rozwiń
+        header_layout.addStretch(1)
         header_layout.addWidget(self.collapse_button)
         header_layout.addWidget(self.expand_button)
-        header_layout.addStretch()
+        header_layout.addStretch(1)
         header_layout.addWidget(self.toggle_button)
         header_frame.setLayout(header_layout)
         layout.addWidget(header_frame)
@@ -157,9 +220,7 @@ class AmvView(QWidget):
         """
         )
         self.folder_tree_view.setHeaderHidden(True)
-        self.folder_tree_view.setEditTriggers(
-            QTreeView.EditTrigger.NoEditTriggers
-        )
+        self.folder_tree_view.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)
         layout.addWidget(self.folder_tree_view)
         logger.info("QTreeView created with GalleryTab styling")
 
@@ -197,9 +258,7 @@ class AmvView(QWidget):
                 button.setEnabled(bool(folder_path))
                 if folder_path:
                     icon_path = (
-                        f"core/resources/img/{folder_icon}"
-                        if folder_icon
-                        else ""
+                        f"core/resources/img/{folder_icon}" if folder_icon else ""
                     )
                     if icon_path and os.path.exists(icon_path):
                         try:
@@ -207,9 +266,7 @@ class AmvView(QWidget):
                             button.setIcon(icon)
                             button.setIconSize(QSize(12, 12))
                         except Exception as e:
-                            logger.debug(
-                                f"Icon loading failed for {icon_path}: {e}"
-                            )
+                            logger.debug(f"Icon loading failed for {icon_path}: {e}")
                     button.setStyleSheet(
                         f"""
                         QPushButton {{
@@ -255,9 +312,7 @@ class AmvView(QWidget):
     def _create_gallery_panel(self):
         self.gallery_panel = QFrame()
         self.gallery_panel.setFrameStyle(QFrame.Shape.NoFrame)
-        self.gallery_panel.setStyleSheet(
-            "background-color: #1E1E1E; border: none;"
-        )
+        self.gallery_panel.setStyleSheet("background-color: #1E1E1E; border: none;")
         gallery_vertical_layout = QVBoxLayout()
         gallery_vertical_layout.setSpacing(0)
         gallery_vertical_layout.setContentsMargins(0, 0, 0, 0)
@@ -369,8 +424,7 @@ class AmvView(QWidget):
         self.control_panel = QFrame()
         self.control_panel.setFixedHeight(50)
         self.control_panel.setStyleSheet(
-            "QFrame { background-color: #252526; "
-            "border-top: 1px solid #3F3F46; }"
+            "QFrame { background-color: #252526; " "border-top: 1px solid #3F3F46; }"
         )
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(12, 6, 12, 6)
@@ -488,16 +542,11 @@ class AmvView(QWidget):
 
     def remove_asset_tiles(self, asset_ids_to_remove: list):
         """Usuwa kafelki assetów z widoku galerii na podstawie ich ID."""
-        logger.debug(
-            f"Attempting to remove asset tiles: {asset_ids_to_remove}"
-        )
+        logger.debug(f"Attempting to remove asset tiles: {asset_ids_to_remove}")
         widgets_to_remove = []
         for i in range(self.gallery_layout.count()):
             widget = self.gallery_layout.itemAt(i).widget()
-            if (
-                hasattr(widget, "asset_id")
-                and widget.asset_id in asset_ids_to_remove
-            ):
+            if hasattr(widget, "asset_id") and widget.asset_id in asset_ids_to_remove:
                 widgets_to_remove.append(widget)
 
         for widget in widgets_to_remove:
@@ -507,6 +556,4 @@ class AmvView(QWidget):
 
         # Po usunięciu kafelków, zaktualizuj widok, aby odświeżyć układ
         self.gallery_layout.update()
-        logger.info(
-            f"Successfully removed {len(widgets_to_remove)} asset tiles."
-        )
+        logger.info(f"Successfully removed {len(widgets_to_remove)} asset tiles.")

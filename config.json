@@ -51,7 +51,7 @@
     "path": "C:/_cloud/___TEST_FOLDER",
     "name": "TEST FOLDER",
     "icon": "",
-    "color": ""
+    "color": "#E0960C"
   },
   "thumbnail": 256,
   "logger_level": "INFO",

@@ -321,3 +321,81 @@ QTreeView::item:selected, QTreeView::item[dropTarget="true"] {
 QTreeView::item[dropTarget="true"] {
     border: 2px solid #FFD700;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                 ScrollBars                                 */
+/* -------------------------------------------------------------------------- */
+QScrollBar:vertical {
+    border: none;
+    background: #1E1E1E;
+    width: 12px;
+    margin: 12px 0 12px 0;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical {
+    background: #3F3F46;
+    min-height: 20px;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #52525B;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+    height: 12px;
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            AMV Control Panel Buttons                       */
+/* -------------------------------------------------------------------------- */
+#controlPanel QPushButton { /* General style for all buttons in the control panel */
+    background-color: #3C3C3C;
+    color: #CCCCCC;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 4px 8px;
+    min-width: 120px;
+}
+#controlPanel QPushButton:hover {
+    background-color: #4A4A4A;
+    border-color: #007ACC;
+    color: #FFFFFF;
+}
+#controlPanel QPushButton:pressed {
+    background-color: #007ACC;
+    color: #FFFFFF;
+}
+#controlPanel QPushButton:disabled {
+    background-color: #2A2A2A;
+    color: #666666;
+    border-color: #3C3C3C;
+}
+
+/* Specific override for button height */
+#selectAllButton, #deselectAllButton, #moveSelectedButton, #deleteSelectedButton {
+    min-height: 18px;
+    max-height: 18px;
+}
+
+QSlider::groove:horizontal {
+    border: 1px solid #3F3F46;
+    height: 4px;
+    background: #3F3F46;
+    margin: 2px 0;
+    border-radius: 2px;
+}
+
+QSlider::handle:horizontal {
+    background-color: #007ACC;
+    border: 1px solid #007ACC;
+    width: 14px;
+    height: 14px;
+    margin: -6px 0;
+    border-radius: 8px;
+}
