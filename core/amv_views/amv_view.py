@@ -25,7 +25,6 @@ from PyQt6.QtWidgets import (
 )
 
 from .gallery_widgets import GalleryContainerWidget
-from .folder_tree_view import CustomFolderTreeView
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +142,9 @@ class AmvView(QWidget):
         layout.addWidget(header_frame)
 
     def _create_folder_tree_view(self, layout):
+        # Import tutaj aby uniknąć cyklicznych importów
+        from .folder_tree_view import CustomFolderTreeView
+
         self.folder_tree_view = CustomFolderTreeView()
         self.folder_tree_view.setStyleSheet(
             """
@@ -349,7 +351,22 @@ class AmvView(QWidget):
         # Domyślnie pokaż placeholder
         self.stacked_layout.setCurrentIndex(1)
 
-    
+    def _create_gallery_placeholder(self):
+        self.placeholder_widget = QWidget()
+        placeholder_layout = QVBoxLayout(self.placeholder_widget)
+        self.placeholder_label = QLabel(
+            "Panel galerii\n(ETAP 9 - Oczekiwanie na wybór folderu)"
+        )
+        self.placeholder_label.setStyleSheet(
+            """
+            QLabel {
+                color: #CCCCCC; font-size: 14px; padding: 50px;
+                background-color: #1E1E1E; font-style: italic;
+            }
+        """
+        )
+        self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        placeholder_layout.addWidget(self.placeholder_label)
 
     def update_gallery_placeholder(self, text: str):
         self.placeholder_label.setText(text)
