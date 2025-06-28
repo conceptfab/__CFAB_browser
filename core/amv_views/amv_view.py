@@ -476,38 +476,60 @@ class AmvView(QWidget):
         """
         )
         self.selection_buttons = []
+        # Styl kompaktowy jak na przyciskach Zwiń/Rozwiń
         button_style = """
             QPushButton {
-                background-color: #3C3C3C; color: #CCCCCC;
-                border: 1px solid #555555; border-radius: 4px;
-                font-size: 10px; font-weight: bold; padding: 4px 8px;
-                min-width: 120px; max-height: 40px;
+                background-color: #2D2D30;
+                color: #CCCCCC;
+                border: 1px solid #3F3F46;
+                border-radius: 2px;
+                font-size: 9px;
+                font-weight: bold;
+                padding: 0px 4px;
+                text-align: center;
+                min-width: 120px;
+                max-height: 14px;
             }
             QPushButton:hover {
-                background-color: #4A4A4A; border-color: #007ACC; color: #FFFFFF;
+                background-color: #3F3F46;
+                border-color: #007ACC;
+                color: #FFFFFF;
             }
-            QPushButton:pressed { background-color: #007ACC; color: #FFFFFF; }
+            QPushButton:pressed {
+                background-color: #007ACC;
+                color: #FFFFFF;
+                border-color: #005A9E;
+            }
             QPushButton:disabled {
-                background-color: #2A2A2A; color: #666666; border-color: #3C3C3C;
+                background-color: #1E1E1E;
+                color: #666666;
+                border-color: #3F3F46;
             }
         """
         self.select_all_button = QPushButton("Zaznacz wszystkie")
         self.select_all_button.setStyleSheet(button_style)
         self.select_all_button.setMinimumWidth(120)
+        self.select_all_button.setFixedHeight(14)
         self.selection_buttons.append(self.select_all_button)
+
         self.move_selected_button = QPushButton("Przenieś zaznaczone")
         self.move_selected_button.setStyleSheet(button_style)
         self.move_selected_button.setMinimumWidth(120)
+        self.move_selected_button.setFixedHeight(14)
         self.move_selected_button.setEnabled(False)
         self.selection_buttons.append(self.move_selected_button)
+
         self.delete_selected_button = QPushButton("Usuń zaznaczone")
         self.delete_selected_button.setStyleSheet(button_style)
         self.delete_selected_button.setMinimumWidth(120)
+        self.delete_selected_button.setFixedHeight(14)
         self.delete_selected_button.setEnabled(False)
         self.selection_buttons.append(self.delete_selected_button)
+
         self.deselect_all_button = QPushButton("Odznacz wszystkie")
         self.deselect_all_button.setStyleSheet(button_style)
         self.deselect_all_button.setMinimumWidth(120)
+        self.deselect_all_button.setFixedHeight(14)
         self.deselect_all_button.setEnabled(False)
         self.selection_buttons.append(self.deselect_all_button)
         control_layout.addWidget(self.progress_bar, 2)
