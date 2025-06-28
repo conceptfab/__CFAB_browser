@@ -313,7 +313,7 @@ class AmvView(QWidget):
     def _create_gallery_panel(self):
         self.gallery_panel = QFrame()
         self.gallery_panel.setFrameStyle(QFrame.Shape.NoFrame)
-        self.gallery_panel.setStyleSheet("background-color: #1E1E1E; border: none;")
+        self.gallery_panel.setStyleSheet("background-color: transparent; border: none;")
         gallery_vertical_layout = QVBoxLayout()
         gallery_vertical_layout.setSpacing(0)
         gallery_vertical_layout.setContentsMargins(0, 0, 0, 0)
@@ -458,7 +458,7 @@ class AmvView(QWidget):
             QSlider::groove:horizontal {
                 border: 1px solid #3F3F46;
                 height: 4px;
-                background: #3F3F46;
+                background: transparent !important;
                 margin: 2px 0;
                 border-radius: 2px;
             }
