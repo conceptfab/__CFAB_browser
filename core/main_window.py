@@ -49,6 +49,7 @@ class MainWindow(QMainWindow):
         try:
             self._createMenuBar()
             self._createTabs()
+            self._connect_signals()
             self.logger.info("MainWindow initialized successfully")
         except Exception as e:
             self.logger.error(f"Error initializing MainWindow: {e}")
@@ -158,6 +159,8 @@ class MainWindow(QMainWindow):
         """
         try:
             self.tabs = QTabWidget()
+            self.amv_tab = None
+            self.pairing_tab = None
 
             # Próbuj utworzyć każdy tab indywidualnie
             tabs_config = [
@@ -171,6 +174,12 @@ class MainWindow(QMainWindow):
             for tab_class, tab_name, is_critical in tabs_config:
                 try:
                     tab_instance = tab_class()
+
+                    if isinstance(tab_instance, AmvTab):
+                        self.amv_tab = tab_instance
+                    elif isinstance(tab_instance, PairingTab):
+                        self.pairing_tab = tab_instance
+
                     self.tabs.addTab(tab_instance, tab_name)
                     successful_tabs += 1
                     self.logger.debug(f"Tab '{tab_name}' created successfully")
@@ -198,6 +207,23 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Critical error creating tabs: {e}")
             # Taby są krytyczne - jeśli się nie załadują, aplikacja nie ma sensu
             raise RuntimeError(f"Failed to initialize application tabs: {e}")
+
+    def _connect_signals(self):
+        """Connect signals between components."""
+        try:
+            # Get controller from AmvTab
+            amv_controller = self.amv_tab.get_controller()
+            if amv_controller:
+                amv_controller.working_directory_changed.connect(
+                    self.pairing_tab.on_working_directory_changed
+                )
+                self.logger.info(
+                    "Successfully connected directory changes to PairingTab."
+                )
+            else:
+                self.logger.error("Could not get AMV controller to connect signals.")
+        except Exception as e:
+            self.logger.error(f"Error connecting signals: {e}")
 
     def get_config(self):
         """

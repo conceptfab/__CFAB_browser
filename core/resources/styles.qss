@@ -248,19 +248,47 @@ QMenuBar::item:pressed {
 /* Dla przycisku zatrzymania zadania */
 /* Np. self.stop_task_btn.setObjectName("StopTaskButton") */
 #StopTaskButton { /* Ważne: To ID musi być ustawione w Pythonie! */
-    background-color: #DC2626; /* warning_color */
-    color: white;
-    border: none; /* Zgodnie z Twoim kodem */
-    border-radius: 4px; /* Zgodnie z Twoim kodem */
-    padding: 4px 8px; /* Zgodnie z Twoim kodem */
-    /* min-height i max-height dziedziczone z ogólnego QPushButton */
+    min-width: 80px;
+    max-width: 80px;
 }
-#StopTaskButton:hover {
-    background-color: #EF4444; /* Jaśniejszy czerwony */
+
+/* Specjalny styl dla przycisku zamykania/otwierania panelu */
+#panelToggleButton {
+    background-color: transparent;
+    border: 1px solid #3F3F46;
+    border-radius: 4px;
+    padding: 0px; /* Reset paddingu */
+    min-width: 24px; /* Ignoruje globalne */
+    min-height: 24px; /* Ignoruje globalne */
 }
-#StopTaskButton:disabled {
-    background-color: #4B5563; /* Ciemnoszary */
-    color: #9CA3AF; /* Jasnoszary tekst */
+
+#panelToggleButton:hover {
+    background-color: #3F3F46;
+    border-color: #007ACC;
+}
+
+#panelToggleButton:pressed {
+    background-color: #007ACC;
+}
+
+#collapseButton, #expandButton {
+    background-color: #2D2D30;
+    color: #CCCCCC;
+    border: 1px solid #3F3F46;
+    border-radius: 4px;
+    font-size: 10px;
+    padding: 1px 4px;
+    text-align: center;
+}
+
+#collapseButton:hover, #expandButton:hover {
+    background-color: #3F3F46;
+    border-color: #007ACC;
+}
+
+#collapseButton:pressed, #expandButton:pressed {
+    background-color: #007ACC;
+    color: #FFFFFF;
 }
 
 /* Dla separatora */

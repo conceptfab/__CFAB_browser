@@ -106,6 +106,10 @@ class AmvTab(QWidget):
         self.setLayout(layout)
         logger.debug("AmvTab initialized successfully - ETAP 14 completed")
 
+    def get_controller(self) -> AmvController:
+        """Zwraca instancję kontrolera dla tej zakładki."""
+        return self.controller
+
 
 # ==============================================================================
 # TESTOWANIE I STANDALONE URUCHOMIENIE

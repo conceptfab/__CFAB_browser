@@ -25,7 +25,7 @@ class PreviewWindow(QDialog):
         self.setWindowTitle(f"Podgląd - {os.path.basename(self.image_path)}")
         self.setModal(False)
         self.setStyleSheet(
-            "QDialog { background-color: #1E1E1E; border: 2px solid #3F3F46; }"
+            "QDialog { background-color: #1E1E1E; " "border: 2px solid #3F3F46; }"
         )
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -40,7 +40,8 @@ class PreviewWindow(QDialog):
 
     def load_image_and_resize(self):
         try:
-            self.original_pixmap = QPixmap(self.image_path)
+            absolute_image_path = os.path.abspath(self.image_path)
+            self.original_pixmap = QPixmap(absolute_image_path)
             if not self.original_pixmap.isNull():
                 screen = QApplication.primaryScreen().availableGeometry()
                 max_width = screen.width() - 100

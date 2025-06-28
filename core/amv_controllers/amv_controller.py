@@ -5,7 +5,6 @@ AmvController - Kontroler dla zakładki AMV
 
 import logging
 import os
-import shutil
 import subprocess
 import sys
 
@@ -14,7 +13,6 @@ from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 from ..amv_models.amv_model import AmvModel
 from ..amv_models.asset_tile_model import AssetTileModel
-from ..amv_views.amv_view import AmvView
 from ..amv_views.asset_tile_view import AssetTileView
 from ..scanner import find_and_create_assets
 
@@ -44,7 +42,8 @@ class AssetRebuilderThread(QThread):
                 return
 
             logger.info(
-                f"Rozpoczęcie przebudowy assetów w folderze: {self.folder_path}"
+                "Rozpoczęcie przebudowy assetów w folderze: %s",
+                self.folder_path,
             )
 
             # Krok 1: Usuwanie plików .asset
@@ -63,7 +62,7 @@ class AssetRebuilderThread(QThread):
 
             self.progress_updated.emit(100, 100, "Przebudowa zakończona!")
             self.rebuild_finished.emit(
-                f"Pomyślnie przebudowano assety w folderze: {self.folder_path}"
+                "Pomyślnie przebudowano assety w folderze: " f"{self.folder_path}"
             )
 
         except Exception as e:
@@ -80,9 +79,9 @@ class AssetRebuilderThread(QThread):
             for asset_file in asset_files:
                 file_path = os.path.join(self.folder_path, asset_file)
                 os.remove(file_path)
-                logger.debug(f"Usunięto plik asset: {asset_file}")
+                logger.debug("Usunięto plik asset: %s", asset_file)
 
-            logger.info(f"Usunięto {len(asset_files)} plików .asset")
+            logger.info("Usunięto %d plików .asset", len(asset_files))
         except Exception as e:
             logger.error(f"Błąd usuwania plików .asset: {e}")
             raise
@@ -95,7 +94,7 @@ class AssetRebuilderThread(QThread):
                 import shutil  # lokalny import, zgodnie z dobrymi praktykami
 
                 shutil.rmtree(cache_folder)
-                logger.info(f"Usunięto folder .cache: {cache_folder}")
+                logger.info("Usunięto folder .cache: %s", cache_folder)
             else:
                 logger.debug("Folder .cache nie istnieje lub nie jest folderem")
         except Exception as e:
@@ -115,7 +114,7 @@ class AssetRebuilderThread(QThread):
                     self.progress_updated.emit(75, 100, message)
 
             created_assets = find_and_create_assets(self.folder_path, progress_callback)
-            logger.info(f"Scanner utworzył {len(created_assets)} nowych assetów")
+            logger.info("Scanner utworzył %d nowych assetów", len(created_assets))
 
         except Exception as e:
             logger.error(f"Błąd uruchamiania scanner-a: {e}")
@@ -124,6 +123,9 @@ class AssetRebuilderThread(QThread):
 
 class AmvController(QObject):
     """Controller dla zakładki AMV - łącznik Model-View"""
+
+    # Sygnał emitowany przy zmianie folderu roboczego
+    working_directory_changed = pyqtSignal(str)
 
     def __init__(self, model: AmvModel, view):
         super().__init__()
@@ -283,7 +285,9 @@ class AmvController(QObject):
         # Oblicz liczbę rzędów
         rows = (len(assets) + cols - 1) // cols if cols > 0 else 0
         logger.debug(
-            f"_rebuild_asset_grid: Rebuilding grid with {cols} columns and {rows} rows."
+            "_rebuild_asset_grid: Rebuilding grid with %d columns and %d rows.",
+            cols,
+            rows,
         )
 
         # Ukryj placeholder przed dodaniem kafelków
@@ -293,7 +297,11 @@ class AmvController(QObject):
             row, col = divmod(i, cols)
             tile_model = AssetTileModel(asset_data)
             tile_view = AssetTileView(
-                tile_model, thumb_size, i + 1, len(assets), self.model.selection_model
+                tile_model,
+                thumb_size,
+                i + 1,
+                len(assets),
+                self.model.selection_model,
             )
 
             self.view.gallery_layout.addWidget(tile_view, row, col)
@@ -333,12 +341,15 @@ class AmvController(QObject):
         logger.debug("Stan aplikacji zainicjalizowany")
 
     def _on_folder_clicked(self, folder_path: str):
-        logger.info(f"Controller: Folder clicked: {folder_path}")
+        """Obsługuje kliknięcie folderu w drzewie"""
+        logger.info("Folder clicked: %s", folder_path)
         self.model.asset_grid_model.set_current_folder(folder_path)
         self.model.asset_scanner_model.scan_folder(folder_path)
+        self.working_directory_changed.emit(folder_path)
 
     def _on_workspace_folder_clicked(self, folder_path: str):
-        logger.info(f"Controller: Workspace folder clicked: {folder_path}")
+        """Obsługuje kliknięcie przycisku folderu roboczego"""
+        logger.info("Workspace folder clicked: %s", folder_path)
         self.model.folder_system_model.set_root_folder(folder_path)
         # Dodaj wywołanie skanowania folderu
         self.model.asset_grid_model.set_current_folder(folder_path)
@@ -377,7 +388,10 @@ class AmvController(QObject):
 
     def _on_scan_completed(self, assets: list, duration: float, operation_type: str):
         logger.info(
-            f"Controller: Scan completed - {len(assets)} assets in {duration:.2f}s ({operation_type})"
+            "Controller: Scan completed - %d assets in %.2fs (%s)",
+            len(assets),
+            duration,
+            operation_type,
         )
         self.model.control_panel_model.set_progress(100)
         self.view.update_gallery_placeholder("")
@@ -485,7 +499,10 @@ class AmvController(QObject):
         # Tutaj tylko logujemy informację
         cols = self.model.asset_grid_model.get_columns()
         logger.debug(
-            f"Controller: Columns recalculated to {cols} (width: {available_width}, thumb: {thumbnail_size})"
+            "Controller: Columns recalculated to %d (width: %d, thumb: %d)",
+            cols,
+            available_width,
+            thumbnail_size,
         )
 
     def _on_select_all_clicked(self):
@@ -523,12 +540,14 @@ class AmvController(QObject):
     def _on_control_panel_selection_state_changed(self, has_selection: bool):
         """Aktualizuje stan przycisków 'Przenieś' i 'Usuń' w widoku."""
         logger.debug(
-            f"AmvController: _on_control_panel_selection_state_changed called with: {has_selection}"
+            "AmvController: _on_control_panel_selection_state_changed "
+            "called with: %s",
+            has_selection,
         )
         self.view.move_selected_button.setEnabled(has_selection)
         self.view.delete_selected_button.setEnabled(has_selection)
         self.view.deselect_all_button.setEnabled(has_selection)
-        logger.debug(f"Control panel buttons updated. Has selection: {has_selection}")
+        logger.debug("Control panel buttons updated. Has selection: %s", has_selection)
 
     def _on_move_selected_clicked(self):
         """Obsługuje kliknięcie przycisku 'Przenieś zaznaczone'."""
@@ -574,14 +593,19 @@ class AmvController(QObject):
         selected_asset_ids = self.model.selection_model.get_selected_asset_ids()
         if not selected_asset_ids:
             QMessageBox.information(
-                self.view, "Usuwanie assetów", "Brak zaznaczonych assetów do usunięcia."
+                self.view,
+                "Usuwanie assetów",
+                "Brak zaznaczonych assetów do usunięcia.",
             )
             return
 
         reply = QMessageBox.question(
             self.view,
             "Potwierdzenie usunięcia",
-            f"Czy na pewno chcesz usunąć {len(selected_asset_ids)} zaznaczonych assetów?\nTa operacja jest nieodwracalna!",
+            (
+                f"Czy na pewno chcesz usunąć {len(selected_asset_ids)} "
+                "zaznaczonych assetów?\nTa operacja jest nieodwracalna!"
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -602,7 +626,8 @@ class AmvController(QObject):
                 return
 
             self.model.file_operations_model.delete_assets(
-                assets_to_delete, self.model.asset_grid_model.get_current_folder()
+                assets_to_delete,
+                self.model.asset_grid_model.get_current_folder(),
             )
             self.model.control_panel_model.set_progress(0)  # Reset progress bar
             self.view.update_gallery_placeholder("Usuwanie assetów...")
@@ -620,44 +645,29 @@ class AmvController(QObject):
 
         # Usuń przeniesione/usunięte assety z listy bez ponownego skanowania
         if success_messages:
-            # Pobierz ID przeniesionych/usuniętych assetów z komunikatów
-            moved_asset_names = []
-            for msg in success_messages:
-                if "przeniesiono" in msg.lower():
-                    # Wyciągnij nazwę assetu z komunikatu "Pomyślnie przeniesiono asset: nazwa"
-                    asset_name = msg.split("asset: ")[-1] if "asset: " in msg else None
-                    if asset_name:
-                        moved_asset_names.append(asset_name)
-                elif "usunięto" in msg.lower():
-                    # Wyciągnij nazwę assetu z komunikatu "Pomyślnie usunięto asset: nazwa"
-                    asset_name = msg.split("asset: ")[-1] if "asset: " in msg else None
-                    if asset_name:
-                        moved_asset_names.append(asset_name)
+            # Usuń assety z modelu danych
+            current_assets = self.model.asset_grid_model.get_assets()
+            updated_assets = [
+                asset
+                for asset in current_assets
+                if asset.get("name") not in success_messages
+            ]
+            self.model.asset_grid_model._assets = updated_assets
 
-            # Usuń przeniesione/usunięte assety z listy i z widoku
-            if moved_asset_names:
-                current_assets = self.model.asset_grid_model.get_assets()
-                updated_assets = [
-                    asset
-                    for asset in current_assets
-                    if asset.get("name") not in moved_asset_names
-                ]
-                self.model.asset_grid_model._assets = updated_assets
+            # Usuń kafelki z widoku
+            self.view.remove_asset_tiles(success_messages)
 
-                # Usuń kafelki z widoku
-                tiles_to_remove = []
-                for tile in self.asset_tiles:
-                    if tile.model.get_name() in moved_asset_names:
-                        tiles_to_remove.append(tile)
+            # Usuń również z listy asset_tiles kontrolera
+            self.asset_tiles = [
+                tile
+                for tile in self.asset_tiles
+                if tile.model.get_name() not in success_messages
+            ]
 
-                for tile in tiles_to_remove:
-                    self.view.gallery_layout.removeWidget(tile)
-                    tile.deleteLater()
-                    self.asset_tiles.remove(tile)
-
-                logger.debug(
-                    f"Removed {len(moved_asset_names)} assets from list and view without rescanning"
-                )
+            logger.debug(
+                "Removed %d assets from list and view without rescanning",
+                len(success_messages),
+            )
 
         self.model.selection_model.clear_selection()  # Wyczyść zaznaczenie po operacji
 
@@ -666,7 +676,7 @@ class AmvController(QObject):
         self.view.update_gallery_placeholder(f"Błąd operacji na plikach: {error_msg}")
 
     def _on_drag_drop_started(self, asset_ids: list):
-        logger.debug(f"AmvController: Drag operation started for assets: {asset_ids}")
+        logger.debug("AmvController: Drag operation started for assets: %s", asset_ids)
         # Tutaj można dodać wizualny feedback, np. zmianę kursora
 
     def _on_drag_drop_possible(self, possible: bool):
@@ -675,7 +685,9 @@ class AmvController(QObject):
 
     def _on_drag_drop_completed(self, target_path: str, asset_ids: list):
         logger.debug(
-            f"AmvController: Drop completed to {target_path} for assets: {asset_ids}"
+            "AmvController: Drop completed to %s for assets: %s",
+            target_path,
+            asset_ids,
         )
         # Pobierz pełne dane assetów na podstawie ID
         all_assets = self.model.asset_grid_model.get_assets()
@@ -712,8 +724,12 @@ class AmvController(QObject):
             reply = QMessageBox.question(
                 self.view,
                 "Potwierdzenie przebudowy",
-                f"Czy na pewno chcesz przebudować assety w folderze:\n{folder_path}\n\n"
-                "Ta operacja usunie wszystkie pliki .asset, folder .cache i uruchomi ponowne skanowanie.",
+                (
+                    f"Czy na pewno chcesz przebudować assety w folderze:\n"
+                    f"{folder_path}\n\n"
+                    "Ta operacja usunie wszystkie pliki .asset, folder .cache "
+                    "i uruchomi ponowne skanowanie."
+                ),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
@@ -735,7 +751,7 @@ class AmvController(QObject):
                 # Uruchom worker
                 self.asset_rebuilder.start()
 
-                logger.info(f"Rozpoczęto przebudowę assetów w folderze: {folder_path}")
+                logger.info("Rozpoczęto przebudowę assetów w folderze: %s", folder_path)
 
         except Exception as e:
             logger.error(f"Błąd inicjalizacji przebudowy assetów: {e}")
