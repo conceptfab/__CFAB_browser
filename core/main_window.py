@@ -1,10 +1,8 @@
-import json
 import logging
 import sys
-from dataclasses import asdict, dataclass, field
 
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
-    QAction,
     QApplication,
     QLabel,
     QMainWindow,
@@ -15,82 +13,36 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.gallery_tab import GalleryTab
+from core.amv_tab import AmvTab
+from core.json_utils import load_from_file
 from core.pairing_tab import PairingTab
 from core.tools_tab import ToolsTab
 
 
-@dataclass
-class AppConfig:
-    logger_level: str = "INFO"
-    use_styles: bool = True
-    thumbnail_size: int = 256
-    work_folder1: dict = field(default_factory=dict)
-    work_folder2: dict = field(default_factory=dict)
-    work_folder3: dict = field(default_factory=dict)
-    work_folder4: dict = field(default_factory=dict)
-    work_folder5: dict = field(default_factory=dict)
-
-    @classmethod
-    def load(cls, config_path: str, logger: logging.Logger) -> "AppConfig":
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if not isinstance(data, dict):
-                raise TypeError("Config file must contain a dictionary.")
-
-            config_args = {}
-            for fld in cls.__dataclass_fields__.values():
-                if fld.name in data:
-                    try:
-                        val = data[fld.name]
-                        if not isinstance(val, fld.type):
-                            val = fld.type(val)
-                        config_args[fld.name] = val
-                    except (ValueError, TypeError):
-                        logger.warning(
-                            "Config '%s' has wrong type. Expected %s, "
-                            "got %s. Using default.",
-                            fld.name,
-                            fld.type,
-                            type(data[fld.name]),
-                        )
-                else:
-                    logger.warning(
-                        "Config key '%s' not found. Using default.", fld.name
-                    )
-
-            return cls(**config_args)
-
-        except (FileNotFoundError, json.JSONDecodeError, TypeError) as e:
-            logger.warning(
-                "Could not load config from %s: %s. Using default.", config_path, e
-            )
-            return cls()
-        except Exception as e:
-            logger.error(
-                "An unexpected error occurred while loading config: %s. "
-                "Using default.",
-                e,
-            )
-            return cls()
-
-
 class MainWindow(QMainWindow):
+
+    # Domyślna konfiguracja jako fallback
+    DEFAULT_CONFIG = {
+        "logger_level": "INFO",
+        "use_styles": True,
+        "thumbnail": 256,
+        "work_folder1": {"path": "", "name": "", "icon": "", "color": ""},
+        "work_folder2": {"path": "", "name": "", "icon": "", "color": ""},
+        "work_folder3": {"path": "", "name": "", "icon": "", "color": ""},
+        "work_folder4": {"path": "", "name": "", "icon": "", "color": ""},
+        "work_folder5": {"path": "", "name": "", "icon": "", "color": ""},
+    }
 
     def __init__(self, config_path="config.json"):
         super().__init__()
 
-        self._setup_preliminary_logger()
+        # Ładowanie konfiguracji z proper error handling
+        self.config = self._load_config_safe(config_path)
 
-        self.config = AppConfig.load(config_path, self.logger)
-
-        if "thumbnail" in self.config.__dict__:
-            self.config.thumbnail_size = self.config.thumbnail
-            del self.config.thumbnail
-
+        # Konfiguracja loggera na podstawie załadowanej konfiguracji
         self._setup_logger()
 
+        # Inicjalizacja okna
         self.setWindowTitle("CFAB Browser")
         self.resize(800, 600)
 
@@ -102,31 +54,85 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error initializing MainWindow: {e}")
             raise
 
-    def _setup_preliminary_logger(self):
-        """Konfiguruje podstawowy logger przed załadowaniem konfiguracji."""
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        )
-        self.logger = logging.getLogger(__name__)
+    def _load_config_safe(self, config_path):
+        """
+        Bezpiecznie ładuje konfigurację z fallback do domyślnych wartości
+
+        Args:
+            config_path (str): Ścieżka do pliku konfiguracyjnego
+
+        Returns:
+            dict: Załadowana lub domyślna konfiguracja
+        """
+        try:
+            config = load_from_file(config_path)
+
+            # Walidacja podstawowych kluczy
+            if not isinstance(config, dict):
+                raise ValueError("Configuration must be a dictionary")
+
+            # Uzupełnienie brakujących kluczy domyślnymi wartościami
+            for key, default_value in self.DEFAULT_CONFIG.items():
+                if key not in config:
+                    config[key] = default_value
+
+            return config
+
+        except FileNotFoundError:
+            print(
+                f"Warning: Configuration file {config_path} not found. "
+                f"Using default configuration."
+            )
+            return self.DEFAULT_CONFIG.copy()
+
+        except (ValueError, UnicodeDecodeError) as e:
+            print(
+                f"Warning: Invalid JSON in {config_path}: {e}. "
+                f"Using default configuration."
+            )
+            return self.DEFAULT_CONFIG.copy()
+
+        except PermissionError:
+            print(
+                f"Warning: Permission denied reading {config_path}. "
+                f"Using default configuration."
+            )
+            return self.DEFAULT_CONFIG.copy()
+
+        except Exception as e:
+            print(
+                f"Warning: Unexpected error loading config {config_path}: {e}. "
+                f"Using default configuration."
+            )
+            return self.DEFAULT_CONFIG.copy()
 
     def _setup_logger(self):
         """
-        Konfiguruje logger na podstawie załadowanej konfiguracji.
+        Konfiguruje logger na podstawie załadowanej konfiguracji
         """
         try:
-            logger_level = self.config.logger_level.upper()
-            if not hasattr(logging, logger_level):
-                self.logger.warning(
-                    "Invalid logger level '%s' in config. Using INFO.", logger_level
-                )
-                logger_level = "INFO"
+            logger_level = self.config.get("logger_level", "INFO")
 
-            logging.getLogger().setLevel(getattr(logging, logger_level))
-            self.logger.info("Logger configured with level: %s", logger_level)
+            # Sprawdź czy poziom logowania jest poprawny
+            if not hasattr(logging, logger_level):
+                logger_level = "INFO"
+                print(f"Warning: Invalid logger level in config. Using INFO.")
+
+            # Konfiguracja loggera tylko jeśli nie został już skonfigurowany
+            if not logging.getLogger().handlers:
+                logging.basicConfig(
+                    level=getattr(logging, logger_level),
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                )
+
+            self.logger = logging.getLogger(__name__)
+            self.logger.info(f"Logger initialized with level: {logger_level}")
 
         except Exception as e:
-            self.logger.error("Error setting up logger from config: %s", e)
+            # Fallback logger setup
+            logging.basicConfig(level=logging.INFO)
+            self.logger = logging.getLogger(__name__)
+            self.logger.error(f"Error setting up logger: {e}")
 
     def _createMenuBar(self):
         """
@@ -156,7 +162,7 @@ class MainWindow(QMainWindow):
 
             # Próbuj utworzyć każdy tab indywidualnie
             tabs_config = [
-                (GalleryTab, "Galeria", True),  # True = krytyczny tab
+                (AmvTab, "Asset Browser", True),  # True = krytyczny tab (główna)
                 (PairingTab, "Parowanie", False),
                 (ToolsTab, "Narzędzia", False),
             ]
@@ -168,16 +174,15 @@ class MainWindow(QMainWindow):
                     tab_instance = tab_class()
                     self.tabs.addTab(tab_instance, tab_name)
                     successful_tabs += 1
-                    self.logger.debug("Tab '%s' created successfully", tab_name)
+                    self.logger.debug(f"Tab '{tab_name}' created successfully")
 
                 except Exception as e:
-                    self.logger.error("Error creating tab '%s': %s", tab_name, e)
+                    self.logger.error(f"Error creating tab '{tab_name}': {e}")
                     if is_critical:
                         # Jeśli krytyczny tab się nie załadował, dodaj placeholder
                         placeholder = QWidget()
                         layout = QVBoxLayout()
-                        label_text = f"Błąd ładowania {tab_name}: {e}"
-                        layout.addWidget(QLabel(label_text))
+                        layout.addWidget(QLabel(f"Błąd ładowania {tab_name}: {e}"))
                         placeholder.setLayout(layout)
                         self.tabs.addTab(placeholder, f"{tab_name} (Błąd)")
                         successful_tabs += 1
@@ -187,28 +192,35 @@ class MainWindow(QMainWindow):
 
             self.setCentralWidget(self.tabs)
             self.logger.info(
-                "Tabs created successfully (%d/%d)", successful_tabs, len(tabs_config)
+                f"Tabs created successfully " f"({successful_tabs}/{len(tabs_config)})"
             )
 
         except Exception as e:
-            self.logger.error("Critical error creating tabs: %s", e)
+            self.logger.error(f"Critical error creating tabs: {e}")
             # Taby są krytyczne - jeśli się nie załadują, aplikacja nie ma sensu
-            raise RuntimeError(f"Failed to initialize application tabs: {e}") from e
+            raise RuntimeError(f"Failed to initialize application tabs: {e}")
 
     def get_config(self):
         """
-        Zwraca konfigurację jako słownik dla kompatybilności wstecznej.
+        Zwraca aktualną konfigurację aplikacji
+
+        Returns:
+            dict: Konfiguracja aplikacji
         """
-        return asdict(self.config)
+        return self.config.copy()  # Zwracamy kopię żeby uniknąć modyfikacji
 
     def get_config_value(self, key, default=None):
         """
-        Zwraca konkretną wartość z konfiguracji.
+        Zwraca konkretną wartość z konfiguracji
+
+        Args:
+            key (str): Klucz konfiguracji
+            default: Wartość domyślna jeśli klucz nie istnieje
+
+        Returns:
+            Wartość konfiguracji lub default
         """
-        # Kompatybilność wsteczna dla 'thumbnail'
-        if key == "thumbnail":
-            key = "thumbnail_size"
-        return getattr(self.config, key, default)
+        return self.config.get(key, default)
 
 
 if __name__ == "__main__":

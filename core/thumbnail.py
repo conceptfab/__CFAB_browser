@@ -1,11 +1,12 @@
-import json
 import logging
 import os
 import time
 from pathlib import Path
-from typing import Optional, Tuple, Callable
+from typing import Callable, Optional, Tuple
 
 from PIL import Image, ImageFile, UnidentifiedImageError
+
+from core.json_utils import load_from_file
 
 # Dodanie loggera dla modułu
 logger = logging.getLogger(__name__)
@@ -51,8 +52,7 @@ class ThumbnailConfigManager:
                 return self._cache_settings
 
             # Załaduj konfigurację
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
+            config = load_from_file(config_path)
 
             # Walidacja i przygotowanie ustawień thumbnail
             thumbnail_size = config.get("thumbnail", 256)
@@ -80,7 +80,7 @@ class ThumbnailConfigManager:
         except FileNotFoundError:
             logger.warning(f"Config file not found: {config_path}, using defaults")
             return self._get_default_config()
-        except json.JSONDecodeError as e:
+        except (ValueError, UnicodeDecodeError) as e:
             logger.error(f"Invalid JSON in config: {e}, using defaults")
             return self._get_default_config()
         except Exception as e:
@@ -270,7 +270,7 @@ class ThumbnailProcessor:
         # Przetwórz obraz
         try:
             self._process_and_save_thumbnail(image_path, config)
-            logger.info(f"Generated thumbnail for: {image_path.name}")
+            logger.debug(f"Generated thumbnail for: {image_path.name}")
             return filename, thumbnail_size
 
         except Exception as e:
@@ -495,7 +495,7 @@ def process_thumbnails_batch(
     results = []
     total_files = len(filenames)
 
-    logger.info(f"Starting batch thumbnail processing: {total_files} files")
+    logger.debug(f"Starting batch thumbnail processing: {total_files} files")
 
     for i, filename in enumerate(filenames):
         try:
@@ -512,7 +512,7 @@ def process_thumbnails_batch(
             results.append((filename, 0, False))
 
     successful = sum(1 for _, _, success in results if success)
-    logger.info(f"Batch processing completed: {successful}/{total_files} successful")
+    logger.debug(f"Batch processing completed: {successful}/{total_files} successful")
 
     return results
 
@@ -579,7 +579,7 @@ def clear_thumbnail_cache(work_folder: str, older_than_days: int = 0) -> int:
             except Exception as e:
                 logger.warning(f"Could not remove {thumb_file}: {e}")
 
-        logger.info(f"Removed {removed_count} thumbnail files from cache")
+        logger.debug(f"Removed {removed_count} thumbnail files from cache")
         return removed_count
 
     except Exception as e:

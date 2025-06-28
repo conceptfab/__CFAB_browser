@@ -1,8 +1,9 @@
 import glob
-import json
 import logging
 import os
+import shutil
 
+from core.json_utils import load_from_file, save_to_file
 from core.thumbnail import process_thumbnail
 
 # Dodanie loggera dla modułu
@@ -59,19 +60,19 @@ def _scan_folder_for_files(folder_path):
     for archive_file in archive_files:
         name_without_ext = os.path.splitext(os.path.basename(archive_file))[0]
         name_lower = name_without_ext.lower()  # Konwertuj na małe litery dla porównania
-        if name_lower in archive_by_name:
-            logger.warning(f"Duplicate archive name found (case-insensitive): {name_without_ext}")
+        logger.debug(f"Archive file: {archive_file} -> name: '{name_without_ext}' -> lower: '{name_lower}'")
         archive_by_name[name_lower] = archive_file
 
     # Grupuj pliki obrazów według nazwy (case-insensitive)
     for image_file in image_files:
         name_without_ext = os.path.splitext(os.path.basename(image_file))[0]
         name_lower = name_without_ext.lower()  # Konwertuj na małe litery dla porównania
-        if name_lower in image_by_name:
-            logger.warning(f"Duplicate image name found (case-insensitive): {name_without_ext}")
+        logger.debug(f"Image file: {image_file} -> name: '{name_without_ext}' -> lower: '{name_lower}'")
         image_by_name[name_lower] = image_file
 
-    logger.info(
+    logger.debug(f"Archive by name: {list(archive_by_name.keys())}")
+    logger.debug(f"Image by name: {list(image_by_name.keys())}")
+    logger.debug(
         f"Found {len(archive_files)} archive files and {len(image_files)} image files"
     )
     return archive_by_name, image_by_name
@@ -118,6 +119,31 @@ def _check_texture_folders_presence(folder_path):
         return True
 
 
+def _scan_for_special_folders(folder_path: str) -> list[dict]:
+    """
+    Skanuje folder w poszukiwaniu specjalnych folderów (tex, textures, maps).
+
+    Args:
+        folder_path (str): Ścieżka do folderu do skanowania.
+
+    Returns:
+        list: Lista słowników reprezentujących znalezione specjalne foldery.
+    """
+    special_folders_data = []
+    special_folder_names = ["tex", "textures", "maps"]
+
+    for folder_name in special_folder_names:
+        full_path = os.path.join(folder_path, folder_name)
+        if os.path.isdir(full_path):
+            special_folders_data.append({
+                "type": "special_folder",
+                "name": folder_name,
+                "folder_path": full_path
+            })
+            logger.debug(f"Found special folder: {full_path}")
+    return special_folders_data
+
+
 def _create_single_asset(name, archive_path, image_path, folder_path):
     """
     Tworzy pojedynczy plik .asset
@@ -129,9 +155,9 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
         folder_path (str): Ścieżka do folderu docelowego
 
     Returns:
-        str|None: Ścieżka do utworzonego pliku .asset lub None przy błędzie
+        dict|None: Słownik z danymi assetu lub None przy błędzie
     """
-    asset_path = os.path.join(folder_path, f"{name}.asset")
+    asset_file_path = os.path.join(folder_path, f"{name}.asset")
 
     try:
         # Pobierz rozmiar pliku archiwum w MB
@@ -141,6 +167,7 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
         textures_in_archive = _check_texture_folders_presence(folder_path)
 
         asset_data = {
+            "type": "asset", # Dodano typ
             "name": name,
             "archive": os.path.basename(archive_path),
             "preview": os.path.basename(image_path),
@@ -150,18 +177,22 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
             "color": None,
             "textures_in_the_archive": textures_in_archive,
             "meta": {},
+            "folder_path": folder_path, # Dodano folder_path
         }
 
-        with open(asset_path, "w", encoding="utf-8") as asset_file:
-            json.dump(asset_data, asset_file, indent=2, ensure_ascii=False)
+        save_to_file(asset_data, asset_file_path, indent=True)
 
         # Utwórz thumbnail dla tego asset
-        thumbnail_success = create_thumbnail_for_asset(asset_path, image_path)
-        if not thumbnail_success:
+        thumbnail_success = create_thumbnail_for_asset(asset_file_path, image_path)
+        if thumbnail_success:
+            asset_data["thumbnail"] = True # Aktualizuj dane w pamięci
+        else:
             logger.warning(f"Failed to create thumbnail for asset: {name}")
 
-        logger.debug(f"Created asset file: {name}.asset with textures_in_the_archive: {textures_in_archive}")
-        return asset_path
+        logger.debug(
+            f"Created asset file: {name}.asset with textures_in_the_archive: {textures_in_archive}"
+        )
+        return asset_data # Zwracamy słownik z danymi assetu
 
     except Exception as e:
         logger.error(f"Error creating asset file for {name}: {e}")
@@ -237,22 +268,20 @@ def create_thumbnail_for_asset(asset_path, image_path):
         process_thumbnail(image_path)
 
         # Jeśli funkcja się wykonała bez błędów, zaktualizuj plik asset
-        with open(asset_path, "r", encoding="utf-8") as asset_file:
-            asset_data = json.load(asset_file)
+        asset_data = load_from_file(asset_path)
 
         # Ustaw thumbnail na True
         asset_data["thumbnail"] = True
 
         # Zapisz zaktualizowany plik asset
-        with open(asset_path, "w", encoding="utf-8") as asset_file:
-            json.dump(asset_data, asset_file, indent=2, ensure_ascii=False)
+        save_to_file(asset_data, asset_path, indent=True)
 
-        logger.info(
+        logger.debug(
             f"Thumbnail created successfully for asset: {os.path.basename(asset_path)}"
         )
         return True
 
-    except json.JSONDecodeError as e:
+    except (ValueError, UnicodeDecodeError) as e:
         logger.error(f"Invalid JSON in asset file {asset_path}: {e}")
         return False
     except PermissionError as e:
@@ -316,10 +345,9 @@ def create_unpair_files_json(folder_path, archive_by_name, image_by_name, common
         unpair_file_path = os.path.join(folder_path, "unpair_files.json")
 
         # Zapisz plik JSON
-        with open(unpair_file_path, "w", encoding="utf-8") as unpair_file:
-            json.dump(unpair_data, unpair_file, indent=2, ensure_ascii=False)
+        save_to_file(unpair_data, unpair_file_path, indent=True)
 
-        logger.info(
+        logger.debug(
             f"Created unpair_files.json with {len(unpaired_archives)} unpaired archives and {len(unpaired_previews)} unpaired previews"
         )
         return unpair_file_path
@@ -347,7 +375,7 @@ def find_and_create_assets(folder_path, progress_callback=None):
                                      Przyjmuje parametry: (current, total, message)
 
     Returns:
-        list: Lista ścieżek do utworzonych plików .asset
+        list: Lista słowników z danymi assetów i specjalnych folderów
     """
     # Walidacja parametrów wejściowych
     if not folder_path or not isinstance(folder_path, str):
@@ -365,14 +393,25 @@ def find_and_create_assets(folder_path, progress_callback=None):
             progress_callback(0, 0, error_msg)
         return []
 
-    logger.info(f"Starting asset scan in folder: {folder_path}")
+    logger.debug(f"Starting asset scan in folder: {folder_path}")
 
     try:
-        # Skanuj folder w poszukiwaniu plików
+        all_found_items = []
+
+        # 1. Skanuj specjalne foldery
+        special_folders = _scan_for_special_folders(folder_path)
+        all_found_items.extend(special_folders)
+        logger.debug(f"Found {len(special_folders)} special folders")
+
+        # 2. Skanuj folder w poszukiwaniu plików asset
         archive_by_name, image_by_name = _scan_folder_for_files(folder_path)
 
         # Znajdź wspólne nazwy (pary plików)
         common_names = set(archive_by_name.keys()) & set(image_by_name.keys())
+        
+        logger.debug(f"Common names (pairs): {sorted(common_names)}")
+        logger.debug(f"Archive names: {sorted(archive_by_name.keys())}")
+        logger.debug(f"Image names: {sorted(image_by_name.keys())}")
 
         # Oblicz całkowitą liczbę operacji do wykonania
         total_operations = len(common_names)
@@ -384,9 +423,8 @@ def find_and_create_assets(folder_path, progress_callback=None):
                 f"Znaleziono {total_operations} par plików do przetworzenia",
             )
 
-        logger.info(f"Found {total_operations} file pairs to process")
+        logger.debug(f"Found {total_operations} file pairs to process")
 
-        created_assets = []
         current_operation = 0
 
         # Dla każdej pary utwórz plik .asset
@@ -404,12 +442,12 @@ def find_and_create_assets(folder_path, progress_callback=None):
             # Użyj oryginalnej nazwy pliku (z zachowaniem wielkości liter) z pliku archiwum
             original_name = os.path.splitext(os.path.basename(archive_path))[0]
 
-            # Utwórz plik .asset
-            asset_path = _create_single_asset(
+            # Utwórz plik .asset i pobierz jego dane
+            asset_data = _create_single_asset(
                 original_name, archive_path, image_path, folder_path
             )
-            if asset_path:
-                created_assets.append(asset_path)
+            if asset_data:
+                all_found_items.append(asset_data)
             else:
                 logger.warning(f"Failed to create asset for: {original_name}")
 
@@ -425,17 +463,17 @@ def find_and_create_assets(folder_path, progress_callback=None):
             folder_path, archive_by_name, image_by_name, common_names
         )
         if unpair_file_path:
-            logger.info(f"Created unpair_files.json at: {unpair_file_path}")
+            logger.debug(f"Created unpair_files.json at: {unpair_file_path}")
         else:
             logger.warning("Failed to create unpair_files.json")
 
         # Finalne podsumowanie
-        success_msg = f"Zakończono! Utworzono {len(created_assets)} plików .asset"
-        logger.info(success_msg)
+        success_msg = f"Zakończono! Znaleziono {len(all_found_items)} elementów (assetów i folderów)"
+        logger.debug(success_msg)
         if progress_callback:
             progress_callback(total_operations, total_operations, success_msg)
 
-        return created_assets
+        return all_found_items
 
     except Exception as e:
         error_msg = f"Unexpected error during asset scanning: {e}"
@@ -443,6 +481,40 @@ def find_and_create_assets(folder_path, progress_callback=None):
         if progress_callback:
             progress_callback(0, 0, error_msg)
         return []
+
+
+def load_existing_assets(folder_path: str) -> list[dict]:
+    """
+    Ładuje istniejące pliki .asset z danego folderu.
+
+    Args:
+        folder_path (str): Ścieżka do folderu do załadowania assetów.
+
+    Returns:
+        list: Lista słowników z danymi istniejących assetów.
+    """
+    if not folder_path or not os.path.exists(folder_path):
+        logger.warning(f"Folder nie istnieje lub jest pusty: {folder_path}")
+        return []
+
+    loaded_assets = []
+    special_folders = _scan_for_special_folders(folder_path)
+    loaded_assets.extend(special_folders)
+
+    for item in os.listdir(folder_path):
+        if item.endswith(".asset"):
+            asset_file_path = os.path.join(folder_path, item)
+            try:
+                asset_data = load_from_file(asset_file_path)
+                if asset_data:
+                    # Upewnij się, że folder_path jest dodany do danych assetu
+                    asset_data["folder_path"] = folder_path
+                    asset_data["type"] = "asset" # Upewnij się, że typ jest poprawny
+                    loaded_assets.append(asset_data)
+            except Exception as e:
+                logger.error(f"Błąd ładowania pliku .asset {asset_file_path}: {e}")
+    logger.debug(f"Załadowano {len(loaded_assets)} istniejących assetów z {folder_path}")
+    return loaded_assets
 
 
 # Przykład użycia

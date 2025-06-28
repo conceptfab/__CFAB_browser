@@ -3,7 +3,6 @@
 CFAB Browser - Główny plik uruchamiający aplikację
 """
 
-import json
 import logging
 import os
 import sys
@@ -11,14 +10,14 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 # Import głównego okna
+from core.json_utils import load_from_file
 from core.main_window import MainWindow
 
 
 def setup_logger():
     """Setup logger based on config.json"""
     try:
-        with open("config.json", "r", encoding="utf-8") as f:
-            config = json.load(f)
+        config = load_from_file("config.json")
         logger_level = config.get("logger_level", "INFO")
         logging.basicConfig(
             level=getattr(logging, logger_level),
@@ -38,8 +37,7 @@ def setup_logger():
 def load_styles(app, logger):
     """Ładuje style z pliku QSS"""
     try:
-        with open("config.json", "r", encoding="utf-8") as f:
-            config = json.load(f)
+        config = load_from_file("config.json")
 
         use_styles = config.get("use_styles", True)
 

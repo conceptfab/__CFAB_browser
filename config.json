@@ -14,8 +14,8 @@
   "work_folder3": {
     "path": "T:/___textures",
     "name": "Textures",
-    "icon": "",
-    "color": ""
+    "icon": "folder_icon_04",
+    "color": "#E0960C"
   },
   "work_folder4": {
     "path": "I:/___3dsky_V2",

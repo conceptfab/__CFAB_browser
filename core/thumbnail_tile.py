@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 
@@ -14,6 +13,8 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QVBoxLayout,
 )
+
+from core.json_utils import dumps
 
 
 class ThumbnailTile(QFrame):
@@ -202,8 +203,10 @@ class ThumbnailTile(QFrame):
         try:
             drag = QDrag(self)
             mime_data = QMimeData()
-            asset_json = json.dumps(self.asset_data)
-            mime_data.setData("application/x-cfab-asset", asset_json.encode("utf-8"))
+            asset_data_serialized = dumps(self.asset_data)
+            if isinstance(asset_data_serialized, str):
+                asset_data_serialized = asset_data_serialized.encode("utf-8")
+            mime_data.setData("application/x-cfab-asset", asset_data_serialized)
             mime_data.setText(f"Asset: {self.asset_data.get('name', 'Unknown')}")
             drag.setMimeData(mime_data)
             pixmap = self.thumbnail_container.pixmap()
@@ -292,7 +295,7 @@ class ThumbnailTile(QFrame):
     def set_asset_data(self, asset_data: dict):
         self.asset_data = asset_data
         # Pokaż ikonę texture jeśli tekstury są w archiwum
-        if asset_data and asset_data.get('textures_in_the_archive', False):
+        if asset_data and asset_data.get("textures_in_the_archive", False):
             self.show_texture_icon()
         else:
             self.hide_texture_icon()
@@ -335,7 +338,7 @@ class ThumbnailTile(QFrame):
             icon_path = os.path.join(
                 os.path.dirname(__file__), "resources", "img", "texture.png"
             )
-            
+
             if os.path.exists(icon_path):
                 # Załaduj i przeskaluj ikonę
                 pixmap = QPixmap(icon_path)
@@ -345,7 +348,7 @@ class ThumbnailTile(QFrame):
                         16,
                         16,
                         Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation
+                        Qt.TransformationMode.SmoothTransformation,
                     )
                     self.texture_icon.setPixmap(scaled_pixmap)
                     # Nie pokazuj automatycznie - ikona zostanie pokazana gdy będzie potrzebna
@@ -353,7 +356,7 @@ class ThumbnailTile(QFrame):
                     self._create_fallback_texture_icon()
             else:
                 self._create_fallback_texture_icon()
-                
+
         except Exception as e:
             print(f"Błąd ładowania ikony texture: {e}")
             self._create_fallback_texture_icon()
@@ -457,7 +460,7 @@ class FolderTile(QFrame):
 
         # Dodanie elementów do layoutu
         layout.addWidget(self.folder_icon)
-        
+
         # Wycentrowanie nazwy folderu
         filename_container = QHBoxLayout()
         filename_container.addStretch()
@@ -474,7 +477,7 @@ class FolderTile(QFrame):
             icon_path = os.path.join(
                 os.path.dirname(__file__), "resources", "img", "folder.png"
             )
-            
+
             if os.path.exists(icon_path):
                 # Załaduj i przeskaluj ikonę
                 pixmap = QPixmap(icon_path)
@@ -484,14 +487,14 @@ class FolderTile(QFrame):
                         self.thumbnail_size - 20,  # Lekko mniejsza niż kontener
                         self.thumbnail_size - 20,
                         Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation
+                        Qt.TransformationMode.SmoothTransformation,
                     )
                     self.folder_icon.setPixmap(scaled_pixmap)
                 else:
                     self._create_fallback_icon()
             else:
                 self._create_fallback_icon()
-                
+
         except Exception as e:
             print(f"Błąd ładowania ikony folderu: {e}")
             self._create_fallback_icon()
@@ -500,7 +503,8 @@ class FolderTile(QFrame):
         """Tworzy zapasową ikonę folderu jako tekst"""
         self.folder_icon.setText("📁")
         self.folder_icon.setStyleSheet(
-            self.folder_icon.styleSheet() + """
+            self.folder_icon.styleSheet()
+            + """
             QLabel {
                 font-size: 48px;
                 color: #3498DB;
@@ -519,7 +523,7 @@ class FolderTile(QFrame):
         self.setFixedWidth(new_size + (2 * self.margins_size))
         self.setFixedHeight(new_size + 60)
         self.folder_icon.setFixedSize(new_size, new_size)
-        
+
         # Ponownie załaduj ikonę w nowym rozmiarze
         self._load_folder_icon()
 
