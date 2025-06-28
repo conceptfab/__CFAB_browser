@@ -1,15 +1,10 @@
+import logging
 import os
 import sys
-import logging
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from PyQt6.QtWidgets import (
-    QApplication,
-    QDialog,
-    QLabel,
-    QVBoxLayout,
-)
+from PyQt6.QtWidgets import QApplication, QDialog, QLabel, QVBoxLayout
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +80,4 @@ class PreviewWindow(QDialog):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    # Przykład użycia
-    # window = PreviewWindow("path/to/your/image.jpg")
-    # sys.exit(app.exec())
+    sys.exit(app.exec())

@@ -611,4 +611,8 @@ if __name__ == "__main__":
     w2.move(w.pos().x() + w.width() + 20, w.pos().y())  # Przesuń drugi kafelek obok
     w2.show()
 
+    # Przykład użycia
+    # tile = ThumbnailTile(256, "example.jpg", 1, 10)
+    # tile.show()
+
     sys.exit(app.exec())

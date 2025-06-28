@@ -151,7 +151,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"Error creating menu bar: {e}")
             # Menu bar nie jest krytyczny - aplikacja może działać bez niego
-            # Ale logujemy błąd dla debugging
 
     def _createTabs(self):
         """

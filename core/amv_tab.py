@@ -71,7 +71,6 @@ from core.rules import FolderClickRules
 from core.scanner import find_and_create_assets, load_existing_assets
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # Wymuś poziom DEBUG dla tego loggera
 
 
 # ==============================================================================
@@ -113,14 +112,7 @@ class AmvTab(QWidget):
 # ==============================================================================
 
 if __name__ == "__main__":
-    # Usunięto logging.basicConfig, poziom DEBUG ustawiony globalnie dla loggera amv_tab
     app = QApplication(sys.argv)
     w = AmvTab()
     w.show()
-    logger.info("=== ETAP 10 TEST START ===")
-    logger.info("Aplikacja uruchomiona. Testowanie zaawansowanych kafelków assetów.")
-    logger.info(
-        "Proszę kliknąć na folder w drzewie, aby rozpocząć skanowanie i zobaczyć kafelki."
-    )
-    logger.info("=== ETAP 10 TEST COMPLETED ===")
     sys.exit(app.exec())

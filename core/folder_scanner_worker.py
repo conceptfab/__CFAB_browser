@@ -52,9 +52,6 @@ class FolderStructureScanner(QThread):
                 self.finished_scanning.emit()
                 return
 
-            # NIE sprawdzaj głównego folderu automatycznie - tylko po kliknięciu użytkownika
-            # self.handle_folder_click(self.folder_path)  # USUNIĘTE!
-
             # Najpierw policz wszystkie foldery dla postępu
             self._count_total_folders()
 
@@ -156,9 +153,6 @@ class FolderStructureScanner(QThread):
                 # DRZEWO MA BYĆ ZAWSZE WIDOCZNE!
                 for subfolder_path in subfolders:
                     self._scan_folder_structure(subfolder_path, level + 1)
-
-                # NIE sprawdzaj zawartości folderu automatycznie - tylko po kliknięciu użytkownika
-                # self.handle_folder_click(current_path)  # USUNIĘTE!
 
             except PermissionError:
                 logger.warning(f"Brak uprawnień do folderu: {current_path}")
