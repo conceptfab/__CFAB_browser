@@ -182,6 +182,14 @@ class AmvController(QObject):
             self._on_delete_selected_clicked
         )
 
+        # --- Sygnały gwiazdek z panelu kontrolnego ---
+        for i, star_cb in enumerate(self.view.star_checkboxes):
+            star_cb.clicked.connect(
+                lambda checked, star_index=i: self._on_star_filter_clicked(
+                    star_index + 1
+                )
+            )
+
         # --- Sygnały AssetGridModel dla przebudowy siatki ---
         self.model.asset_grid_model.recalculate_columns_requested.connect(
             self._on_recalculate_columns_requested
@@ -295,7 +303,15 @@ class AmvController(QObject):
 
         for i, asset_data in enumerate(assets):
             row, col = divmod(i, cols)
-            tile_model = AssetTileModel(asset_data)
+            # Oblicz ścieżkę do pliku .asset
+            current_folder = self.model.asset_grid_model.get_current_folder()
+            asset_name = asset_data.get("name", "")
+            asset_file_path = (
+                os.path.join(current_folder, f"{asset_name}.asset")
+                if current_folder and asset_name
+                else None
+            )
+            tile_model = AssetTileModel(asset_data, asset_file_path)
             tile_view = AssetTileView(
                 tile_model,
                 thumb_size,
@@ -822,9 +838,61 @@ class AmvController(QObject):
 
     def _on_expand_tree_requested(self):
         """Obsługuje żądanie rozwinięcia drzewa folderów"""
-        logger.info("Rozwijanie wszystkich elementów drzewa folderów")
+        logger.info("Rozwijanie wszystkich węzłów drzewa folderów")
         try:
             self.view.folder_tree_view.expandAll()
-            logger.debug("Drzewo folderów zostało rozwinięte")
+            logger.debug("Pomyślnie rozwinięto wszystkie węzły drzewa")
         except Exception as e:
-            logger.error(f"Błąd podczas rozwijania drzewa folderów: {e}")
+            logger.error(f"Błąd podczas rozwijania drzewa: {e}")
+
+    def _on_star_filter_clicked(self, star_rating: int):
+        """Obsługuje kliknięcie w gwiazdkę filtrowania w panelu kontrolnym"""
+        logger.info(f"Filtrowanie assetów według {star_rating} gwiazdek")
+
+        # Sprawdź czy gwiazdka została zaznaczona czy odznaczona
+        star_checkbox = self.view.star_checkboxes[star_rating - 1]
+        is_checked = star_checkbox.isChecked()
+
+        if is_checked:
+            # Odznacz inne gwiazdki (tylko jedna może być aktywna)
+            for i, cb in enumerate(self.view.star_checkboxes):
+                if i != star_rating - 1:
+                    cb.setChecked(False)
+
+            # Filtruj assety według gwiazdek
+            self._filter_assets_by_stars(star_rating)
+        else:
+            # Jeśli odznaczono, pokaż wszystkie assety
+            self._filter_assets_by_stars(0)
+
+    def _filter_assets_by_stars(self, min_stars: int):
+        """Filtruje assety według minimalnej liczby gwiazdek"""
+        try:
+            all_assets = self.model.asset_grid_model.get_all_assets()
+
+            if min_stars == 0:
+                # Pokaż wszystkie assety
+                filtered_assets = all_assets
+                logger.debug("Pokazano wszystkie assety (brak filtrowania)")
+            else:
+                # Filtruj assety z odpowiednią liczbą gwiazdek
+                filtered_assets = []
+                for asset_data in all_assets:
+                    asset_stars = asset_data.get("stars", 0)
+                    if (
+                        isinstance(asset_stars, (int, float))
+                        and asset_stars >= min_stars
+                    ):
+                        filtered_assets.append(asset_data)
+
+                logger.debug(
+                    f"Przefiltrowano {len(filtered_assets)} assetów z {min_stars}+ gwiazdkami"
+                )
+
+            # Odbuduj siatkę z przefiltrowanymi assetami
+            self._rebuild_asset_grid(filtered_assets)
+
+        except Exception as e:
+            logger.error(f"Błąd podczas filtrowania assetów: {e}")
+            # W przypadku błędu, pokaż wszystkie assety
+            self._filter_assets_by_stars(0)

@@ -38,6 +38,10 @@ class AssetGridModel(QObject):
     def get_assets(self):
         return self._assets
 
+    def get_all_assets(self):
+        """Zwraca wszystkie assety (alias dla get_assets dla czytelności)"""
+        return self._assets
+
     def set_columns(self, columns: int):
         if self._columns != columns:
             self._columns = max(1, columns)
@@ -393,10 +397,6 @@ class AssetScannerWorker(QThread):
 
             duration = time.time() - start_time
             operation_type = "scan_completed"
-
-            # Dodaj ścieżkę folderu do każdego assetu
-            for asset in all_assets:
-                asset["folder_path"] = self.folder_path
 
             self.scan_finished.emit(all_assets, duration, operation_type)
             logger.debug(

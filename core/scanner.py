@@ -157,12 +157,19 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
     asset_file_path = os.path.join(folder_path, f"{name}.asset")
 
     try:
+        # Sprawdź czy plik .asset już istnieje
+        existing_asset_data = None
+        if os.path.exists(asset_file_path):
+            existing_asset_data = load_from_file(asset_file_path)
+            logger.debug(f"Znaleziono istniejący plik .asset: {name}.asset")
+
         # Pobierz rozmiar pliku archiwum w MB
         archive_size_mb = get_file_size_mb(archive_path)
 
         # Sprawdź obecność folderów tekstur
         textures_in_archive = _check_texture_folders_presence(folder_path)
 
+        # Utwórz nowe dane assetu
         asset_data = {
             "type": "asset",  # Dodano typ
             "name": name,
@@ -174,20 +181,45 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
             "color": None,
             "textures_in_the_archive": textures_in_archive,
             "meta": {},
-            "folder_path": folder_path,  # Dodano folder_path
         }
+
+        # Jeśli istnieje poprzedni plik, zachowaj ważne dane użytkownika
+        if existing_asset_data:
+            # Zachowaj gwiazdki, kolor i inne dane użytkownika
+            if (
+                "stars" in existing_asset_data
+                and existing_asset_data["stars"] is not None
+            ):
+                asset_data["stars"] = existing_asset_data["stars"]
+                logger.debug(
+                    f"Zachowano gwiazdki: {existing_asset_data['stars']} dla {name}"
+                )
+
+            if (
+                "color" in existing_asset_data
+                and existing_asset_data["color"] is not None
+            ):
+                asset_data["color"] = existing_asset_data["color"]
+                logger.debug(f"Zachowano kolor dla {name}")
+
+            if "thumbnail" in existing_asset_data:
+                asset_data["thumbnail"] = existing_asset_data["thumbnail"]
+
+            if "meta" in existing_asset_data:
+                asset_data["meta"] = existing_asset_data["meta"]
 
         save_to_file(asset_data, asset_file_path, indent=True)
 
-        # Utwórz thumbnail dla tego asset
-        thumbnail_success = create_thumbnail_for_asset(asset_file_path, image_path)
-        if thumbnail_success:
-            asset_data["thumbnail"] = True  # Aktualizuj dane w pamięci
-        else:
-            logger.warning(f"Failed to create thumbnail for asset: {name}")
+        # Utwórz thumbnail dla tego asset (tylko jeśli nie ma thumbnail)
+        if not asset_data.get("thumbnail"):
+            thumbnail_success = create_thumbnail_for_asset(asset_file_path, image_path)
+            if thumbnail_success:
+                asset_data["thumbnail"] = True  # Aktualizuj dane w pamięci
+            else:
+                logger.warning(f"Failed to create thumbnail for asset: {name}")
 
         logger.debug(
-            f"Created asset file: {name}.asset with textures_in_the_archive: {textures_in_archive}"
+            f"Created/updated asset file: {name}.asset with textures_in_the_archive: {textures_in_archive}"
         )
         return asset_data  # Zwracamy słownik z danymi assetu
 
@@ -504,9 +536,8 @@ def load_existing_assets(folder_path: str) -> list[dict]:
             try:
                 asset_data = load_from_file(asset_file_path)
                 if asset_data:
-                    # Upewnij się, że folder_path jest dodany do danych assetu
-                    asset_data["folder_path"] = folder_path
-                    asset_data["type"] = "asset"  # Upewnij się, że typ jest poprawny
+                    # Upewnij się, że typ jest poprawny
+                    asset_data["type"] = "asset"
                     loaded_assets.append(asset_data)
             except Exception as e:
                 logger.error(f"Błąd ładowania pliku .asset {asset_file_path}: {e}")
