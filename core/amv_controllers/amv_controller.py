@@ -184,6 +184,8 @@ class AmvController(QObject):
 
         # --- Sygnały gwiazdek z panelu kontrolnego ---
         for i, star_cb in enumerate(self.view.star_checkboxes):
+            # Blokuj automatyczną zmianę stanu checkboxa
+            star_cb.setAutoExclusive(False)
             star_cb.clicked.connect(
                 lambda checked, star_index=i: self._on_star_filter_clicked(
                     star_index + 1
@@ -303,14 +305,15 @@ class AmvController(QObject):
 
         for i, asset_data in enumerate(assets):
             row, col = divmod(i, cols)
-            # Oblicz ścieżkę do pliku .asset
-            current_folder = self.model.asset_grid_model.get_current_folder()
-            asset_name = asset_data.get("name", "")
-            asset_file_path = (
-                os.path.join(current_folder, f"{asset_name}.asset")
-                if current_folder and asset_name
-                else None
-            )
+            # Oblicz ścieżkę do pliku .asset (tylko dla prawdziwych assetów)
+            asset_file_path = None
+            if asset_data.get("type") != "special_folder":
+                current_folder = self.model.asset_grid_model.get_current_folder()
+                asset_name = asset_data.get("name", "")
+                if current_folder and asset_name:
+                    asset_file_path = os.path.join(
+                        current_folder, f"{asset_name}.asset"
+                    )
             tile_model = AssetTileModel(asset_data, asset_file_path)
             tile_view = AssetTileView(
                 tile_model,
@@ -847,23 +850,33 @@ class AmvController(QObject):
 
     def _on_star_filter_clicked(self, star_rating: int):
         """Obsługuje kliknięcie w gwiazdkę filtrowania w panelu kontrolnym"""
-        logger.info(f"Filtrowanie assetów według {star_rating} gwiazdek")
+        logger.info(f"Kliknięto gwiazdkę {star_rating}")
 
-        # Sprawdź czy gwiazdka została zaznaczona czy odznaczona
-        star_checkbox = self.view.star_checkboxes[star_rating - 1]
-        is_checked = star_checkbox.isChecked()
+        # Sprawdź aktualny stan gwiazdek PRZED zablokowaniem sygnałów
+        # (checkbox już zmienił stan po kliknięciu)
+        clicked_checkbox = self.view.star_checkboxes[star_rating - 1]
+        was_checked_before = not clicked_checkbox.isChecked()  # Odwrócony stan
 
-        if is_checked:
-            # Odznacz inne gwiazdki (tylko jedna może być aktywna)
-            for i, cb in enumerate(self.view.star_checkboxes):
-                if i != star_rating - 1:
-                    cb.setChecked(False)
+        # Zablokuj sygnały żeby uniknąć rekurencji
+        for cb in self.view.star_checkboxes:
+            cb.blockSignals(True)
 
-            # Filtruj assety według gwiazdek
-            self._filter_assets_by_stars(star_rating)
-        else:
-            # Jeśli odznaczono, pokaż wszystkie assety
+        # Jeśli gwiazdka była zaznaczona przed kliknięciem, odznacz wszystkie
+        if was_checked_before:
+            for cb in self.view.star_checkboxes:
+                cb.setChecked(False)
             self._filter_assets_by_stars(0)
+            logger.info("Odznaczono wszystkie gwiazdki - pokazano wszystkie assety")
+        else:
+            # Zaznacz gwiazdki od 1 do klikniętej (jak na kafelkach)
+            for i, cb in enumerate(self.view.star_checkboxes):
+                cb.setChecked(i < star_rating)
+            self._filter_assets_by_stars(star_rating)
+            logger.info(f"Zaznaczono {star_rating} gwiazdek - filtrowanie")
+
+        # Odblokuj sygnały
+        for cb in self.view.star_checkboxes:
+            cb.blockSignals(False)
 
     def _filter_assets_by_stars(self, min_stars: int):
         """Filtruje assety według minimalnej liczby gwiazdek"""
@@ -878,6 +891,12 @@ class AmvController(QObject):
                 # Filtruj assety z odpowiednią liczbą gwiazdek
                 filtered_assets = []
                 for asset_data in all_assets:
+                    # Zawsze dodaj specjalne foldery (nie filtruj ich)
+                    if asset_data.get("type") == "special_folder":
+                        filtered_assets.append(asset_data)
+                        continue
+
+                    # Filtruj tylko prawdziwe assety
                     asset_stars = asset_data.get("stars", 0)
                     if (
                         isinstance(asset_stars, (int, float))

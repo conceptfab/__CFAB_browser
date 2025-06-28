@@ -44,7 +44,7 @@ class AmvView(QWidget):
         super().__init__()
         self._load_icons()
         self._setup_ui()
-        logger.info("AmvView initialized - ETAP 9")
+        logger.debug("AmvView initialized - ETAP 9")
 
     def _load_icons(self):
         """Ładuje ikony używane w widoku."""
@@ -223,7 +223,7 @@ class AmvView(QWidget):
         self.folder_tree_view.setHeaderHidden(True)
         self.folder_tree_view.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)
         layout.addWidget(self.folder_tree_view)
-        logger.info("QTreeView created with GalleryTab styling")
+        logger.debug("QTreeView created with GalleryTab styling")
 
     def _create_folder_buttons_panel(self, folder_layout):
         self.buttons_frame = QFrame()

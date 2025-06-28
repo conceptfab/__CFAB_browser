@@ -52,7 +52,7 @@ class AmvModel(QObject):
         self.file_operations_model = FileOperationsModel()
         self.drag_drop_model = DragDropModel()
 
-        logger.info("AmvModel initialized - ETAP 13")
+        logger.debug("AmvModel initialized - ETAP 13")
 
     def initialize_state(self):
         """Inicjalizuje stan z konfiguracji. Wywoływane po utworzeniu kontrolera."""

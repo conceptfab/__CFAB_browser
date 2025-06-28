@@ -6,7 +6,7 @@ Prezentuje miniaturkę, nazwę pliku, gwiazdki i checkbox dla assetu.
 import logging
 import os
 
-from PyQt6.QtCore import QPoint, Qt, pyqtSignal, QMimeData
+from PyQt6.QtCore import QMimeData, QPoint, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QDrag, QFont, QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -220,6 +220,11 @@ class AssetTileView(QFrame):
             self.name_label.setText(file_name)
 
         self.tile_number_label.setText(f"{self.tile_number} / {self.total_tiles}")
+
+        # Pokaż gwiazdki dla assetów
+        for star_cb in self.star_checkboxes:
+            star_cb.setVisible(True)
+
         self.set_star_rating(self.model.get_stars())
         self.texture_icon.setVisible(self.model.has_textures_in_archive())
         self.checkbox.setVisible(True)
@@ -246,7 +251,11 @@ class AssetTileView(QFrame):
         folder_name = self.model.get_name()
         self.name_label.setText(folder_name)
         self.tile_number_label.setText(f"{self.tile_number} / {self.total_tiles}")
-        self.set_star_rating(0)  # Foldery nie mają gwiazdek
+
+        # Ukryj gwiazdki dla folderów
+        for star_cb in self.star_checkboxes:
+            star_cb.setVisible(False)
+
         self.texture_icon.setVisible(False)
         self.checkbox.setVisible(False)
 
@@ -299,7 +308,10 @@ class AssetTileView(QFrame):
                 pixmap = QPixmap(icon_path)
                 if not pixmap.isNull():
                     scaled_pixmap = pixmap.scaled(
-                        16, 16, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                        16,
+                        16,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
                     )
                     self.texture_icon.setPixmap(scaled_pixmap)
                 else:
@@ -320,38 +332,46 @@ class AssetTileView(QFrame):
         """Obsługuje naciśnięcie myszy - zapisuje pozycję startową dla drag & drop."""
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = event.position().toPoint()
-            logger.debug(f"Mouse press detected, saved drag start position: {self._drag_start_position}")
+            logger.debug(
+                f"Mouse press detected, saved drag start position: {self._drag_start_position}"
+            )
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         """Obsługuje ruch myszy - inicjuje drag & drop."""
         if (
             event.buttons() & Qt.MouseButton.LeftButton
-            and (event.position().toPoint() - self._drag_start_position).manhattanLength()
+            and (
+                event.position().toPoint() - self._drag_start_position
+            ).manhattanLength()
             >= QApplication.startDragDistance()
         ):
-            logger.debug(f"Mouse move detected, starting drag for asset: {self.asset_id}")
+            logger.debug(
+                f"Mouse move detected, starting drag for asset: {self.asset_id}"
+            )
             self._start_drag(event)
         super().mouseMoveEvent(event)
 
     def _start_drag(self, event):
         logger.debug(f"Starting drag for asset: {self.asset_id}")
-        
+
         # Pobierz zaznaczone assety z SelectionModel
         selected_asset_ids = self.selection_model.get_selected_asset_ids()
         logger.debug(f"Selected asset IDs: {selected_asset_ids}")
-        
+
         # Jeśli nie ma zaznaczonych assetów, przeciągnij tylko ten kafelek
         if not selected_asset_ids:
             selected_asset_ids = [self.asset_id]
-            logger.debug(f"No selected assets, dragging single asset: {selected_asset_ids}")
+            logger.debug(
+                f"No selected assets, dragging single asset: {selected_asset_ids}"
+            )
 
         drag = QDrag(self)
         mime_data = QMimeData()
         mime_text = f"application/x-cfab-asset,{','.join(selected_asset_ids)}"
         mime_data.setText(mime_text)
         drag.setMimeData(mime_data)
-        
+
         logger.debug(f"Created mime data: {mime_text}")
 
         # Ustaw kursor przeciągania
@@ -394,7 +414,7 @@ class AssetTileView(QFrame):
         self.checkbox.blockSignals(True)
         self.checkbox.setChecked(checked)
         self.checkbox.blockSignals(False)
-        
+
         # Ręcznie wywołaj metodę obsługującą zmianę stanu, aby zaktualizować model
         self._on_checkbox_state_changed(self.checkbox.checkState().value)
 
@@ -430,4 +450,4 @@ class AssetTileView(QFrame):
 
     def clear_stars(self):
         for cb in self.star_checkboxes:
-            cb.setChecked(False) 
+            cb.setChecked(False)
