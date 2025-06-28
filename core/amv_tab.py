@@ -105,7 +105,7 @@ class AmvTab(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.view)
         self.setLayout(layout)
-        logger.info("AmvTab initialized successfully - ETAP 14 completed")
+        logger.debug("AmvTab initialized successfully - ETAP 14 completed")
 
 
 # ==============================================================================

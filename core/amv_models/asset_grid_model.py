@@ -1,8 +1,9 @@
 import logging
 import os
-from PyQt6.QtCore import QObject, pyqtSignal, QThread, QTimer
-from PyQt6.QtGui import QStandardItemModel, QStandardItem, QIcon
-from PyQt6.QtCore import QModelIndex, Qt
+
+from PyQt6.QtCore import QModelIndex, QObject, Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtGui import QIcon, QStandardItem, QStandardItemModel
+
 from core.scanner import find_and_create_assets, load_existing_assets
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ class AssetGridModel(QObject):
         self._recalc_timer = QTimer(self)  # Timer do debouncingu
         self._recalc_timer.setSingleShot(True)
         self._recalc_timer.timeout.connect(self._perform_recalculate_columns)
-        logger.info("AssetGridModel initialized")
+        logger.debug("AssetGridModel initialized")
 
     def set_assets(self, assets: list):
         self._assets = assets
@@ -125,7 +126,7 @@ class FolderTreeModel(QObject):
         self._tree_model = QStandardItemModel()
         self._tree_model.setHorizontalHeaderLabels(["Folders"])
         self._root_folder = ""
-        logger.info("FolderTreeModel initialized")
+        logger.debug("FolderTreeModel initialized")
 
     def get_tree_model(self):
         return self._tree_model
@@ -158,7 +159,7 @@ class FolderSystemModel(QObject):
         self._tree_model.setHorizontalHeaderLabels(["Folders"])
         self._root_folder = ""
         self._is_loading = False
-        logger.info("FolderSystemModel initialized")
+        logger.debug("FolderSystemModel initialized")
 
     def get_tree_model(self):
         return self._tree_model
@@ -272,7 +273,7 @@ class WorkspaceFoldersModel(QObject):
         self._folders = []
         # Połącz z sygnałem konfiguracji
         self._config_manager.config_loaded.connect(self._load_folders_from_config)
-        logger.info("WorkspaceFoldersModel initialized")
+        logger.debug("WorkspaceFoldersModel initialized")
 
     def load_folders(self):
         """Ładuje foldery robocze z konfiguracji."""
@@ -282,34 +283,38 @@ class WorkspaceFoldersModel(QObject):
         """Ładuje foldery z konfiguracji i emituje sygnał aktualizacji."""
         try:
             self._folders = []
-            
+
             # Przeiteruj przez work_folder1 do work_folder9
             for i in range(1, 10):
                 folder_key = f"work_folder{i}"
                 folder_config = config.get(folder_key, {})
-                
+
                 if not isinstance(folder_config, dict):
                     continue
-                    
+
                 folder_name = folder_config.get("name", f"Folder {i}")
                 folder_path = folder_config.get("path", "")
                 folder_icon = folder_config.get("icon", "")
                 folder_color = folder_config.get("color", "#007ACC")
-                
+
                 # Sprawdź, czy folder istnieje (tylko jeśli ma ścieżkę)
                 folder_exists = os.path.exists(folder_path) if folder_path else False
                 if folder_path and not folder_exists:
                     logger.warning(f"Folder roboczy nie istnieje: {folder_path}")
-                
+
                 # Dodaj wszystkie foldery, nawet puste
-                self._folders.append({
-                    "name": folder_name,
-                    "path": folder_path,
-                    "icon": folder_icon,
-                    "color": folder_color,
-                    "exists": folder_exists,
-                    "enabled": bool(folder_path and folder_exists)  # Aktywny tylko jeśli ma ścieżkę i istnieje
-                })
+                self._folders.append(
+                    {
+                        "name": folder_name,
+                        "path": folder_path,
+                        "icon": folder_icon,
+                        "color": folder_color,
+                        "exists": folder_exists,
+                        "enabled": bool(
+                            folder_path and folder_exists
+                        ),  # Aktywny tylko jeśli ma ścieżkę i istnieje
+                    }
+                )
 
             self.folders_updated.emit(self._folders)
             logger.debug(f"Załadowano {len(self._folders)} folderów roboczych")
@@ -339,9 +344,12 @@ class AssetScannerWorker(QThread):
     def run(self):
         try:
             import time
+
             start_time = time.time()
 
-            logger.debug(f"AssetScannerWorker: Rozpoczynam skanowanie folderu: {self.folder_path}")
+            logger.debug(
+                f"AssetScannerWorker: Rozpoczynam skanowanie folderu: {self.folder_path}"
+            )
 
             if not os.path.exists(self.folder_path):
                 self.scan_error.emit(f"Folder nie istnieje: {self.folder_path}")
@@ -365,21 +373,22 @@ class AssetScannerWorker(QThread):
             # Zawsze skanuj folder, nawet jeśli są istniejące assety
             # To zapewni, że nowe pliki zostaną wykryte
             scanned_assets = find_and_create_assets(
-                self.folder_path, 
-                progress_callback=progress_callback
+                self.folder_path, progress_callback=progress_callback
             )
-            logger.debug(f"Przeskanowano folder, znaleziono {len(scanned_assets)} assetów")
+            logger.debug(
+                f"Przeskanowano folder, znaleziono {len(scanned_assets)} assetów"
+            )
 
             if self._should_stop:
                 return
 
             # Połącz istniejące i nowe assety, usuwając duplikaty
             all_assets = existing_assets.copy()
-            
+
             # Dodaj nowe assety, które nie istnieją już w existing_assets
-            existing_names = {asset.get('name', '') for asset in existing_assets}
+            existing_names = {asset.get("name", "") for asset in existing_assets}
             for asset in scanned_assets:
-                if asset.get('name', '') not in existing_names:
+                if asset.get("name", "") not in existing_names:
                     all_assets.append(asset)
 
             duration = time.time() - start_time
@@ -387,10 +396,12 @@ class AssetScannerWorker(QThread):
 
             # Dodaj ścieżkę folderu do każdego assetu
             for asset in all_assets:
-                asset['folder_path'] = self.folder_path
+                asset["folder_path"] = self.folder_path
 
             self.scan_finished.emit(all_assets, duration, operation_type)
-            logger.debug(f"AssetScannerWorker: Skanowanie zakończone w {duration:.2f}s, znaleziono {len(all_assets)} assetów")
+            logger.debug(
+                f"AssetScannerWorker: Skanowanie zakończone w {duration:.2f}s, znaleziono {len(all_assets)} assetów"
+            )
 
         except Exception as e:
             error_msg = f"Błąd podczas skanowania: {str(e)}"
@@ -414,7 +425,7 @@ class AssetScannerModelMV(QObject):
     def __init__(self):
         super().__init__()
         self._current_worker = None
-        logger.info("AssetScannerModelMV initialized")
+        logger.debug("AssetScannerModelMV initialized")
 
     def scan_folder(self, folder_path: str):
         """Rozpoczyna skanowanie folderu w osobnym wątku."""
@@ -448,7 +459,9 @@ class AssetScannerModelMV(QObject):
     def _on_scan_finished(self, assets: list, duration: float, operation_type: str):
         """Obsługuje zakończenie skanowania."""
         self.scan_completed.emit(assets, duration, operation_type)
-        logger.debug(f"AssetScannerModelMV: Skanowanie zakończone - {len(assets)} assetów w {duration:.2f}s")
+        logger.debug(
+            f"AssetScannerModelMV: Skanowanie zakończone - {len(assets)} assetów w {duration:.2f}s"
+        )
 
     def _on_scan_error(self, error_msg: str):
         """Obsługuje błąd skanowania."""
@@ -457,4 +470,4 @@ class AssetScannerModelMV(QObject):
 
     def _on_worker_finished(self):
         """Czyści referencję do worker'a po zakończeniu."""
-        self._current_worker = None 
+        self._current_worker = None

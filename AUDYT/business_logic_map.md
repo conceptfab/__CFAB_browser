@@ -28,7 +28,7 @@ core/
 
 - **Status:** ✅ UKOŃCZONA ANALIZA
 - **Data ukończenia:** 2025-06-28
-- **Business impact:** Plik jest odpowiedzialny za skanowanie struktury folderów. Analiza wykazała, że kod jest funkcjonalny, ale wymaga refaktoryzacji w celu delegowania odpowiedzialności za skanowanie assetów do innego modułu.
+- **Business impact:** Refaktoryzacja poprawiła separację odpowiedzialności poprzez delegowanie skanowania assetów do AssetScannerModelMV. FolderStructureScanner teraz skupia się wyłącznie na skanowaniu struktury folderów, co poprawia maintainability i testowanie kodu. Zmiana zachowuje 100% kompatybilność wsteczną.
 - **Pliki wynikowe:**
   - `AUDYT/corrections/folder_scanner_worker_correction.md`
   - `AUDYT/patches/folder_scanner_worker_patch_code.md`

@@ -196,7 +196,7 @@ class AmvView(QWidget):
         self.buttons_frame.setLayout(self.buttons_layout)
         folder_layout.addWidget(self.buttons_frame)
         self.folder_buttons = []
-        logger.info("Workspace folders panel created - ETAP 7")
+        logger.debug("Workspace folders panel created - ETAP 7")
 
     def update_workspace_folder_buttons(self, folders: list):
         try:
@@ -260,7 +260,7 @@ class AmvView(QWidget):
                 col = i % 3
                 self.buttons_layout.addWidget(button, row, col)
                 self.folder_buttons.append(button)
-            logger.info("Workspace folder buttons updated - ETAP 7")
+            logger.debug("Workspace folder buttons updated - ETAP 7")
         except Exception as e:
             logger.error(f"Error updating workspace folder buttons: {e}")
 

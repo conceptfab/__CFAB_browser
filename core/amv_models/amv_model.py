@@ -65,7 +65,7 @@ class AmvModel(QObject):
             self.config_changed.emit(config)
             self.thumbnail_size_changed.emit(self._thumbnail_size)
             self.state_initialized.emit()
-            logger.info("Stan aplikacji zainicjalizowany z konfiguracji")
+            logger.debug("Stan aplikacji zainicjalizowany z konfiguracji")
         except Exception as e:
             logger.error(f"Błąd inicjalizacji stanu ({type(e).__name__}): {e}")
             self._config = self.config_manager._get_default_config()

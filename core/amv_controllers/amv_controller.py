@@ -134,7 +134,7 @@ class AmvController(QObject):
         self._connect_signals()
         self._setup_folder_tree()
         self._setup_asset_grid()
-        logger.info("AmvController initialized - ETAP 14")
+        logger.debug("AmvController initialized - ETAP 14")
 
     def _connect_signals(self):
         # --- Podstawowe sygnały UI ---
@@ -247,7 +247,7 @@ class AmvController(QObject):
         logger.info("Folder system model connected to view - ETAP 6")
 
     def _setup_asset_grid(self):
-        logger.info("Asset grid model connected to view - ETAP 9")
+        logger.debug("Asset grid model connected to view - ETAP 9")
 
     def _on_folder_structure_changed(self, tree_model):
         self.view.folder_tree_view.setModel(tree_model)
@@ -326,11 +326,11 @@ class AmvController(QObject):
 
     def _on_config_loaded(self, config: dict):
         self.model.set_config(config)
-        logger.info("Konfiguracja załadowana pomyślnie")
+        logger.debug("Konfiguracja załadowana pomyślnie")
 
     def _on_state_initialized(self):
         self.model.workspace_folders_model.load_folders()
-        logger.info("Stan aplikacji zainicjalizowany")
+        logger.debug("Stan aplikacji zainicjalizowany")
 
     def _on_folder_clicked(self, folder_path: str):
         logger.info(f"Controller: Folder clicked: {folder_path}")
