@@ -427,7 +427,7 @@ class AmvView(QWidget):
         self.control_panel = QFrame()
         self.control_panel.setFixedHeight(32)
         self.control_panel.setStyleSheet(
-            "QFrame { background-color: #252526; border-top: 1px solid #3F3F46; }"
+            "QFrame { background-color: #252526; border-top: 1px solid #3F3F46; border-left: 1px solid #3F3F46; }"
         )
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(0, 0, 0, 0)
@@ -442,6 +442,7 @@ class AmvView(QWidget):
                 border: 1px solid #555555; background-color: #2D2D30;
                 text-align: center; color: #FFFFFF; border-radius: 10px;
                 font-size: 11px; font-weight: bold;
+                margin-left: 5px;
             }
             QProgressBar::chunk {
                 background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,

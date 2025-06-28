@@ -3,25 +3,25 @@
     "path": "W:___3dsky_V1",
     "name": "3DSky V1",
     "icon": "",
-    "color": ""
+    "color": "#131313"
   },
   "work_folder2": {
     "path": "W:/_SBSAR_LIB",
     "name": "SBSAR",
     "icon": "",
-    "color": ""
+    "color": "#34608B"
   },
   "work_folder3": {
     "path": "T:/___textures",
     "name": "Textures",
     "icon": "texture",
-    "color": "#E0960C"
+    "color": "#9F2F8B"
   },
   "work_folder4": {
     "path": "I:/___3dsky_V2",
     "name": "3DSky V2",
     "icon": "",
-    "color": ""
+    "color": "#632F9F"
   },
   "work_folder5": {
     "path": "",
@@ -33,7 +33,7 @@
     "path": "T:/___textures",
     "name": "Textures",
     "icon": "",
-    "color": ""
+    "color": "#39F702F"
   },
   "work_folder7": {
     "path": "",
