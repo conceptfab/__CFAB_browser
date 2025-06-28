@@ -78,7 +78,7 @@ def _scan_folder_for_files(folder_path):
     return archive_by_name, image_by_name
 
 
-def _check_texture_folders_presence(folder_path):
+def _are_textures_in_archive(folder_path):
     """
     Sprawdza obecność folderów tekstur w folderze roboczym
 
@@ -164,7 +164,7 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
         archive_size_mb = get_file_size_mb(archive_path)
 
         # Sprawdź obecność folderów tekstur
-        textures_in_archive = _check_texture_folders_presence(folder_path)
+        textures_in_archive = _are_textures_in_archive(folder_path)
 
         asset_data = {
             "type": "asset", # Dodano typ

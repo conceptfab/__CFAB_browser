@@ -45,7 +45,7 @@ class FolderClickRules:
 
     # Stałe konfiguracyjne
     CACHE_FOLDER_NAME = ".cache"
-    THUMB_EXTENSION = ".thumb"
+    THUMB_EXTENSION: Set[str] = {".thumb"} # Zmieniono na zbiór
 
     # Zbiory rozszerzeń plików dla efektywnego lookup
     ASSET_EXTENSIONS: Set[str] = {".asset"}
@@ -200,7 +200,7 @@ class FolderClickRules:
             thumb_count = sum(
                 1
                 for item in cache_items
-                if item.lower().endswith(FolderClickRules.THUMB_EXTENSION)
+                if item.lower().endswith(tuple(FolderClickRules.THUMB_EXTENSION)) # Użycie tuple dla endswith
             )
 
             return thumb_count

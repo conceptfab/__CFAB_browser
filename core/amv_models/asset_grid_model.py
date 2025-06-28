@@ -16,6 +16,11 @@ class AssetGridModel(QObject):
     loading_state_changed = pyqtSignal(bool)
     recalculate_columns_requested = pyqtSignal(int, int)  # Sygnał do kontrolera
 
+    # Constants for layout calculations
+    TILE_MARGINS = 8  # 2 * 8px = 16px total for tile_width
+    LAYOUT_MARGINS = 16 # From gallery_layout.setContentsMargins(8, 8, 8, 8)
+    TILE_SPACING = 8 # Spacing between tiles
+
     def __init__(self):
         super().__init__()
         self._assets = []

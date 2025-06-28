@@ -15,6 +15,9 @@ from PyQt6.QtWidgets import (
 )
 
 from core.json_utils import dumps
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ThumbnailTile(QFrame):
@@ -223,7 +226,7 @@ class ThumbnailTile(QFrame):
             self.drag_started.emit(self.asset_data)
             drag.exec(Qt.DropAction.MoveAction | Qt.DropAction.CopyAction)
         except Exception as e:
-            print(f"Błąd podczas rozpoczęcia drag: {e}")
+            logger.error(f"Błąd podczas rozpoczęcia drag: {e}")
 
     def _on_thumbnail_clicked(self, ev):
         if self.asset_data:
@@ -284,7 +287,7 @@ class ThumbnailTile(QFrame):
                     self.thumbnail_container.setPixmap(scaled_pixmap)
                     return True
             except Exception as e:
-                print(f"Błąd ładowania thumbnail {thumb_file}: {e}")
+                logger.error(f"Błąd ładowania thumbnail {thumb_file}: {e}")
 
         return False
 
@@ -358,7 +361,7 @@ class ThumbnailTile(QFrame):
                 self._create_fallback_texture_icon()
 
         except Exception as e:
-            print(f"Błąd ładowania ikony texture: {e}")
+            logger.error(f"Błąd ładowania ikony texture: {e}")
             self._create_fallback_texture_icon()
 
     def _create_fallback_texture_icon(self):
@@ -378,6 +381,9 @@ class FolderTile(QFrame):
     """
     Kafelek dla specjalnych folderów (tex, textures, maps)
     """
+
+    FOLDER_TILE_HEIGHT_ADDITION = 60
+    FOLDER_ICON_PADDING = 20
 
     folder_clicked = pyqtSignal(str)  # Sygnał z ścieżką do folderu
 
@@ -408,7 +414,7 @@ class FolderTile(QFrame):
         # Polityka rozmiaru - stała szerokość
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.setFixedWidth(self.thumbnail_size + (2 * self.margins_size))
-        self.setFixedHeight(self.thumbnail_size + 60)  # Dodatkowe miejsce na tekst
+        self.setFixedHeight(self.thumbnail_size + self.FOLDER_TILE_HEIGHT_ADDITION)  # Dodatkowe miejsce na tekst
 
         # Główny layout pionowy
         layout = QVBoxLayout(self)
@@ -484,8 +490,8 @@ class FolderTile(QFrame):
                 if not pixmap.isNull():
                     # Przeskaluj do rozmiaru thumbnail z zachowaniem proporcji
                     scaled_pixmap = pixmap.scaled(
-                        self.thumbnail_size - 20,  # Lekko mniejsza niż kontener
-                        self.thumbnail_size - 20,
+                        self.thumbnail_size - self.FOLDER_ICON_PADDING,  # Lekko mniejsza niż kontener
+                        self.thumbnail_size - self.FOLDER_ICON_PADDING,
                         Qt.AspectRatioMode.KeepAspectRatio,
                         Qt.TransformationMode.SmoothTransformation,
                     )
@@ -496,7 +502,7 @@ class FolderTile(QFrame):
                 self._create_fallback_icon()
 
         except Exception as e:
-            print(f"Błąd ładowania ikony folderu: {e}")
+            logger.error(f"Błąd ładowania ikony folderu: {e}")
             self._create_fallback_icon()
 
     def _create_fallback_icon(self):
@@ -521,79 +527,11 @@ class FolderTile(QFrame):
         """Aktualizuje rozmiar kafelka folderu"""
         self.thumbnail_size = new_size
         self.setFixedWidth(new_size + (2 * self.margins_size))
-        self.setFixedHeight(new_size + 60)
+        self.setFixedHeight(new_size + self.FOLDER_TILE_HEIGHT_ADDITION)
         self.folder_icon.setFixedSize(new_size, new_size)
 
         # Ponownie załaduj ikonę w nowym rozmiarze
         self._load_folder_icon()
-
-
-class PreviewWindow(QDialog):
-    def __init__(self, image_path: str, parent=None):
-        super().__init__(parent)
-        self.image_path = image_path
-        self.original_pixmap = None
-        self.setWindowFlags(
-            self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool
-        )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, False)
-        self.setup_ui()
-
-    def setup_ui(self):
-        self.setWindowTitle(f"Podgląd - {os.path.basename(self.image_path)}")
-        self.setModal(False)
-        self.setStyleSheet(
-            "QDialog { background-color: #1E1E1E; border: 2px solid #3F3F46; }"
-        )
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.image_label = QLabel()
-        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.image_label)
-        self.setLayout(layout)
-        self.load_image_and_resize()
-        self.show()
-        self.raise_()
-        self.activateWindow()
-
-    def load_image_and_resize(self):
-        try:
-            self.original_pixmap = QPixmap(self.image_path)
-            if not self.original_pixmap.isNull():
-                screen = QApplication.primaryScreen().availableGeometry()
-                max_width = screen.width() - 100
-                max_height = screen.height() - 100
-                scale = min(
-                    max_width / self.original_pixmap.width(),
-                    max_height / self.original_pixmap.height(),
-                    1.0,
-                )
-                new_width, new_height = int(self.original_pixmap.width() * scale), int(
-                    self.original_pixmap.height() * scale
-                )
-                self.resize(new_width, new_height)
-                self.move(
-                    (screen.width() - new_width) // 2,
-                    (screen.height() - new_height) // 2,
-                )
-                self.load_image()
-        except Exception as e:
-            self.image_label.setText(f"Błąd ładowania obrazu: {e}")
-
-    def load_image(self):
-        if self.original_pixmap:
-            self.image_label.setPixmap(
-                self.original_pixmap.scaled(
-                    self.size(),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-            )
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self.load_image()
 
 
 if __name__ == "__main__":

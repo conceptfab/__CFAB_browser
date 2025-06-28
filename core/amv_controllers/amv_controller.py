@@ -17,6 +17,7 @@ from ..amv_models.asset_tile_model import AssetTileModel
 from ..amv_views.amv_view import AmvView
 from ..amv_views.asset_tile_view import AssetTileView
 from ..scanner import find_and_create_assets
+from ..thumbnail_tile import PreviewWindow
 
 # Importy widoków będą dodane po przeniesieniu klas do core/amv_views/
 # from ..amv_views.amv_main_view import AmvView
@@ -395,8 +396,6 @@ class AmvController(QObject):
         if os.path.exists(path):
             try:
                 # Otwórz podgląd w dedykowanym oknie aplikacji
-                from core.thumbnail_tile import PreviewWindow
-
                 PreviewWindow(path, self.view)
                 logger.info(f"Otworzono podgląd w dedykowanym oknie: {path}")
             except Exception as e:
