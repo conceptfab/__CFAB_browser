@@ -40,9 +40,11 @@ class FileOperationsWorker(QThread):
         if not self.assets_data:
             self.operation_completed.emit([], [])
             return
-        success_asset_names = []
+
+        success_messages = []
         error_messages = []
         total_assets = len(self.assets_data)
+
         if not os.path.exists(self.target_folder_path):
             try:
                 os.makedirs(self.target_folder_path)
@@ -53,17 +55,19 @@ class FileOperationsWorker(QThread):
                     f"{self.target_folder_path}: {e}"
                 )
                 return
+
         for i, asset_data in enumerate(self.assets_data):
             asset_name = asset_data.get("name", "Unknown Asset")
             self.operation_progress.emit(
                 i + 1, total_assets, f"Przenoszenie: {asset_name}"
             )
             try:
+                # Użyj nowej metody z obsługą konfliktów nazw
                 result = self._move_single_asset_with_conflict_resolution(
                     asset_data, asset_name
                 )
                 if result["success"]:
-                    success_asset_names.append(result["final_name"])
+                    success_messages.append(result["message"])
                     logger.debug(result["message"])
                 else:
                     error_messages.append(result["message"])
@@ -72,6 +76,8 @@ class FileOperationsWorker(QThread):
                 error_msg = f"Błąd przenoszenia assetu {asset_name}: {e}"
                 error_messages.append(error_msg)
                 logger.error(error_msg)
+
+        # Po przeniesieniu assetów, sprawdź i usuń pusty folder .cache w źródle
         source_cache_dir = os.path.join(self.source_folder_path, ".cache")
         if os.path.exists(source_cache_dir) and not os.listdir(source_cache_dir):
             try:
@@ -83,7 +89,8 @@ class FileOperationsWorker(QThread):
                 logger.warning(
                     f"Nie można usunąć pustego folderu .cache w źródle {source_cache_dir}: {e}"
                 )
-        self.operation_completed.emit(success_asset_names, error_messages)
+
+        self.operation_completed.emit(success_messages, error_messages)
 
     def _generate_unique_asset_name(self, original_name: str) -> str:
         """Generuje unikalną nazwę assetu dodając suffix _01, _02, itd."""
@@ -134,6 +141,7 @@ class FileOperationsWorker(QThread):
             if archive_filename:
                 source_archive = os.path.join(self.source_folder_path, archive_filename)
                 if os.path.exists(source_archive):
+                    # Zachowaj oryginalne rozszerzenie
                     archive_ext = os.path.splitext(archive_filename)[1]
                     target_archive = os.path.join(
                         self.target_folder_path, f"{unique_name}{archive_ext}"
@@ -145,6 +153,7 @@ class FileOperationsWorker(QThread):
             if preview_filename:
                 source_preview = os.path.join(self.source_folder_path, preview_filename)
                 if os.path.exists(source_preview):
+                    # Zachowaj oryginalne rozszerzenie
                     preview_ext = os.path.splitext(preview_filename)[1]
                     target_preview = os.path.join(
                         self.target_folder_path, f"{unique_name}{preview_ext}"
@@ -170,10 +179,21 @@ class FileOperationsWorker(QThread):
 
             # Jeśli nazwa została zmieniona, zaktualizuj plik .asset
             if unique_name != original_name:
-                self._update_asset_file_after_rename(source_asset, target_asset)
-                if os.path.exists(source_asset):
-                    self._mark_asset_as_duplicate(target_asset, source_asset)
+                self._update_asset_file_after_rename(source_path, target_path)
 
+                # Oznacz jako duplikat z informacją o oryginale
+                original_asset_path = os.path.join(
+                    self.target_folder_path, f"{original_name}.asset"
+                )
+                target_asset_path = os.path.join(
+                    self.target_folder_path, f"{unique_name}.asset"
+                )
+                if os.path.exists(original_asset_path):
+                    self._mark_asset_as_duplicate(
+                        target_asset_path, original_asset_path
+                    )
+
+            # Zwróć informację o sukcesie
             if unique_name != original_name:
                 message = (
                     f"Przeniesiono asset: {original_name} -> {unique_name} "
@@ -191,28 +211,29 @@ class FileOperationsWorker(QThread):
                 "final_name": original_name,
             }
 
-    def _update_asset_file_after_rename(self, original_asset_path, new_asset_path):
+    def _update_asset_file_after_rename(self, original_path, new_path):
+        """Aktualizuje plik .asset po zmianie nazwy"""
         try:
-            asset_file_path = new_asset_path
+            asset_file_path = new_path.replace(os.path.splitext(new_path)[1], ".asset")
+
             if os.path.exists(asset_file_path):
+                # Wczytaj JSON z pliku .asset
                 with open(asset_file_path, "r", encoding="utf-8") as f:
                     asset_data = json.load(f)
-                original_basename = os.path.splitext(
-                    os.path.basename(original_asset_path)
-                )[0]
-                new_basename = os.path.splitext(os.path.basename(new_asset_path))[0]
-                if "archive" in asset_data and isinstance(asset_data["archive"], str):
-                    if original_basename in asset_data["archive"]:
-                        asset_data["archive"] = asset_data["archive"].replace(
-                            original_basename, new_basename
-                        )
-                if "preview" in asset_data and isinstance(asset_data["preview"], str):
-                    if original_basename in asset_data["preview"]:
-                        asset_data["preview"] = asset_data["preview"].replace(
-                            original_basename, new_basename
-                        )
+
+                # Zaktualizuj ścieżki w asset_data
+                original_basename = os.path.splitext(os.path.basename(original_path))[0]
+                new_basename = os.path.splitext(os.path.basename(new_path))[0]
+
+                # Aktualizuj wszystkie ścieżki w asset_data
+                for key, value in asset_data.items():
+                    if isinstance(value, str) and original_basename in value:
+                        asset_data[key] = value.replace(original_basename, new_basename)
+
+                # Zapisz zaktualizowany JSON
                 with open(asset_file_path, "w", encoding="utf-8") as f:
                     json.dump(asset_data, f, ensure_ascii=False, indent=2)
+
                 logger.debug(f"Zaktualizowano plik .asset: {asset_file_path}")
         except Exception as e:
             logger.error(f"Błąd aktualizacji pliku .asset: {e}")
@@ -277,9 +298,11 @@ class FileOperationsWorker(QThread):
         if not self.assets_data:
             self.operation_completed.emit([], [])
             return
-        success_asset_names = []
+
+        success_messages = []
         error_messages = []
         total_assets = len(self.assets_data)
+
         for i, asset_data in enumerate(self.assets_data):
             asset_name = asset_data.get("name", "Unknown Asset")
             self.operation_progress.emit(i + 1, total_assets, f"Usuwanie: {asset_name}")
@@ -291,11 +314,13 @@ class FileOperationsWorker(QThread):
                     if os.path.exists(file_path):
                         os.remove(file_path)
                         logger.debug(f"Usunięto plik: {file_path}")
-                success_asset_names.append(asset_name)
+                success_messages.append(f"Pomyślnie usunięto asset: {asset_name}")
                 logger.debug(f"Usunięto asset: {asset_name}")
             except Exception as e:
                 error_messages.append(f"Błąd usuwania assetu {asset_name}: {e}")
                 logger.error(f"Błąd usuwania assetu {asset_name}: {e}")
+
+        # Po usunięciu assetów, sprawdź i usuń pusty folder .cache
         cache_dir = os.path.join(self.source_folder_path, ".cache")
         if os.path.exists(cache_dir) and not os.listdir(cache_dir):
             try:
@@ -305,7 +330,8 @@ class FileOperationsWorker(QThread):
                 logger.warning(
                     f"Nie można usunąć pustego folderu .cache {cache_dir}: {e}"
                 )
-        self.operation_completed.emit(success_asset_names, error_messages)
+
+        self.operation_completed.emit(success_messages, error_messages)
 
     def _get_asset_files_paths(self, asset_data: dict, folder_path: str) -> list:
         """Zwraca listę pełnych ścieżek do plików assetu (bez thumb)."""

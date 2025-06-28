@@ -1,5 +1,7 @@
+import glob
 import logging
 import os
+import shutil
 
 from core.json_utils import load_from_file, save_to_file
 from core.thumbnail import process_thumbnail
@@ -26,13 +28,13 @@ def _get_files_by_extensions(folder_path, extensions):
         list: Lista ścieżek do znalezionych plików
     """
     files = []
-    ext_set = set(ext.lower() for ext in extensions)
-    for entry in os.listdir(folder_path):
-        full_path = os.path.join(folder_path, entry)
-        if os.path.isfile(full_path):
-            _, ext = os.path.splitext(entry)
-            if ext and ext[1:].lower() in ext_set:
-                files.append(full_path)
+    for ext in extensions:
+        # Małe litery
+        pattern_lower = os.path.join(folder_path, f"*.{ext.lower()}")
+        files.extend(glob.glob(pattern_lower))
+        # Wielkie litery
+        pattern_upper = os.path.join(folder_path, f"*.{ext.upper()}")
+        files.extend(glob.glob(pattern_upper))
     return files
 
 
@@ -58,17 +60,20 @@ def _scan_folder_for_files(folder_path):
     for archive_file in archive_files:
         name_without_ext = os.path.splitext(os.path.basename(archive_file))[0]
         name_lower = name_without_ext.lower()  # Konwertuj na małe litery dla porównania
+        logger.debug(f"Archive file: {archive_file} -> name: '{name_without_ext}' -> lower: '{name_lower}'")
         archive_by_name[name_lower] = archive_file
 
     # Grupuj pliki obrazów według nazwy (case-insensitive)
     for image_file in image_files:
         name_without_ext = os.path.splitext(os.path.basename(image_file))[0]
         name_lower = name_without_ext.lower()  # Konwertuj na małe litery dla porównania
+        logger.debug(f"Image file: {image_file} -> name: '{name_without_ext}' -> lower: '{name_lower}'")
         image_by_name[name_lower] = image_file
 
+    logger.debug(f"Archive by name: {list(archive_by_name.keys())}")
+    logger.debug(f"Image by name: {list(image_by_name.keys())}")
     logger.debug(
-        f"Found {len(archive_files)} archive files and "
-        f"{len(image_files)} image files"
+        f"Found {len(archive_files)} archive files and {len(image_files)} image files"
     )
     return archive_by_name, image_by_name
 
@@ -130,13 +135,11 @@ def _scan_for_special_folders(folder_path: str) -> list[dict]:
     for folder_name in special_folder_names:
         full_path = os.path.join(folder_path, folder_name)
         if os.path.isdir(full_path):
-            special_folders_data.append(
-                {
-                    "type": "special_folder",
-                    "name": folder_name,
-                    "folder_path": full_path,
-                }
-            )
+            special_folders_data.append({
+                "type": "special_folder",
+                "name": folder_name,
+                "folder_path": full_path
+            })
             logger.debug(f"Found special folder: {full_path}")
     return special_folders_data
 
@@ -164,7 +167,7 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
         textures_in_archive = _check_texture_folders_presence(folder_path)
 
         asset_data = {
-            "type": "asset",  # Dodano typ
+            "type": "asset", # Dodano typ
             "name": name,
             "archive": os.path.basename(archive_path),
             "preview": os.path.basename(image_path),
@@ -174,7 +177,7 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
             "color": None,
             "textures_in_the_archive": textures_in_archive,
             "meta": {},
-            "folder_path": folder_path,  # Dodano folder_path
+            "folder_path": folder_path, # Dodano folder_path
         }
 
         save_to_file(asset_data, asset_file_path, indent=True)
@@ -182,14 +185,14 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
         # Utwórz thumbnail dla tego asset
         thumbnail_success = create_thumbnail_for_asset(asset_file_path, image_path)
         if thumbnail_success:
-            asset_data["thumbnail"] = True  # Aktualizuj dane w pamięci
+            asset_data["thumbnail"] = True # Aktualizuj dane w pamięci
         else:
             logger.warning(f"Failed to create thumbnail for asset: {name}")
 
         logger.debug(
             f"Created asset file: {name}.asset with textures_in_the_archive: {textures_in_archive}"
         )
-        return asset_data  # Zwracamy słownik z danymi assetu
+        return asset_data # Zwracamy słownik z danymi assetu
 
     except Exception as e:
         logger.error(f"Error creating asset file for {name}: {e}")
@@ -405,7 +408,7 @@ def find_and_create_assets(folder_path, progress_callback=None):
 
         # Znajdź wspólne nazwy (pary plików)
         common_names = set(archive_by_name.keys()) & set(image_by_name.keys())
-
+        
         logger.debug(f"Common names (pairs): {sorted(common_names)}")
         logger.debug(f"Archive names: {sorted(archive_by_name.keys())}")
         logger.debug(f"Image names: {sorted(image_by_name.keys())}")
@@ -506,13 +509,11 @@ def load_existing_assets(folder_path: str) -> list[dict]:
                 if asset_data:
                     # Upewnij się, że folder_path jest dodany do danych assetu
                     asset_data["folder_path"] = folder_path
-                    asset_data["type"] = "asset"  # Upewnij się, że typ jest poprawny
+                    asset_data["type"] = "asset" # Upewnij się, że typ jest poprawny
                     loaded_assets.append(asset_data)
             except Exception as e:
                 logger.error(f"Błąd ładowania pliku .asset {asset_file_path}: {e}")
-    logger.debug(
-        f"Załadowano {len(loaded_assets)} istniejących assetów z {folder_path}"
-    )
+    logger.debug(f"Załadowano {len(loaded_assets)} istniejących assetów z {folder_path}")
     return loaded_assets
 
 

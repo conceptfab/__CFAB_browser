@@ -4,21 +4,21 @@ Zarządza ogólnym stanem aplikacji i agreguje wszystkie inne modele.
 """
 
 import logging
-
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from .asset_grid_model import (
-    AssetGridModel,
-    AssetScannerModelMV,
-    FolderSystemModel,
-    FolderTreeModel,
-    WorkspaceFoldersModel,
-)
 from .config_manager_model import ConfigManagerMV
 from .control_panel_model import ControlPanelModel
+from .selection_model import SelectionModel
 from .drag_drop_model import DragDropModel
 from .file_operations_model import FileOperationsModel
-from .selection_model import SelectionModel
+from .asset_tile_model import AssetTileModel
+from .asset_grid_model import (
+    AssetGridModel, 
+    FolderTreeModel, 
+    FolderSystemModel, 
+    WorkspaceFoldersModel, 
+    AssetScannerModelMV
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class AmvModel(QObject):
         self._work_folder = ""
         self._is_left_panel_collapsed = False
         self._last_splitter_sizes = [200, 800]
-
+        
         # Inicjalizacja wszystkich modeli
         self.folder_tree_model = FolderTreeModel()
         self.asset_grid_model = AssetGridModel()
@@ -51,7 +51,7 @@ class AmvModel(QObject):
         self.selection_model = SelectionModel()
         self.file_operations_model = FileOperationsModel()
         self.drag_drop_model = DragDropModel()
-
+        
         logger.info("AmvModel initialized - ETAP 13")
 
     def initialize_state(self):
@@ -67,7 +67,7 @@ class AmvModel(QObject):
             self.state_initialized.emit()
             logger.info("Stan aplikacji zainicjalizowany z konfiguracji")
         except Exception as e:
-            logger.error(f"Błąd inicjalizacji stanu ({type(e).__name__}): {e}")
+            logger.error(f"Błąd inicjalizacji stanu: {e}")
             self._config = self.config_manager._get_default_config()
             self.state_initialized.emit()
 
@@ -101,4 +101,4 @@ class AmvModel(QObject):
             return self._last_splitter_sizes[:]
 
     def is_left_panel_collapsed(self):
-        return self._is_left_panel_collapsed
+        return self._is_left_panel_collapsed 

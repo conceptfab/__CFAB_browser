@@ -92,8 +92,6 @@ class AssetRebuilderThread(QThread):
         try:
             cache_folder = os.path.join(self.folder_path, ".cache")
             if os.path.exists(cache_folder) and os.path.isdir(cache_folder):
-                import shutil  # lokalny import, zgodnie z dobrymi praktykami
-
                 shutil.rmtree(cache_folder)
                 logger.info(f"Usunięto folder .cache: {cache_folder}")
             else:

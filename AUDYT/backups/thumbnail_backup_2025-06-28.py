@@ -95,7 +95,7 @@ class ThumbnailConfigManager:
         try:
             current_timestamp = config_path.stat().st_mtime
             return current_timestamp == self._config_timestamp
-        except OSError:
+        except:
             return False
 
     def _get_default_config(self):
@@ -333,7 +333,7 @@ class ThumbnailProcessor:
             if temp_path.exists():
                 try:
                     temp_path.unlink()
-                except OSError:
+                except:
                     pass
             raise RuntimeError(f"Image processing error: {e}")
 
@@ -425,7 +425,7 @@ class ThumbnailProcessor:
             if temp_path.exists():
                 try:
                     temp_path.unlink()
-                except OSError:
+                except:
                     pass
             raise
 
@@ -576,7 +576,7 @@ def clear_thumbnail_cache(work_folder: str, older_than_days: int = 0) -> int:
                 if older_than_days == 0 or thumb_file.stat().st_mtime < cutoff_time:
                     thumb_file.unlink()
                     removed_count += 1
-            except OSError as e:
+            except Exception as e:
                 logger.warning(f"Could not remove {thumb_file}: {e}")
 
         logger.debug(f"Removed {removed_count} thumbnail files from cache")
