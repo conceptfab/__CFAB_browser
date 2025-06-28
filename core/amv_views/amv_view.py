@@ -268,10 +268,12 @@ class AmvView(QWidget):
                             button.setIconSize(QSize(12, 12))
                         except Exception as e:
                             logger.debug(f"Icon loading failed for {icon_path}: {e}")
+                    # Ustawienie domyślnego koloru tła na kolor z config, jeśli jest zdefiniowany
+                    default_bg_color = folder_color if folder_color else "#2D2D30"
                     button.setStyleSheet(
                         f"""
                         QPushButton {{
-                            background-color: #2D2D30; color: #CCCCCC;
+                            background-color: {default_bg_color}; color: #CCCCCC;
                             border: 1px solid #3F3F46; border-radius: 4px;
                             font-size: 10px; padding: 1px 4px; text-align: center;
                         }}
