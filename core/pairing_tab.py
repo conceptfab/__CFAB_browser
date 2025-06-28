@@ -2,19 +2,24 @@ import os
 import subprocess
 import sys
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMenu,
+    QMessageBox,
     QPushButton,
     QSizePolicy,
+    QSlider,
     QVBoxLayout,
     QWidget,
 )
 
+from core.amv_controllers.amv_controller import AssetRebuilderThread
 from core.amv_models.pairing_model import PairingModel
 from core.amv_views.preview_gallery_view import PreviewGalleryView
 from core.preview_window import PreviewWindow
@@ -41,20 +46,24 @@ class ArchiveListItem(QWidget):
         layout.addWidget(self.checkbox)
 
         self.label = QLabel(self.file_name)
-        self.label.linkActivated.connect(self._on_label_clicked)
-        # Make label clickable
-        self.label.setTextInteractionFlags(
-            Qt.TextInteractionFlag.LinksAccessibleByMouse
-        )
         layout.addWidget(self.label)
         layout.addStretch(1)
 
         self.setLayout(layout)
 
+    def contextMenuEvent(self, event):
+        """Create context menu for right-click."""
+        menu = QMenu(self)
+        open_action = QAction("Otwórz w programie domyślnym", self)
+        open_action.triggered.connect(self._handle_open)
+        menu.addAction(open_action)
+        menu.exec(event.globalPos())
+
     def _on_checkbox_state_changed(self, state):
         self.checked.emit(self.file_name, state == Qt.CheckState.Checked.value)
 
-    def _on_label_clicked(self):
+    def _handle_open(self):
+        """Handle the open action from the context menu."""
         self.clicked.emit(self.file_name)
 
     def is_checked(self):
@@ -68,6 +77,7 @@ class PairingTab(QWidget):
     def __init__(self):
         super().__init__()
         self.model = PairingModel()
+        self.rebuild_thread = None
         self.init_ui()
         # self.load_data() # Data will be loaded on directory change
 
@@ -78,44 +88,77 @@ class PairingTab(QWidget):
         self.load_data()
 
     def init_ui(self):
-        main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        # Main vertical layout
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(5)
 
-        # Left Column: Archive Files List (200px)
-        self.archive_list_widget = QListWidget()
-        self.archive_list_widget.setFixedWidth(200)
-        main_layout.addWidget(self.archive_list_widget)
+        # Horizontal layout for the three columns
+        columns_layout = QHBoxLayout()
+        columns_layout.setContentsMargins(0, 0, 0, 0)
+        columns_layout.setSpacing(5)
 
-        # Middle Column: Buttons (75px)
+        # Left Column: Archive Files List (350px)
+        self.archive_list_widget = QListWidget()
+        self.archive_list_widget.setFixedWidth(350)  # Increased width
+        columns_layout.addWidget(self.archive_list_widget)
+
+        # Middle Column: Buttons (150px)
         button_column_layout = QVBoxLayout()
         button_column_layout.setContentsMargins(0, 0, 0, 0)
         button_column_layout.setSpacing(5)
         button_column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.create_asset_button = QPushButton("Utwórz asset")
-        self.create_asset_button.setFixedSize(75, 30)
+        self.create_asset_button.setFixedSize(250, 30)  # Increased width
         self.create_asset_button.clicked.connect(self._on_create_asset_button_clicked)
         button_column_layout.addWidget(self.create_asset_button)
 
-        self.button2 = QPushButton("Przycisk 2")
-        self.button2.setFixedSize(75, 30)
-        button_column_layout.addWidget(self.button2)
+        self.delete_previews_button = QPushButton("Usuń podglądy bez pary")
+        self.delete_previews_button.setFixedSize(250, 30)  # Increased width
+        self.delete_previews_button.clicked.connect(
+            self._on_delete_unpaired_previews_clicked
+        )
+        button_column_layout.addWidget(self.delete_previews_button)
 
-        self.button3 = QPushButton("Przycisk 3")
-        self.button3.setFixedSize(75, 30)
-        button_column_layout.addWidget(self.button3)
+        self.delete_archives_button = QPushButton("Usuń archiwa bez pary")
+        self.delete_archives_button.setFixedSize(250, 30)  # Increased width
+        self.delete_archives_button.clicked.connect(
+            self._on_delete_unpaired_archives_clicked
+        )
+        button_column_layout.addWidget(self.delete_archives_button)
 
-        # Add a spacer to push buttons to the top
+        self.rebuild_assets_button = QPushButton("Przebuduj assety")
+        self.rebuild_assets_button.setFixedSize(250, 30)  # Increased width
+        self.rebuild_assets_button.clicked.connect(self._on_rebuild_assets_clicked)
+        button_column_layout.addWidget(self.rebuild_assets_button)
+
         button_column_layout.addStretch(1)
+        columns_layout.addLayout(button_column_layout)
 
-        main_layout.addLayout(button_column_layout)
-
-        # Right Column: Preview Gallery (remaining space)
+        # Right Column: Preview Gallery and Slider
+        right_column_layout = QVBoxLayout()
         self.preview_gallery_view = PreviewGalleryView()
         self.preview_gallery_view.preview_selected.connect(self._on_preview_selected)
         self.preview_gallery_view.preview_clicked.connect(self._on_preview_clicked)
-        main_layout.addWidget(self.preview_gallery_view)
+        right_column_layout.addWidget(self.preview_gallery_view)
+
+        # Slider for thumbnail size below the gallery
+        self.size_slider = QSlider(Qt.Orientation.Horizontal)
+        self.size_slider.setMinimum(64)
+        self.size_slider.setMaximum(256)
+        self.size_slider.setValue(128)
+        self.size_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.size_slider.setTickInterval(32)
+        self.size_slider.valueChanged.connect(
+            self.preview_gallery_view.on_slider_value_changed
+        )
+        right_column_layout.addWidget(self.size_slider)
+
+        columns_layout.addLayout(right_column_layout)
+
+        # Add columns layout to main layout
+        main_layout.addLayout(columns_layout)
 
         self.setLayout(main_layout)
         self._update_create_asset_button_state()
@@ -241,3 +284,86 @@ class PairingTab(QWidget):
                 self.load_data()
             else:
                 print("Failed to create asset.")
+
+    def _on_delete_unpaired_previews_clicked(self):
+        reply = QMessageBox.question(
+            self,
+            "Potwierdzenie",
+            "Czy na pewno chcesz usunąć WSZYSTKIE niesparowane podglądy z listy i z dysku?\nTej operacji nie można cofnąć.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            success = self.model.delete_unpaired_previews()
+            if success:
+                QMessageBox.information(
+                    self, "Sukces", "Pomyślnie usunięto niesparowane podglądy."
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Błąd",
+                    "Wystąpił błąd podczas usuwania podglądów. Sprawdź logi.",
+                )
+            self.load_data()
+
+    def _on_delete_unpaired_archives_clicked(self):
+        reply = QMessageBox.question(
+            self,
+            "Potwierdzenie",
+            "Czy na pewno chcesz usunąć WSZYSTKIE niesparowane archiwa z listy i z dysku?\nTej operacji nie można cofnąć.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            success = self.model.delete_unpaired_archives()
+            if success:
+                QMessageBox.information(
+                    self, "Sukces", "Pomyślnie usunięto niesparowane archiwa."
+                )
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Błąd",
+                    "Wystąpił błąd podczas usuwania archiwów. Sprawdź logi.",
+                )
+            self.load_data()
+
+    def _on_rebuild_assets_clicked(self):
+        work_folder = (
+            os.path.dirname(self.model.unpair_files_path)
+            if self.model.unpair_files_path
+            else ""
+        )
+        if not work_folder or not os.path.exists(work_folder):
+            QMessageBox.warning(
+                self, "Błąd", "Folder roboczy nie jest ustawiony lub nie istnieje."
+            )
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Potwierdzenie",
+            f"Czy na pewno chcesz przebudować wszystkie assety w folderze:\n{work_folder}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.rebuild_thread = AssetRebuilderThread(work_folder)
+            self.rebuild_thread.rebuild_finished.connect(self._on_rebuild_finished)
+            self.rebuild_thread.error_occurred.connect(self._on_rebuild_error)
+            # We can also connect progress_updated if we add a progress bar
+            self.rebuild_thread.start()
+            QMessageBox.information(
+                self,
+                "Proces rozpoczęty",
+                f"Rozpoczęto przebudowę assetów w folderze:\n{work_folder}",
+            )
+
+    def _on_rebuild_finished(self, message):
+        QMessageBox.information(self, "Sukces", message)
+        self.load_data()  # Refresh data as assets might have changed
+
+    def _on_rebuild_error(self, error_message):
+        QMessageBox.critical(self, "Błąd przebudowy", error_message)

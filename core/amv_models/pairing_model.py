@@ -114,6 +114,72 @@ class PairingModel:
             self.unpaired_previews.append(preview_file)
             self.save_unpair_files()
 
+    def delete_unpaired_archives(self):
+        """Deletes all unpaired archives from disk and updates the list."""
+        if not self.unpair_files_path:
+            logger.error("Cannot delete archives, work folder path is not set.")
+            return False
+
+        work_folder = os.path.dirname(self.unpair_files_path)
+        deleted_count = 0
+        failed_count = 0
+
+        for archive_name in self.unpaired_archives[:]:  # Iterate over a copy
+            try:
+                file_path = os.path.join(work_folder, archive_name)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    logger.info(f"Deleted unpaired archive: {file_path}")
+                    self.unpaired_archives.remove(archive_name)
+                    deleted_count += 1
+                else:
+                    logger.warning(
+                        f"Archive not found for deletion, removing from list: {file_path}"
+                    )
+                    self.unpaired_archives.remove(archive_name)
+            except Exception as e:
+                logger.error(f"Failed to delete archive {archive_name}: {e}")
+                failed_count += 1
+
+        self.save_unpair_files()
+        logger.info(
+            f"Archive deletion complete. Deleted: {deleted_count}, Failed: {failed_count}."
+        )
+        return failed_count == 0
+
+    def delete_unpaired_previews(self):
+        """Deletes all unpaired previews from disk and updates the list."""
+        if not self.unpair_files_path:
+            logger.error("Cannot delete previews, work folder path is not set.")
+            return False
+
+        work_folder = os.path.dirname(self.unpair_files_path)
+        deleted_count = 0
+        failed_count = 0
+
+        for preview_name in self.unpaired_previews[:]:  # Iterate over a copy
+            try:
+                file_path = os.path.join(work_folder, preview_name)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    logger.info(f"Deleted unpaired preview: {file_path}")
+                    self.unpaired_previews.remove(preview_name)
+                    deleted_count += 1
+                else:
+                    logger.warning(
+                        f"Preview not found for deletion, removing from list: {file_path}"
+                    )
+                    self.unpaired_previews.remove(preview_name)
+            except Exception as e:
+                logger.error(f"Failed to delete preview {preview_name}: {e}")
+                failed_count += 1
+
+        self.save_unpair_files()
+        logger.info(
+            f"Preview deletion complete. Deleted: {deleted_count}, Failed: {failed_count}."
+        )
+        return failed_count == 0
+
     def create_asset_from_pair(self, archive_full_path: str, preview_full_path: str):
         archive_name_without_ext = os.path.splitext(
             os.path.basename(archive_full_path)

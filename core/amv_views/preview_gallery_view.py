@@ -27,16 +27,6 @@ class PreviewGalleryView(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(5)
 
-        # Slider for thumbnail size
-        self.size_slider = QSlider(Qt.Orientation.Horizontal)
-        self.size_slider.setMinimum(64)
-        self.size_slider.setMaximum(256)
-        self.size_slider.setValue(self.current_thumbnail_size)
-        self.size_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.size_slider.setTickInterval(32)
-        self.size_slider.valueChanged.connect(self.on_slider_value_changed)
-        main_layout.addWidget(self.size_slider)
-
         # Scroll Area for gallery
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
