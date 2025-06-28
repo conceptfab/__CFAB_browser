@@ -70,18 +70,21 @@ markdown### 🗺️ MAPA PLIKÓW UI DO REFAKTORYZACJI MODEL/VIEW
 **Wygenerowano na podstawie analizy kodu: [DATA]**
 
 #### **KOMPONENTY GALERII** ⚫⚫⚫⚫
+
 [ŚCIEŻKA_KATALOGU]/
 ├── [plik_galerii].py ⚫⚫⚫⚫ - [OPIS ROLI W UI] -> GalleryView + GalleryModel
 ├── [plik_danych].py ⚫⚫⚫⚫ - [OPIS ZARZĄDZANIA DANYMI] -> GalleryModel + CacheModel
 └── [plik_kontrolera].py ⚫⚫⚫⚫ - [OPIS KONTROLI] -> GalleryController
 
 #### **KOMPONENTY KAFELKÓW** 🔴🔴🔴
+
 [ŚCIEŻKA_KATALOGU]/
 ├── [plik_kafelka].py 🔴🔴🔴 - [OPIS KAFELKA] -> TileWidget + TileDelegate
 ├── [plik_metadanych].py 🔴🔴🔴 - [OPIS METADANYCH] -> MetadataModel
 └── [plik_renderowania].py 🔴🔴🔴 - [OPIS RENDEROWANIA] -> TileDelegate
 
 #### **KONTROLERY UI** 🔴🔴🔴
+
 [ŚCIEŻKA_KATALOGU]/
 ├── [plik_main_controller].py 🔴🔴🔴 - [OPIS GŁÓWNEGO KONTROLERA] -> MainController
 ├── [plik_event_handler].py 🔴🔴🔴 - [OPIS OBSŁUGI ZDARZEŃ] -> EventController
@@ -90,31 +93,31 @@ markdown### 🗺️ MAPA PLIKÓW UI DO REFAKTORYZACJI MODEL/VIEW
 📁 STRUKTURA PLIKÓW WYNIKOWYCH REFAKTORYZACJI
 Dla każdego analizowanego pliku UI [nazwa_pliku].py:
 
-Skopiuj _BASE_/correction_template.md do AUDYT/corrections/[nazwa_pliku]_mv_correction.md
+Skopiuj **doc/correction_template.md do AUDYT/corrections/[nazwa_pliku]\_mv_correction.md
 Wypełnij zgodnie z analizą refaktoryzacji Model/View
-Skopiuj _BASE_/patch_code_template.md do AUDYT/patches/[nazwa_pliku]_mv_patch_code.md
+Skopiuj **doc/patch_code_template.md do AUDYT/patches/[nazwa_pliku]\_mv_patch_code.md
 Wypełnij fragmentami kodu refaktoryzacji Model/View
 
 🚫 ZASADA INDYWIDUALNEGO GENEROWANIA DOKUMENTÓW REFAKTORYZACJI
 OBOWIĄZKOWE ZASADY:
 
 Jeden plik UI = jeden correction - Każdy plik .py ma SWÓJ plik [nazwa]_mv_correction.md
-Jeden plik UI = jeden patch - Każdy plik .py ma SWÓJ plik [nazwa]_mv_patch_code.md
+Jeden plik UI = jeden patch - Każdy plik .py ma SWÓJ plik [nazwa]\_mv_patch_code.md
 Brak grupowania - NIGDY nie łącz refaktoryzacji wielu plików w jeden dokument
-Prefiks MV - Każdy dokument ma prefiks _mv_ dla odróżnienia od standardowego audytu
+Prefiks MV - Każdy dokument ma prefiks \_mv_ dla odróżnienia od standardowego audytu
 
 PRZYKŁADY POPRAWNEJ STRUKTURY:
 AUDYT/corrections/
-├── [plik_galerii]_mv_correction.md        ✅ Refaktoryzacja Model/View
-├── [plik_kafelka]_mv_correction.md        ✅ Refaktoryzacja Model/View  
-├── [plik_kontrolera]_mv_correction.md     ✅ Refaktoryzacja Model/View
-└── [plik_danych]_mv_correction.md         ✅ Refaktoryzacja Model/View
+├── [plik_galerii]\_mv_correction.md ✅ Refaktoryzacja Model/View
+├── [plik_kafelka]\_mv_correction.md ✅ Refaktoryzacja Model/View  
+├── [plik_kontrolera]\_mv_correction.md ✅ Refaktoryzacja Model/View
+└── [plik_danych]\_mv_correction.md ✅ Refaktoryzacja Model/View
 
 AUDYT/patches/
-├── [plik_galerii]_mv_patch_code.md        ✅ Kod refaktoryzacji
-├── [plik_kafelka]_mv_patch_code.md        ✅ Kod refaktoryzacji
-├── [plik_kontrolera]_mv_patch_code.md     ✅ Kod refaktoryzacji  
-└── [plik_danych]_mv_patch_code.md         ✅ Kod refaktoryzacji
+├── [plik_galerii]\_mv_patch_code.md ✅ Kod refaktoryzacji
+├── [plik_kafelka]\_mv_patch_code.md ✅ Kod refaktoryzacji
+├── [plik_kontrolera]\_mv_patch_code.md ✅ Kod refaktoryzacji  
+└── [plik_danych]\_mv_patch_code.md ✅ Kod refaktoryzacji
 🔍 ZAKRES ANALIZY REFAKTORYZACJI MODEL/VIEW
 🎯 ANALIZA KOMPONENTÓW UI
 Dla każdego pliku UI przeanalizuj:
@@ -168,62 +171,69 @@ Memory efficiency - Efektywne zarządzanie pamięcią
 markdown## 📄 ANALIZA REFAKTORYZACJI: [NAZWA_PLIKU].PY
 
 ### **🎯 OBECNA ARCHITEKTURA**
+
 - **Typ komponentu:** [Widget/Controller/Model/Service]
 - **Główne odpowiedzialności:** [LISTA ODPOWIEDZIALNOŚCI]
 - **Zależności:** [LISTA ZALEŻNOŚCI]
 - **Dane zarządzane:** [TYPY DANYCH]
 
 ### **❌ PROBLEMY DO NAPRAWIENIA**
+
 - **Problem 1:** [OPIS] - [WPŁYW NA WYDAJNOŚĆ/STABILNOŚĆ]
-- **Problem 2:** [OPIS] - [WPŁYW NA WYDAJNOŚĆ/STABILNOŚĆ] 
+- **Problem 2:** [OPIS] - [WPŁYW NA WYDAJNOŚĆ/STABILNOŚĆ]
 - **Problem 3:** [OPIS] - [WPŁYW NA OVER-ENGINEERING]
 
 ### **✅ PLAN REFAKTORYZACJI MODEL/VIEW**
+
 - **Docelowa architektura:** [Model/View/Controller/Delegate]
 - **Klasy Qt do użycia:** [QAbstractListModel/QListView/QStyledItemDelegate]
 - **Podział odpowiedzialności:** [MODEL: ... / VIEW: ... / CONTROLLER: ...]
 - **Zachowanie funkcjonalności:** [LISTA FUNKCJI DO ZACHOWANIA]
 
 ### **🔧 ZMIANY TECHNICZNE**
+
 - **Zmiana 1:** [OPIS ZMIANY] - [UZASADNIENIE]
 - **Zmiana 2:** [OPIS ZMIANY] - [UZASADNIENIE]
 - **Zmiana 3:** [OPIS ZMIANY] - [UZASADNIENIE]
 
 ### **⚡ WPŁYW NA WYDAJNOŚĆ**
+
 - **Renderowanie:** [OPIS POPRAWY]
 - **Pamięć:** [OPIS OPTYMALIZACJI]
 - **Responsywność:** [OPIS POPRAWY]
 
-### **🛡️ WPŁYW NA STABILNOŚĆ** 
+### **🛡️ WPŁYW NA STABILNOŚĆ**
+
 - **Thread safety:** [OPIS POPRAWY]
 - **Error handling:** [OPIS POPRAWY]
 - **Memory management:** [OPIS POPRAWY]
 
 ### **🎯 ELIMINACJA OVER-ENGINEERING**
+
 - **Uproszczenie 1:** [OPIS]
 - **Uproszczenie 2:** [OPIS]
 - **Konsolidacja:** [OPIS]
-📈 OBOWIĄZKOWA KONTROLA POSTĘPU REFAKTORYZACJI
-Po każdym ukończonym pliku UI model MUSI:
-markdown📊 POSTĘP REFAKTORYZACJI MODEL/VIEW:
-✅ Ukończone pliki UI: X/Y (Z%)
-🔄 Aktualny plik: [NAZWA_PLIKU_UI]
-⏳ Pozostałe pliki: [LICZBA]
-💼 Wpływ na architekturę: [OPIS WPŁYWU]
-✅ UZUPEŁNIONO BUSINESS_LOGIC_MAP.MD: TAK/NIE
-✅ ZAZNACZANIE UKOŃCZONYCH REFAKTORYZACJI
-Po każdej ukończonej refaktoryzacji pliku UI:
-markdown### 📄 [NAZWA_PLIKU].PY
+  📈 OBOWIĄZKOWA KONTROLA POSTĘPU REFAKTORYZACJI
+  Po każdym ukończonym pliku UI model MUSI:
+  markdown📊 POSTĘP REFAKTORYZACJI MODEL/VIEW:
+  ✅ Ukończone pliki UI: X/Y (Z%)
+  🔄 Aktualny plik: [NAZWA_PLIKU_UI]
+  ⏳ Pozostałe pliki: [LICZBA]
+  💼 Wpływ na architekturę: [OPIS WPŁYWU]
+  ✅ UZUPEŁNIONO BUSINESS_LOGIC_MAP.MD: TAK/NIE
+  ✅ ZAZNACZANIE UKOŃCZONYCH REFAKTORYZACJI
+  Po każdej ukończonej refaktoryzacji pliku UI:
+  markdown### 📄 [NAZWA_PLIKU].PY
 
 - **Status:** ✅ UKOŃCZONA REFAKTORYZACJA MODEL/VIEW
 - **Data ukończenia:** [DATA]
-- **Typ refaktoryzacji:** [Model/View/Controller/Delegate] 
+- **Typ refaktoryzacji:** [Model/View/Controller/Delegate]
 - **Wpływ na architekturę:** [OPIS WPŁYWU NA ARCHITEKTURĘ]
 - **Pliki wynikowe:**
   - `AUDYT/corrections/[nazwa_pliku]_mv_correction.md`
   - `AUDYT/patches/[nazwa_pliku]_mv_patch_code.md`
-🚀 ROZPOCZĘCIE REFAKTORYZACJI
-🚨 OBOWIĄZKOWE KROKI PRZED ROZPOCZĘCIEM:
+    🚀 ROZPOCZĘCIE REFAKTORYZACJI
+    🚨 OBOWIĄZKOWE KROKI PRZED ROZPOCZĘCIEM:
 
 Zapoznaj się z README.md - architektura UI, wymagania wydajnościowe
 Przeanalizuj strukturę UI - dynamicznie odkryj komponenty galerii i kafli

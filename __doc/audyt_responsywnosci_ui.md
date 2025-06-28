@@ -5,17 +5,18 @@
 ## 🎯 CEL
 
 Zindetyfikuj i napraw nastepujace problemy:
+
 - przy folderach z większą ilościa par błędnie rysowana jest galeria, kafle nachodzą na siebie, ilość kolumn nie odpowiada szerokości okna galerii
 - przy folderach z większą ilością par rysowany jest na początku w galerii tylko jeden rząd kafli!!!
 - po chuj jakaś virtualizacja w kodzie skoro jest wyłączona!!!!! 2025-06-25 12:59:41,781 - src.ui.gallery_manager - INFO - Gallery loaded: 0 active widgets, virtualization: False
 
 - olbrzymim problemem jest wydajność a włąściwie jaj brak
-- co to są za komunikaty?? 
-2025-06-25 12:53:28,346 - src.logic.scanner_core - WARNING - CRITICAL_MEMORY: 1904MB - forcing immediate GC
-2025-06-25 12:53:28,474 - src.logic.scanner_core - ERROR - [8497f3ed] CRITICAL_MEMORY: 1895MB at 207 files - system may be unstable
-2025-06-25 12:53:28,475 - src.logic.scanner_core - WARNING - CRITICAL_MEMORY: 1899MB - forcing immediate GC
-2025-06-25 12:53:28,597 - src.logic.scanner_core - ERROR - [8497f3ed] CRITICAL_MEMORY: 1888MB at 208 files - system may be unstable
-skaner powinen zrealizowć swoje zadanie i po jego skończeniu dopiero mają być tworzone i rysowane kafle, to wyglada tak jakby wszystko było robione naraz! to jest niedopuszczalne!!! mam 128 GB RAM, ograniczenia pamięci mnie nie interesują!
+- co to są za komunikaty??
+  2025-06-25 12:53:28,346 - src.logic.scanner_core - WARNING - CRITICAL_MEMORY: 1904MB - forcing immediate GC
+  2025-06-25 12:53:28,474 - src.logic.scanner_core - ERROR - [8497f3ed] CRITICAL_MEMORY: 1895MB at 207 files - system may be unstable
+  2025-06-25 12:53:28,475 - src.logic.scanner_core - WARNING - CRITICAL_MEMORY: 1899MB - forcing immediate GC
+  2025-06-25 12:53:28,597 - src.logic.scanner_core - ERROR - [8497f3ed] CRITICAL_MEMORY: 1888MB at 208 files - system may be unstable
+  skaner powinen zrealizowć swoje zadanie i po jego skończeniu dopiero mają być tworzone i rysowane kafle, to wyglada tak jakby wszystko było robione naraz! to jest niedopuszczalne!!! mam 128 GB RAM, ograniczenia pamięci mnie nie interesują!
 
 ### 🏛️ TRZY FILARY AUDYTU LOGIKI BIZNESOWEJ
 
@@ -114,7 +115,7 @@ Ten audyt opiera się na trzech kluczowych filarach, które stanowią najwyższe
 
 ### 📜 ZASADY I PROCEDURY
 
-**Wszystkie szczegółowe zasady, procedury i checklisty zostały zebrane w pliku `_BASE_/refactoring_rules.md`. Należy się z nim zapoznać przed rozpoczęciem pracy.**
+**Wszystkie szczegółowe zasady, procedury i checklisty zostały zebrane w pliku `__doc/refactoring_rules.md`. Należy się z nim zapoznać przed rozpoczęciem pracy.**
 
 ---
 
@@ -582,7 +583,7 @@ Przeanalizuj **WSZYSTKIE** pliki logiki biznesowej pod kątem:
 
 **Kluczem do spójności i efektywności audytu jest używanie przygotowanych szablonów.** Zamiast tworzyć strukturę plików od zera, **należy kopiować i wypełniać** odpowiednie szablony.
 
-**W folderze `_BASE_/` znajdują się szablony:**
+**W folderze `__doc/` znajdują się szablony:**
 
 - `refactoring_rules.md` - Główne zasady, do których linkują pozostałe dokumenty.
 - `correction_template.md` - Szablon dla plików `*_correction.md`.
@@ -591,9 +592,9 @@ Przeanalizuj **WSZYSTKIE** pliki logiki biznesowej pod kątem:
 **Procedura tworzenia plików wynikowych:**
 
 1.  **Dla każdego analizowanego pliku logiki biznesowej `[nazwa_pliku].py`:**
-    - Skopiuj `_BASE_/correction_template.md` do `AUDYT/corrections/[nazwa_pliku]_correction.md`.
+    - Skopiuj `__doc/correction_template.md` do `AUDYT/corrections/[nazwa_pliku]_correction.md`.
     - Wypełnij skopiowany plik zgodnie z wynikami analizy logiki biznesowej.
-    - Skopiuj `_BASE_/patch_code_template.md` do `AUDYT/patches/[nazwa_pliku]_patch_code.md`.
+    - Skopiuj `__doc/patch_code_template.md` do `AUDYT/patches/[nazwa_pliku]_patch_code.md`.
     - Wypełnij plik patch fragmentami kodu z optymalizacjami logiki biznesowej.
 
 ### 🚫 ZASADA INDYWIDUALNEGO GENEROWANIA DOKUMENTÓW

@@ -411,7 +411,9 @@ class FileOperationsModel(QObject):
         if self._current_worker:
             if self._current_worker.isRunning():
                 self._current_worker.terminate()
-                self._current_worker.wait(3000)  # Czekaj maksymalnie 3 sekundy
+                # Sprawdź czy worker nadal istnieje przed wywołaniem wait()
+                if self._current_worker:
+                    self._current_worker.wait(3000)  # Czekaj maksymalnie 3 sekundy
                 logger.info("FileOperationsModel: Operacja zatrzymana")
                 # Emituj sygnał completion z pustymi listami żeby kontroler mógł zaktualizować UI
                 self.operation_completed.emit([], [])

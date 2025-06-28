@@ -95,7 +95,7 @@ class ThumbnailConfigManager:
         try:
             current_timestamp = config_path.stat().st_mtime
             return current_timestamp == self._config_timestamp
-        except FileNotFoundError:
+        except:
             return False
 
     def _get_default_config(self):
@@ -226,8 +226,7 @@ class ThumbnailProcessor:
 
     def __init__(self):
         self.config_manager = ThumbnailConfigManager()
-        config = self.config_manager.get_thumbnail_config()
-        self.cache_manager = ThumbnailCacheManager(config["cache_dir_name"])
+        self.cache_manager = None  # Będzie zainicjalizowany przy pierwszym użyciu
 
     def process_image(self, filename: str) -> Tuple[str, int]:
         """
@@ -250,6 +249,10 @@ class ThumbnailProcessor:
         # Pobierz konfigurację
         config = self.config_manager.get_thumbnail_config()
         thumbnail_size = config["size"]
+
+        # Inicjalizuj cache manager jeśli potrzebny
+        if self.cache_manager is None:
+            self.cache_manager = ThumbnailCacheManager(config["cache_dir_name"])
 
         # Sprawdź czy thumbnail już istnieje i jest aktualny
         if self.cache_manager.is_thumbnail_current(image_path, thumbnail_size):
@@ -525,10 +528,8 @@ def get_thumbnail_cache_stats(work_folder: str) -> dict:
         Słownik ze statystykami cache
     """
     try:
-        config = ThumbnailConfigManager().get_thumbnail_config()
-        cache_dir_name = config["cache_dir_name"]
         work_path = Path(work_folder)
-        cache_dir = work_path / cache_dir_name
+        cache_dir = work_path / ".cache"
 
         if not cache_dir.exists():
             return {"cache_exists": False, "thumbnail_count": 0, "total_size_mb": 0}
@@ -560,10 +561,8 @@ def clear_thumbnail_cache(work_folder: str, older_than_days: int = 0) -> int:
         Liczba usuniętych plików
     """
     try:
-        config = ThumbnailConfigManager().get_thumbnail_config()
-        cache_dir_name = config["cache_dir_name"]
         work_path = Path(work_folder)
-        cache_dir = work_path / cache_dir_name
+        cache_dir = work_path / ".cache"
 
         if not cache_dir.exists():
             return 0
@@ -599,10 +598,8 @@ def validate_thumbnail_integrity(work_folder: str) -> dict:
         Słownik z wynikami walidacji
     """
     try:
-        config = ThumbnailConfigManager().get_thumbnail_config()
-        cache_dir_name = config["cache_dir_name"]
         work_path = Path(work_folder)
-        cache_dir = work_path / cache_dir_name
+        cache_dir = work_path / ".cache"
 
         if not cache_dir.exists():
             return {"valid": 0, "invalid": 0, "errors": []}
