@@ -212,9 +212,7 @@ def _create_single_asset(name, archive_path, image_path, folder_path):
 
         # Utwórz thumbnail dla tego asset (tylko jeśli nie ma thumbnail)
         if not asset_data.get("thumbnail"):
-            # W tej wersji używamy synchronicznego trybu dla zachowania kompatybilności
-            # W przyszłości może być dodany parametr async_mode do _create_single_asset
-            thumbnail_success = create_thumbnail_for_asset(asset_file_path, image_path, async_mode=False)
+            thumbnail_success = create_thumbnail_for_asset(asset_file_path, image_path)
             if thumbnail_success:
                 asset_data["thumbnail"] = True  # Aktualizuj dane w pamięci
             else:
@@ -264,22 +262,17 @@ def get_file_size_mb(file_path):
         return 0
 
 
-def create_thumbnail_for_asset(asset_path, image_path, async_mode=False):
+def create_thumbnail_for_asset(asset_path, image_path):
     """
     Tworzy thumbnail dla pliku asset i aktualizuje plik asset
 
     Args:
         asset_path (str): Ścieżka do pliku .asset
         image_path (str): Ścieżka do pliku obrazu (preview)
-        async_mode (bool): Jeśli True, używa asynchronicznego generowania miniatur
 
     Returns:
         bool: True jeśli thumbnail został utworzony pomyślnie,
               False w przeciwnym razie
-              
-        UWAGA: W trybie asynchronicznym aktualizacja pliku .asset 
-        odbywa się natychmiast (bez czekania na generowanie miniatury),
-        a rzeczywiste generowanie odbywa się w tle
     """
     # Walidacja parametrów
     if not asset_path or not isinstance(asset_path, str):
@@ -299,11 +292,11 @@ def create_thumbnail_for_asset(asset_path, image_path, async_mode=False):
         return False
 
     try:
-        # Wywołaj funkcję process_thumbnail z odpowiednim trybem
-        logger.debug(f"Processing thumbnail for image: {image_path} (async={async_mode})")
-        process_thumbnail(image_path, async_mode=async_mode)
+        # Wywołaj funkcję process_thumbnail
+        logger.debug(f"Processing thumbnail for image: {image_path}")
+        process_thumbnail(image_path)
 
-        # Aktualizuj plik asset (natychmiast w obu trybach)
+        # Jeśli funkcja się wykonała bez błędów, zaktualizuj plik asset
         asset_data = load_from_file(asset_path)
 
         # Ustaw thumbnail na True
@@ -312,14 +305,9 @@ def create_thumbnail_for_asset(asset_path, image_path, async_mode=False):
         # Zapisz zaktualizowany plik asset
         save_to_file(asset_data, asset_path, indent=True)
 
-        if async_mode:
-            logger.debug(
-                f"Thumbnail scheduled for async generation for asset: {os.path.basename(asset_path)}"
-            )
-        else:
-            logger.debug(
-                f"Thumbnail created successfully for asset: {os.path.basename(asset_path)}"
-            )
+        logger.debug(
+            f"Thumbnail created successfully for asset: {os.path.basename(asset_path)}"
+        )
         return True
 
     except (ValueError, UnicodeDecodeError) as e:
@@ -401,7 +389,7 @@ def create_unpair_files_json(folder_path, archive_by_name, image_by_name, common
         return None
 
 
-def find_and_create_assets(folder_path, progress_callback=None, use_async_thumbnails=False):
+def find_and_create_assets(folder_path, progress_callback=None):
     """
     Szuka par plików o tej samej nazwie w folderze:
     - pliki archiwum: zip, rar, sbsar
@@ -414,8 +402,6 @@ def find_and_create_assets(folder_path, progress_callback=None, use_async_thumbn
         folder_path (str): Ścieżka do folderu do skanowania
         progress_callback (callable): Funkcja callback do aktualizacji postępu
                                      Przyjmuje parametry: (current, total, message)
-        use_async_thumbnails (bool): Jeśli True, używa asynchronicznego generowania miniatur
-                                    dla lepszej wydajności (wymaga Qt event loop)
 
     Returns:
         list: Lista słowników z danymi assetów i specjalnych folderów
@@ -510,34 +496,8 @@ def find_and_create_assets(folder_path, progress_callback=None, use_async_thumbn
         else:
             logger.warning("Failed to create unpair_files.json")
 
-        # Asynchroniczne generowanie miniatur (jeśli włączone)
-        if use_async_thumbnails and common_names:
-            if progress_callback:
-                progress_callback(
-                    total_operations,
-                    total_operations,
-                    "Rozpoczynanie asynchronicznego generowania miniatur...",
-                )
-            
-            # Zbierz wszystkie pliki obrazów do asynchronicznego przetwarzania
-            async_image_paths = []
-            for name_lower in common_names:
-                image_path = image_by_name[name_lower]
-                async_image_paths.append(image_path)
-            
-            # Używamy process_thumbnails_batch z async_mode=True
-            if async_image_paths:
-                from core.thumbnail import process_thumbnails_batch
-                logger.debug(f"Scheduling {len(async_image_paths)} thumbnails for async generation")
-                process_thumbnails_batch(async_image_paths, async_mode=True)
-                logger.debug("All thumbnails scheduled for async processing")
-
         # Finalne podsumowanie
-        if use_async_thumbnails and common_names:
-            success_msg = f"Zakończono! Znaleziono {len(all_found_items)} elementów. Miniatury generowane asynchronicznie."
-        else:
-            success_msg = f"Zakończono! Znaleziono {len(all_found_items)} elementów (assetów i folderów)"
-        
+        success_msg = f"Zakończono! Znaleziono {len(all_found_items)} elementów (assetów i folderów)"
         logger.debug(success_msg)
         if progress_callback:
             progress_callback(total_operations, total_operations, success_msg)

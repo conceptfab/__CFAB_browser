@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Callable, Optional, Tuple
 
 from PIL import Image, ImageFile, UnidentifiedImageError
-from PyQt6.QtCore import QObject, Qt, pyqtSignal, QThreadPool, QRunnable, QTimer
+from PyQt6.QtCore import QObject, Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap
 
 from core.json_utils import load_from_file
@@ -516,7 +516,7 @@ class ThumbnailProcessor:
 _thumbnail_processor = None
 
 
-def process_thumbnail(filename: str, async_mode: bool = False) -> Tuple[str, int]:
+def process_thumbnail(filename: str) -> Tuple[str, int]:
     """
     Funkcja przetwarzająca thumbnail dla podanego pliku.
 
@@ -525,21 +525,15 @@ def process_thumbnail(filename: str, async_mode: bool = False) -> Tuple[str, int
 
     Args:
         filename (str): Nazwa pliku do przetworzenia
-        async_mode (bool): Jeśli True, przetwarzanie odbywa się asynchronicznie
-                          w QThreadPool (dla nowych implementacji)
 
     Returns:
         tuple[str, int]: Krotka zawierająca nazwę pliku i wartość thumbnail
         z config.json
-        
-        UWAGA: W trybie asynchronicznym zwraca natychmiast (filename, 0),
-        a rzeczywisty wynik będzie dostępny przez sygnał thumbnail_generated
-        w AsyncThumbnailManager
 
     Raises:
-        FileNotFoundError: Gdy plik nie istnieje (tylko tryb synchroniczny)
-        ValueError: Gdy plik ma nieprawidłowy format (tylko tryb synchroniczny)
-        RuntimeError: Przy błędach przetwarzania lub I/O (tylko tryb synchroniczny)
+        FileNotFoundError: Gdy plik nie istnieje
+        ValueError: Gdy plik ma nieprawidłowy format lub invalid parameters
+        RuntimeError: Przy błędach przetwarzania lub I/O
     """
     global _thumbnail_processor
 
@@ -547,14 +541,6 @@ def process_thumbnail(filename: str, async_mode: bool = False) -> Tuple[str, int
     if _thumbnail_processor is None:
         _thumbnail_processor = ThumbnailProcessor()
 
-    # Tryb asynchroniczny - deleguj do AsyncThumbnailManager
-    if async_mode:
-        async_manager = get_async_thumbnail_manager()
-        async_manager.process_thumbnail_async(filename)
-        # W trybie async zwracamy natychmiast - rzeczywisty wynik przez sygnał
-        return (filename, 0)
-
-    # Tryb synchroniczny - zachowuje pełną kompatybilność wsteczną
     try:
         return _thumbnail_processor.process_image(filename)
     except (FileNotFoundError, ValueError) as e:
@@ -568,7 +554,7 @@ def process_thumbnail(filename: str, async_mode: bool = False) -> Tuple[str, int
 
 
 def process_thumbnails_batch(
-    filenames: list[str], progress_callback: Optional[Callable] = None, async_mode: bool = False
+    filenames: list[str], progress_callback: Optional[Callable] = None
 ) -> list[Tuple[str, int, bool]]:
     """
     Przetwarza wiele thumbnails w batch z progress tracking
@@ -576,13 +562,9 @@ def process_thumbnails_batch(
     Args:
         filenames: Lista ścieżek do plików obrazów
         progress_callback: Opcjonalna funkcja callback (current, total, filename)
-        async_mode: Jeśli True, używa asynchronicznego przetwarzania
 
     Returns:
         Lista krotek (filename, thumbnail_size, success)
-        
-        UWAGA: W trybie asynchronicznym zwraca natychmiast listę (filename, 0, True)
-        dla wszystkich plików, a rzeczywiste rezultaty będą dostępne przez sygnały
     """
     global _thumbnail_processor
 
@@ -592,25 +574,6 @@ def process_thumbnails_batch(
     if not filenames:
         return []
 
-    # Tryb asynchroniczny - deleguj wszystkie pliki do AsyncThumbnailManager
-    if async_mode:
-        async_manager = get_async_thumbnail_manager()
-        results = []
-        total_files = len(filenames)
-        
-        logger.debug(f"Starting async batch thumbnail processing: {total_files} files")
-        
-        for i, filename in enumerate(filenames):
-            if progress_callback:
-                progress_callback(i + 1, total_files, filename)
-            
-            async_manager.process_thumbnail_async(filename)
-            results.append((filename, 0, True))  # Placeholder results
-        
-        logger.debug(f"Scheduled {total_files} thumbnails for async processing")
-        return results
-
-    # Tryb synchroniczny - zachowuje pełną kompatybilność wsteczną
     results = []
     total_files = len(filenames)
 
@@ -745,84 +708,6 @@ def validate_thumbnail_integrity(work_folder: str) -> dict:
     except Exception as e:
         logger.error(f"Error validating thumbnail integrity: {e}")
         return {"error": str(e)}
-
-
-class ThumbnailGeneratorWorker(QRunnable):
-    """Worker dla asynchronicznego generowania miniatur w QThreadPool"""
-    
-    def __init__(self, filename: str, processor: 'ThumbnailProcessor', callback_signal: QObject = None):
-        super().__init__()
-        self.filename = filename
-        self.processor = processor
-        self.callback_signal = callback_signal
-        self.setAutoDelete(True)
-    
-    def run(self):
-        """Wykonuje generowanie miniatury w tle"""
-        try:
-            result = self.processor.process_image(self.filename)
-            if self.callback_signal:
-                # Emituj sygnał o zakończeniu
-                self.callback_signal.thumbnail_generated.emit(self.filename, result[0], result[1], True, None)
-        except Exception as e:
-            logger.error(f"Async thumbnail generation failed for {self.filename}: {e}")
-            if self.callback_signal:
-                self.callback_signal.thumbnail_generated.emit(self.filename, None, 0, False, str(e))
-
-
-class AsyncThumbnailManager(QObject):
-    """Manager dla asynchronicznego generowania miniatur"""
-    
-    # Sygnał: filename, result_filename, thumbnail_size, success, error_message
-    thumbnail_generated = pyqtSignal(str, str, int, bool, str)
-    
-    def __init__(self):
-        super().__init__()
-        self.thread_pool = QThreadPool()
-        self.thread_pool.setMaxThreadCount(4)  # Maksymalnie 4 wątki dla generowania miniatur
-        self.processor = None  # Będzie zainicjalizowany lazy
-        
-    def process_thumbnail_async(self, filename: str):
-        """
-        Procesuje miniaturę asynchronicznie w QThreadPool
-        
-        Args:
-            filename (str): Ścieżka do pliku obrazu
-        """
-        if self.processor is None:
-            self.processor = ThumbnailProcessor()
-            
-        worker = ThumbnailGeneratorWorker(filename, self.processor, self)
-        self.thread_pool.start(worker)
-        logger.debug(f"Scheduled async thumbnail generation for: {filename}")
-    
-    def wait_for_completion(self, timeout_ms: int = 30000):
-        """
-        Czeka na zakończenie wszystkich zadań w puli wątków
-        
-        Args:
-            timeout_ms (int): Timeout w milisekundach
-            
-        Returns:
-            bool: True jeśli wszystkie zadania zostały zakończone
-        """
-        return self.thread_pool.waitForDone(timeout_ms)
-    
-    def active_thread_count(self) -> int:
-        """Zwraca liczbę aktywnych wątków"""
-        return self.thread_pool.activeThreadCount()
-
-
-# Globalna instancja managera asynchronicznego
-_async_thumbnail_manager = None
-
-
-def get_async_thumbnail_manager() -> AsyncThumbnailManager:
-    """Pobiera globalną instancję managera asynchronicznego (singleton)"""
-    global _async_thumbnail_manager
-    if _async_thumbnail_manager is None:
-        _async_thumbnail_manager = AsyncThumbnailManager()
-    return _async_thumbnail_manager
 
 
 # Przykład użycia:
