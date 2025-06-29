@@ -1,0 +1,1 @@
+1. przycisk refresh VIEW

@@ -6,6 +6,40 @@
 
 Kompleksowa analiza, optymalizacja i uproszczenie logiki biznesowej aplikacji z naciskiem na wydajność procesów, stabilność operacji i eliminację over-engineering w warstwie biznesowej.
 
+## 📋 DOKUMENT FINALNY AUDYTU - PLAN IMPLEMENTACJI
+
+**🚨 KRYTYCZNE: Finalnym wynikiem audytu logiki biznesowej jest dokument `AUDYT/implementation_plan.md`!**
+
+### 🎯 Cel dokumentu finalnego
+
+Plan implementacji poprawek w optymalnej kolejności, bazujący na wszystkich plikach `*_correction.md` i `*_patch_code.md` utworzonych podczas audytu.
+
+### 📋 Szablon dokumentu
+
+- **Lokalizacja szablonu:** `__doc/implementation_plan_template.md`
+- **Docelowa lokalizacja:** `AUDYT/implementation_plan.md`
+- **Aktualizacja:** Progresywna - po każdej ukończonej analizie pliku
+
+### 🔄 Progresywne uzupełnianie
+
+**OBOWIĄZKOWE: Po każdej ukończonej analizie pliku logiki biznesowej:**
+
+1. ✅ **Skopiuj szablon** `__doc/implementation_plan_template.md` do `AUDYT/implementation_plan.md` (jeśli nie istnieje)
+2. ✅ **Dodaj nową poprawkę** do odpowiedniej sekcji priorytetowej
+3. ✅ **Zaktualizuj statystyki** (liczba plików, poprawek w każdym priorytecie)
+4. ✅ **Uzupełnij zależności** między poprawkami (jeśli występują)
+5. ✅ **Dostosuj harmonogram** implementacji
+
+### 📊 Struktura planu implementacji
+
+- **Sekcja I: KRYTYCZNE** - ⚫⚫⚫⚫ poprawki (najwyższy priorytet)
+- **Sekcja II: WYSOKIE** - 🔴🔴🔴 poprawki
+- **Sekcja III: ŚREDNIE** - 🟡🟡 poprawki
+- **Sekcja IV: NISKIE** - 🟢 poprawki
+- **Mapa zależności** - związki między poprawkami
+- **Harmonogram** - fazy implementacji
+- **Monitoring** - metryki i kontrola jakości
+
 ### 🏛️ TRZY FILARY AUDYTU LOGIKI BIZNESOWEJ
 
 Ten audyt opiera się na trzech kluczowych filarach, które stanowią najwyższe priorytety każdej analizy procesów biznesowych:
@@ -635,7 +669,7 @@ Przed utworzeniem dokumentu sprawdź:
 
 ### 📈 OBOWIĄZKOWA KONTROLA POSTĘPU PO KAŻDYM ETAPIE
 
-**🚨 KRYTYCZNE: MODEL MUSI PAMIĘTAĆ O UZUPEŁNIENIU BUSINESS_LOGIC_MAP.MD!**
+**🚨 KRYTYCZNE: MODEL MUSI PAMIĘTAĆ O UZUPEŁNIENIU BUSINESS_LOGIC_MAP.MD I IMPLEMENTATION_PLAN.MD!**
 
 **MODEL MUSI SPRAWDZIĆ I PODAĆ:**
 
@@ -644,13 +678,15 @@ Przed utworzeniem dokumentu sprawdź:
 - **Następny etap:** Nazwa pliku logiki biznesowej do analizy
 - **Business impact:** Wpływ na procesy biznesowe
 - **✅ UZUPEŁNIONO BUSINESS_LOGIC_MAP.MD:** TAK/NIE
+- **✅ UZUPEŁNIONO IMPLEMENTATION_PLAN.MD:** TAK/NIE
 
 **OBOWIĄZKOWE KROKI PO KAŻDYM ETAPIE:**
 
 1. ✅ **Ukończ analizę pliku** - utwórz correction.md i patch_code.md
 2. ✅ **UZUPEŁNIJ business_logic_map.md** - dodaj status ukończenia
-3. ✅ **Sprawdź postęp** - podaj procent ukończenia
-4. ✅ **Określ następny etap** - nazwa kolejnego pliku do analizy
+3. ✅ **UZUPEŁNIJ implementation_plan.md** - dodaj poprawkę do planu implementacji
+4. ✅ **Sprawdź postęp** - podaj procent ukończenia
+5. ✅ **Określ następny etap** - nazwa kolejnego pliku do analizy
 
 **PRZYKŁAD RAPORTU POSTĘPU:**
 
@@ -661,9 +697,10 @@ Przed utworzeniem dokumentu sprawdź:
 ⏳ Pozostałe etapy: 12
 💼 Business impact: [OPIS WPŁYWU NA PROCESY BIZNESOWE]
 ✅ UZUPEŁNIONO BUSINESS_LOGIC_MAP.MD: TAK
+✅ UZUPEŁNIONO IMPLEMENTATION_PLAN.MD: TAK
 ```
 
-**🚨 MODEL NIE MOŻE ZAPOMNIEĆ O UZUPEŁNIENIU MAPY!**
+**🚨 MODEL NIE MOŻE ZAPOMNIEĆ O UZUPEŁNIENIU OBIE DOKUMENTÓW!**
 
 ### ✅ ZAZNACZANIE UKOŃCZONYCH ANALIZ W BUSINESS_LOGIC_MAP.MD
 
@@ -710,7 +747,56 @@ Przed utworzeniem dokumentu sprawdź:
 - Upewnij się że ścieżki do plików wynikowych są prawidłowe
 - Zweryfikuj że business impact jest opisany konkretnie
 
-**🚨 KRYTYCZNE: MODEL MUSI PAMIĘTAĆ O UZUPEŁNIENIU BUSINESS_LOGIC_MAP.MD PO KAŻDEJ ANALIZIE!**
+**🚨 KRYTYCZNE: MODEL MUSI PAMIĘTAĆ O UZUPEŁNIENIU BUSINESS_LOGIC_MAP.MD I IMPLEMENTATION_PLAN.MD PO KAŻDEJ ANALIZIE!**
+
+### 📋 UZUPEŁNIANIE PLANU IMPLEMENTACJI
+
+**PO KAŻDEJ UKOŃCZONEJ ANALIZIE PLIKU LOGIKI BIZNESOWEJ:**
+
+1. **Skopiuj szablon** (jeśli `AUDYT/implementation_plan.md` nie istnieje):
+
+   ```bash
+   cp __doc/implementation_plan_template.md AUDYT/implementation_plan.md
+   ```
+
+2. **Otwórz plik** `AUDYT/implementation_plan.md`
+
+3. **Dodaj poprawkę do odpowiedniej sekcji** na podstawie priorytetu:
+
+   - ⚫⚫⚫⚫ → Sekcja I: KRYTYCZNE
+   - 🔴🔴🔴 → Sekcja II: WYSOKIE
+   - 🟡🟡 → Sekcja III: ŚREDNIE
+   - 🟢 → Sekcja IV: NISKIE
+
+4. **Uzupełnij format poprawki:**
+
+   ```markdown
+   ### X. [NAZWA_POPRAWKI_NA_PODSTAWIE_ANALIZY]
+
+   **Powiązane pliki:** `[PLIK_Z_ANALIZY]`  
+   **Cel:** [CEL_Z_CORRECTION.MD]  
+   **Business Impact:** [IMPACT_Z_CORRECTION.MD]  
+   **Szacowany czas wdrożenia:** [CZAS_NA_PODSTAWIE_ZŁOŻONOŚCI]
+
+   **Instrukcje dla implementacji:**
+
+   1. Zapoznaj się z analizami w plikach:
+      - `AUDYT/corrections/[nazwa_pliku]_correction.md`
+   2. Wprowadź zmiany w plikach:
+      - **`[PLIK]`:** [OPIS_ZMIAN_Z_PATCH_CODE.MD]
+   3. Po każdej logicznej zmianie, upewnij się, że kod działa poprawnie i nie wprowadza regresji. Odwołaj się do zasad w `poprawki.md`.
+
+   4. Zaktualizuj pliki patchujące:
+      - `AUDYT/patches/[nazwa_pliku]_patch_code.md`
+
+   **Status implementacji:** ⏳ OCZEKUJE
+   ```
+
+5. **Zaktualizuj statystyki** w sekcji "PODSUMOWANIE AUDYTU"
+
+6. **Sprawdź zależności** - czy ta poprawka wymaga innych lub blokuje inne
+
+7. **Dostosuj harmonogram** - dodaj do odpowiedniej fazy
 
 **🚨 BEZ TEGO KROKU AUDYT NIE JEST UKOŃCZONY!**
 
@@ -737,10 +823,13 @@ git commit -m "BUSINESS LOGIC AUDIT [NUMER]: [NAZWA_PLIKU] - [OPIS] - ZAKOŃCZON
 1. **Zapoznaj się z README.md** - zawiera kluczowe informacje o architekturze, wymaganiach wydajnościowych i procesach biznesowych aplikacji
 2. **Przeanalizuj strukturę projektu** - dynamicznie odkryj katalogi i pliki
 3. **Wygeneruj mapę logiki biznesowej** - na podstawie analizy kodu i kontekstu z README.md
+4. **Skopiuj szablon planu implementacji** - `cp __doc/implementation_plan_template.md AUDYT/implementation_plan.md`
 
 **Czekam na Twój pierwszy wynik: zawartość pliku `business_logic_map.md` z mapą plików logiki biznesowej.**
 
 **UWAGA: Mapa musi być wygenerowana na podstawie analizy aktualnego kodu oraz kontekstu biznesowego z README.md!**
+
+**🚨 PAMIĘTAJ: Po każdej analizie pliku logiki biznesowej OBOWIĄZKOWO uzupełniaj `AUDYT/implementation_plan.md`!**
 
 #### **SZCZEGÓŁOWA ANALIZA FUNKCJI BIZNESOWYCH**
 
@@ -757,9 +846,12 @@ git commit -m "BUSINESS LOGIC AUDIT [NUMER]: [NAZWA_PLIKU] - [OPIS] - ZAKOŃCZON
 
 ## 🚨 KRYTYCZNE ZASADY - MODEL MUSI PAMIĘTAĆ!
 
-### 📋 **OBOWIĄZKOWE UZUPEŁNIANIE BUSINESS_LOGIC_MAP.MD**
+### 📋 **OBOWIĄZKOWE UZUPEŁNIANIE DOKUMENTÓW AUDYTU**
 
-**🚨 MODEL MUSI PAMIĘTAĆ: Po każdej ukończonej analizie pliku logiki biznesowej OBAWIĄZKOWO uzupełnić plik `AUDYT/business_logic_map.md`!**
+**🚨 MODEL MUSI PAMIĘTAĆ: Po każdej ukończonej analizie pliku logiki biznesowej OBAWIĄZKOWO uzupełnić pliki:**
+
+- `AUDYT/business_logic_map.md` - status ukończenia analizy
+- `AUDYT/implementation_plan.md` - dodanie poprawki do planu implementacji
 
 **OBOWIĄZKOWE KROKI PO KAŻDEJ ANALIZIE:**
 
@@ -769,6 +861,8 @@ git commit -m "BUSINESS LOGIC AUDIT [NUMER]: [NAZWA_PLIKU] - [OPIS] - ZAKOŃCZON
 4. ✅ **DODAJ datę ukończenia** - aktualna data w formacie YYYY-MM-DD
 5. ✅ **DODAJ business impact** - opis wpływu na procesy biznesowe
 6. ✅ **DODAJ ścieżki do plików wynikowych** - correction.md i patch_code.md
+7. ✅ **OTWÓRZ implementation_plan.md** - dodaj poprawkę do odpowiedniej sekcji priorytetowej
+8. ✅ **ZAKTUALIZUJ statystyki** - liczba plików i poprawek w planie implementacji
 
 **FORMAT UZUPEŁNIENIA W BUSINESS_LOGIC_MAP.MD:**
 
