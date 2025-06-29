@@ -1,19 +1,16 @@
 import logging
 import os
-from functools import lru_cache
-from typing import Any, Dict, Optional
 
 from PyQt6.QtCore import QModelIndex, QObject, Qt, QThread, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QStandardItem, QStandardItemModel
 
-from core.json_utils import load_from_file
 from core.scanner import find_and_create_assets, load_existing_assets
 
 logger = logging.getLogger(__name__)
 
 
 class AssetGridModel(QObject):
-    """Model dla siatki assetów - architektura M/V z Lazy Loading"""
+    """Model dla siatki assetów - architektura M/V"""
 
     assets_changed = pyqtSignal(list)
     grid_layout_changed = pyqtSignal(int)
@@ -31,79 +28,12 @@ class AssetGridModel(QObject):
         self._recalc_timer = QTimer(self)  # Timer do debouncingu
         self._recalc_timer.setSingleShot(True)
         self._recalc_timer.timeout.connect(self._perform_recalculate_columns)
-
-        # Lazy Loading i Cache
-        self._asset_cache: Dict[str, Any] = {}  # Cache dla danych assetów
-        self._thumbnail_cache: Dict[str, Any] = {}  # Cache dla miniatur
-        self._max_cache_size = 200  # Maksymalny rozmiar cache
-
-        logger.debug("AssetGridModel initialized with Lazy Loading")
-
-    @lru_cache(maxsize=128)
-    def _get_cached_asset_data(self, asset_id: str, folder_path: str) -> Optional[Dict]:
-        """
-        Pobiera dane assetu z cache lub ładuje z dysku (z LRU cache).
-        """
-        # Ładuj dane z dysku
-        asset_file_path = os.path.join(folder_path, f"{asset_id}.asset")
-        if os.path.exists(asset_file_path):
-            try:
-                asset_data = load_from_file(asset_file_path)
-                if not asset_data:
-                    logger.warning(f"Failed to load JSON data for {asset_id}")
-                    return None
-
-                logger.debug(f"Lazy loaded asset data for: {asset_id}")
-                return asset_data
-            except Exception as e:
-                asset_name = asset_id
-                logger.error(f"Error lazy loading asset data for {asset_name}: {e}")
-                return None
-
-        logger.warning(f"Asset file not found for lazy loading: {asset_file_path}")
-        return None
-
-    def get_asset_data_lazy(self, asset_id: str) -> Optional[Dict]:
-        """
-        Publiczna metoda do lazy loading danych assetu.
-        """
-        if not self._current_folder_path:
-            return None
-
-        return self._get_cached_asset_data(asset_id, self._current_folder_path)
-
-    def invalidate_cache(self):
-        """
-        Czyści cache assetów (np. po zmianie folderu).
-        """
-        self._asset_cache.clear()
-        self._thumbnail_cache.clear()
-        self._get_cached_asset_data.cache_clear()
-        logger.debug("Asset cache invalidated")
+        logger.debug("AssetGridModel initialized")
 
     def set_assets(self, assets: list):
-        # Wyczyść cache przy zmianie assetów
-        self.invalidate_cache()
-
-        # Dla lazy loading - przechowuj tylko identyfikatory assetów
-        # zamiast pełnych danych
-        if assets and len(assets) > 50:  # Lazy loading dla dużych zbiorów
-            # Przechowuj tylko podstawowe informacje (stubs)
-            self._assets = [
-                {
-                    "name": asset.get("name", ""),
-                    "type": asset.get("type", "asset"),
-                    "is_stub": True,  # Flaga dla lazy loading
-                }
-                for asset in assets
-            ]
-            logger.debug(f"Assets set with lazy stubs: {len(self._assets)} items")
-        else:
-            # Dla małych zbiorów zachowaj pełne dane
-            self._assets = assets
-            logger.debug(f"Assets set with full data: {len(self._assets)} items")
-
-        self.assets_changed.emit(self._assets)
+        self._assets = assets
+        self.assets_changed.emit(assets)
+        logger.debug(f"Assets updated: {len(assets)} items")
 
     def get_assets(self):
         return self._assets
@@ -131,10 +61,6 @@ class AssetGridModel(QObject):
         return self._is_loading
 
     def set_current_folder(self, folder_path: str):
-        if self._current_folder_path != folder_path:
-            # Wyczyść cache przy zmianie folderu
-            self.invalidate_cache()
-
         self._current_folder_path = folder_path
         logger.debug(f"Current folder set: {folder_path}")
 

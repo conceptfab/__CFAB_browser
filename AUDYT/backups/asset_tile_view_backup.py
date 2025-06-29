@@ -7,7 +7,7 @@ import logging
 import os
 
 from PyQt6.QtCore import QMimeData, QPoint, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QDrag, QPixmap
+from PyQt6.QtGui import QColor, QDrag, QFont, QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QSizePolicy,
     QVBoxLayout,
+    QWidget,
 )
 
 from ..amv_models.asset_tile_model import AssetTileModel
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class AssetTileView(QFrame):
-    """Widok dla pojedynczego kafelka assetu - ETAP 15 + Object Pooling"""
+    """Widok dla pojedynczego kafelka assetu - ETAP 15"""
 
     thumbnail_clicked = pyqtSignal(str)  # Ścieżka do pliku podglądu
     filename_clicked = pyqtSignal(str)  # Ścieżka do pliku archiwum
@@ -55,80 +56,6 @@ class AssetTileView(QFrame):
         self._setup_ui()
         self.model.data_changed.connect(self.update_ui)
 
-    def update_asset_data(
-        self, tile_model: AssetTileModel, tile_number: int, total_tiles: int
-    ):
-        """
-        Aktualizuje dane kafelka dla Object Pooling.
-        Pozwala na ponowne wykorzystanie istniejącej instancji AssetTileView.
-        """
-        # Odłącz stare połączenie sygnału
-        if hasattr(self, "model") and self.model:
-            try:
-                self.model.data_changed.disconnect(self.update_ui)
-            except TypeError:
-                pass  # Połączenie już nie istnieje
-
-        # Zaktualizuj dane
-        self.model = tile_model
-        self.tile_number = tile_number
-        self.total_tiles = total_tiles
-        self.asset_id = self.model.get_name()
-
-        # Podłącz nowe połączenie sygnału
-        self.model.data_changed.connect(self.update_ui)
-
-        # Natychmiast zaktualizuj UI z nowymi danymi
-        self.update_ui()
-
-        asset_name = self.asset_id
-        logger.debug(f"AssetTileView data updated for asset: {asset_name}")
-
-    def reset_for_pool(self):
-        """
-        Resetuje kafelek do stanu gotowego do ponownego użycia w puli.
-        """
-        try:
-            # Odłącz połączenia sygnałów
-            if hasattr(self, "model") and self.model:
-                try:
-                    self.model.data_changed.disconnect(self.update_ui)
-                except (TypeError, RuntimeError):
-                    pass  # Połączenie już odłączone lub obiekt usunięty
-
-            # Wyczyść dane
-            self.model = None
-            self.asset_id = ""
-            self.tile_number = 0
-            self.total_tiles = 0
-
-            # Wyczyść UI - z zabezpieczeniami
-            try:
-                if hasattr(self, "thumbnail_container"):
-                    self.thumbnail_container.clear()
-                if hasattr(self, "name_label"):
-                    self.name_label.clear()
-                if hasattr(self, "tile_number_label"):
-                    self.tile_number_label.clear()
-                if hasattr(self, "checkbox"):
-                    self.checkbox.setChecked(False)
-
-                # Wyczyść gwiazdki
-                if hasattr(self, "star_checkboxes"):
-                    for star_cb in self.star_checkboxes:
-                        try:
-                            star_cb.setChecked(False)
-                        except RuntimeError:
-                            pass  # Widget już usunięty
-
-            except RuntimeError:
-                pass  # Widget już usunięty
-
-            logger.debug("AssetTileView reset for pool reuse")
-
-        except RuntimeError as e:
-            logger.debug(f"Error in reset_for_pool: {e} - object already deleted")
-
     def _setup_ui(self):
         self.setStyleSheet(
             """
@@ -145,18 +72,17 @@ class AssetTileView(QFrame):
         )
 
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
-        tile_width = self.thumbnail_size + (2 * self.margins_size)
-        self.setFixedWidth(tile_width)
+        self.setFixedWidth(self.thumbnail_size + (2 * self.margins_size))
 
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
-        margins = self.margins_size
-        layout.setContentsMargins(margins, margins, margins, margins)
+        layout.setContentsMargins(
+            self.margins_size, self.margins_size, self.margins_size, self.margins_size
+        )
 
         # RZĄD 1: Miniaturka
         self.thumbnail_container = QLabel()
-        thumb_size = self.thumbnail_size
-        self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
+        self.thumbnail_container.setFixedSize(self.thumbnail_size, self.thumbnail_size)
         self.thumbnail_container.setStyleSheet(
             """
             QLabel {
@@ -183,8 +109,8 @@ class AssetTileView(QFrame):
         self.name_label.setStyleSheet(
             """
             QLabel {
-                color: #CCCCCC; background-color: transparent; 
-                font-size: 10px; padding: 2px;
+                color: #CCCCCC; background-color: transparent; font-size: 10px;
+                padding: 2px;
             }
             QLabel:hover {
                 font-weight: bold; color: #FFFFFF;
@@ -207,28 +133,23 @@ class AssetTileView(QFrame):
 
         # Numer kafelka
         self.tile_number_label = QLabel()
-        style = (
+        self.tile_number_label.setStyleSheet(
             "color: #888888; background-color: transparent; "
             "font-size: 9px; font-weight: bold;"
         )
-        self.tile_number_label.setStyleSheet(style)
 
         # Gwiazdki
         self.star_checkboxes = []
         for i in range(5):
             star_cb = QCheckBox("★")
-            star_style = """
-                QCheckBox { 
-                    spacing: 0px; color: #888888; font-size: 14px; 
-                    border: none; padding: 0px; background: transparent; 
-                }
-                QCheckBox::indicator { 
-                    width: 0px; height: 0px; border: none; 
-                }
+            star_cb.setStyleSheet(
+                """
+                QCheckBox { spacing: 0px; color: #888888; font-size: 14px; border: none; padding: 0px; background: transparent; }
+                QCheckBox::indicator { width: 0px; height: 0px; border: none; }
                 QCheckBox:checked { color: #FFD700; font-weight: bold; }
                 QCheckBox:hover { color: #FFA500; }
             """
-            star_cb.setStyleSheet(star_style)
+            )
             star_cb.clicked.connect(
                 lambda checked, star_index=i: self._on_star_clicked(star_index + 1)
             )
@@ -237,7 +158,8 @@ class AssetTileView(QFrame):
         # Checkbox
         self.checkbox = QCheckBox()
         self.checkbox.setFixedSize(16, 16)
-        checkbox_style = """
+        self.checkbox.setStyleSheet(
+            """
             QCheckBox::indicator {
                 width: 14px; height: 14px; border: 1px solid #555;
                 border-radius: 2px; background-color: #2A2D2E;
@@ -247,8 +169,8 @@ class AssetTileView(QFrame):
             }
             QCheckBox::indicator:hover { border-color: #007ACC; }
         """
-        self.checkbox.setStyleSheet(checkbox_style)
-        # Połącz sygnał stateChanged z metodą obsługującą zmianę
+        )
+        # Połącz sygnał stateChanged z metodą obsługującą zmianę zaznaczenia w modelu
         self.checkbox.stateChanged.connect(self._on_checkbox_state_changed)
 
         bottom_row.addWidget(self.tile_number_label)
@@ -261,18 +183,18 @@ class AssetTileView(QFrame):
         # Dodanie elementów do głównego layoutu
         layout.addWidget(self.thumbnail_container)
 
-        # Dodajemy nazwę pliku w osobnym layoutcie poziomym
+        # Dodajemy nazwę pliku w osobnym layoutcie poziomym dla wycentrowania
         filename_container = QHBoxLayout()
         filename_container.addStretch()
         filename_container.addWidget(self.name_label)
-        filename_container.addWidget(self.texture_icon)
+        filename_container.addWidget(self.texture_icon)  # Ikona texture obok nazwy
         filename_container.addStretch()
         layout.addLayout(filename_container)
 
         # Dodajemy stretch, który dopycha dolny rząd do dołu
         layout.addStretch(1)
 
-        # Dolny rząd z numerem, gwiazdkami i checkboxem
+        # Dolny rząd z numerem, gwiazdkami i checkboxem - teraz przyklejony do dołu
         layout.addLayout(bottom_row)
 
         self.setAcceptDrops(False)  # D&D będzie obsługiwane przez Controller
@@ -464,27 +386,23 @@ class AssetTileView(QFrame):
         logger.debug(f"Drag exec result: {result}")
 
     def _on_thumbnail_clicked(self, ev):
-        logger.debug(f"AssetTileView: Thumbnail clicked for asset {self.asset_id}")
-        self.thumbnail_clicked.emit(self.model.get_preview_path())
+        """Obsługuje kliknięcie w miniaturkę."""
+        preview_path = self.model.get_preview_path()
+        if preview_path:
+            self.thumbnail_clicked.emit(preview_path)
 
     def _on_filename_clicked(self, ev):
-        logger.debug(f"AssetTileView: Filename clicked for asset {self.asset_id}")
-        self.filename_clicked.emit(self.model.get_archive_path())
+        """Obsługuje kliknięcie w nazwę pliku."""
+        filename_path = self.model.get_archive_path()
+        if filename_path:
+            self.filename_clicked.emit(filename_path)
 
     def update_thumbnail_size(self, new_size: int):
         """Aktualizuje rozmiar miniaturki."""
         self.thumbnail_size = new_size
-        self.setFixedWidth(new_size + (2 * self.margins_size))
+        self.setFixedWidth(self.thumbnail_size + (2 * self.margins_size))
         self.thumbnail_container.setFixedSize(self.thumbnail_size, self.thumbnail_size)
-        self.update_ui()  # Przeładuj UI, aby zastosować nowy rozmiar
-
-    def release_resources(self):
-        """
-        Zwalnia zasoby (np. QPixmap) przed umieszczeniem w puli lub usunięciem.
-        """
-        if hasattr(self, "thumbnail_container"):
-            self.thumbnail_container.clear()
-        logger.debug(f"Resources released for tile: {self.asset_id}")
+        self.update_ui()
 
     def is_checked(self) -> bool:
         """Sprawdza czy kafelek jest zaznaczony."""
