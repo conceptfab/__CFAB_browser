@@ -3,7 +3,6 @@ import os
 
 from core.amv_models.repository_interfaces import IAssetRepository
 from core.json_utils import load_from_file, save_to_file
-from core.performance_monitor import measure_operation
 from core.thumbnail import process_thumbnail
 
 # Dodanie loggera dla modułu
@@ -284,49 +283,37 @@ class AssetRepository(IAssetRepository):
         Returns:
             str: Ścieżka do utworzonej miniatury lub None przy błędzie
         """
-        with measure_operation(
-            "scanner.create_thumbnail_for_asset",
-            {
-                "asset_path": asset_path,
-                "image_path": image_path,
-                "async_mode": async_mode,
-            },
-        ):
-            try:
-                # Pobierz nazwę assetu z ścieżki
-                asset_name = os.path.splitext(os.path.basename(asset_path))[0]
+        try:
+            # Pobierz nazwę assetu z ścieżki
+            asset_name = os.path.splitext(os.path.basename(asset_path))[0]
 
-                # Utwórz miniaturę - process_thumbnail zwraca tuple (filename, thumbnail_size)
-                result = process_thumbnail(image_path, async_mode)
-                if isinstance(result, tuple) and len(result) >= 1:
-                    thumbnail_path = result[
-                        0
-                    ]  # Pierwszy element to ścieżka do miniatury
-                else:
-                    thumbnail_path = None
+            # Utwórz miniaturę - process_thumbnail zwraca tuple (filename, thumbnail_size)
+            result = process_thumbnail(image_path, async_mode)
+            if isinstance(result, tuple) and len(result) >= 1:
+                thumbnail_path = result[0]  # Pierwszy element to ścieżka do miniatury
+            else:
+                thumbnail_path = None
 
-                if thumbnail_path:
-                    logger.debug(f"Utworzono miniaturę: {thumbnail_path}")
+            if thumbnail_path:
+                logger.debug(f"Utworzono miniaturę: {thumbnail_path}")
 
-                    # Zaktualizuj plik .asset z ścieżką do miniatury
-                    asset_data = load_from_file(asset_path)
-                    if asset_data:
-                        asset_data["thumbnail"] = thumbnail_path
-                        save_to_file(asset_data, asset_path)
-                        logger.debug(
-                            f"Zaktualizowano plik .asset z miniaturą: {asset_path}"
-                        )
-
-                    return thumbnail_path
-                else:
-                    logger.warning(
-                        f"Nie udało się utworzyć miniatury dla: {asset_name}"
+                # Zaktualizuj plik .asset z ścieżką do miniatury
+                asset_data = load_from_file(asset_path)
+                if asset_data:
+                    asset_data["thumbnail"] = thumbnail_path
+                    save_to_file(asset_data, asset_path)
+                    logger.debug(
+                        f"Zaktualizowano plik .asset z miniaturą: {asset_path}"
                     )
-                    return None
 
-            except Exception as e:
-                logger.error(f"Błąd podczas tworzenia miniatury dla {asset_path}: {e}")
+                return thumbnail_path
+            else:
+                logger.warning(f"Nie udało się utworzyć miniatury dla: {asset_name}")
                 return None
+
+        except Exception as e:
+            logger.error(f"Błąd podczas tworzenia miniatury dla {asset_path}: {e}")
+            return None
 
     def _create_unpair_files_json(
         self,
@@ -383,76 +370,66 @@ class AssetRepository(IAssetRepository):
         Returns:
             list: Lista słowników reprezentujących znalezione assety
         """
-        with measure_operation(
-            "scanner.find_and_create_assets",
-            {"folder_path": folder_path, "use_async_thumbnails": use_async_thumbnails},
-        ):
-            if not folder_path or not os.path.exists(folder_path):
-                logger.error(f"Nieprawidłowa ścieżka folderu: {folder_path}")
-                return []
+        if not folder_path or not os.path.exists(folder_path):
+            logger.error(f"Nieprawidłowa ścieżka folderu: {folder_path}")
+            return []
 
-            try:
-                logger.info(f"Rozpoczęto skanowanie folderu: {folder_path}")
+        try:
+            logger.info(f"Rozpoczęto skanowanie folderu: {folder_path}")
 
-                # Skanuj folder w poszukiwaniu plików
-                archive_by_name, image_by_name = self._scan_folder_for_files(
-                    folder_path
-                )
+            # Skanuj folder w poszukiwaniu plików
+            archive_by_name, image_by_name = self._scan_folder_for_files(folder_path)
 
-                # Znajdź wspólne nazwy (case-insensitive)
-                common_names = set(archive_by_name.keys()) & set(image_by_name.keys())
+            # Znajdź wspólne nazwy (case-insensitive)
+            common_names = set(archive_by_name.keys()) & set(image_by_name.keys())
 
-                if not common_names:
-                    logger.warning(
-                        f"Nie znaleziono sparowanych plików w: {folder_path}"
-                    )
-                    # Utwórz plik z nieparowanymi plikami
-                    self._create_unpair_files_json(
-                        folder_path, archive_by_name, image_by_name, common_names
-                    )
-                    return []
-
-                # Utwórz assety dla każdej sparowanej nazwy
-                created_assets = []
-                total_assets = len(common_names)
-
-                for i, name in enumerate(common_names):
-                    if progress_callback:
-                        progress_callback(
-                            i + 1, total_assets, f"Tworzenie assetu: {name}"
-                        )
-
-                    archive_path = archive_by_name[name]
-                    image_path = image_by_name[name]
-
-                    # Utwórz asset
-                    asset_data = self._create_single_asset(
-                        name, archive_path, image_path, folder_path
-                    )
-
-                    if asset_data:
-                        created_assets.append(asset_data)
-                        logger.debug(f"Utworzono asset: {name}")
-
-                        # Utwórz miniaturę
-                        asset_file_path = os.path.join(folder_path, f"{name}.asset")
-                        self.create_thumbnail_for_asset(
-                            asset_file_path, image_path, use_async_thumbnails
-                        )
-
+            if not common_names:
+                logger.warning(f"Nie znaleziono sparowanych plików w: {folder_path}")
                 # Utwórz plik z nieparowanymi plikami
                 self._create_unpair_files_json(
                     folder_path, archive_by_name, image_by_name, common_names
                 )
-
-                logger.info(
-                    f"Zakończono skanowanie. Utworzono {len(created_assets)} assetów."
-                )
-                return created_assets
-
-            except Exception as e:
-                logger.error(f"Błąd podczas skanowania folderu {folder_path}: {e}")
                 return []
+
+            # Utwórz assety dla każdej sparowanej nazwy
+            created_assets = []
+            total_assets = len(common_names)
+
+            for i, name in enumerate(common_names):
+                if progress_callback:
+                    progress_callback(i + 1, total_assets, f"Tworzenie assetu: {name}")
+
+                archive_path = archive_by_name[name]
+                image_path = image_by_name[name]
+
+                # Utwórz asset
+                asset_data = self._create_single_asset(
+                    name, archive_path, image_path, folder_path
+                )
+
+                if asset_data:
+                    created_assets.append(asset_data)
+                    logger.debug(f"Utworzono asset: {name}")
+
+                    # Utwórz miniaturę
+                    asset_file_path = os.path.join(folder_path, f"{name}.asset")
+                    self.create_thumbnail_for_asset(
+                        asset_file_path, image_path, use_async_thumbnails
+                    )
+
+            # Utwórz plik z nieparowanymi plikami
+            self._create_unpair_files_json(
+                folder_path, archive_by_name, image_by_name, common_names
+            )
+
+            logger.info(
+                f"Zakończono skanowanie. Utworzono {len(created_assets)} assetów."
+            )
+            return created_assets
+
+        except Exception as e:
+            logger.error(f"Błąd podczas skanowania folderu {folder_path}: {e}")
+            return []
 
     def load_existing_assets(self, folder_path: str) -> list:
         """
@@ -464,36 +441,33 @@ class AssetRepository(IAssetRepository):
         Returns:
             list: Lista słowników reprezentujących załadowane assety
         """
-        with measure_operation(
-            "scanner.load_existing_assets", {"folder_path": folder_path}
-        ):
-            if not folder_path or not os.path.exists(folder_path):
-                logger.error(f"Nieprawidłowa ścieżka folderu: {folder_path}")
-                return []
+        if not folder_path or not os.path.exists(folder_path):
+            logger.error(f"Nieprawidłowa ścieżka folderu: {folder_path}")
+            return []
 
-            try:
-                logger.info(f"Ładowanie istniejących assetów z: {folder_path}")
+        try:
+            logger.info(f"Ładowanie istniejących assetów z: {folder_path}")
 
-                assets = []
-                for entry in os.listdir(folder_path):
-                    if entry.endswith(".asset"):
-                        asset_file_path = os.path.join(folder_path, entry)
-                        try:
-                            asset_data = load_from_file(asset_file_path)
-                            if asset_data and isinstance(asset_data, dict):
-                                assets.append(asset_data)
-                                logger.debug(f"Załadowano asset: {entry}")
-                            else:
-                                logger.warning(f"Nieprawidłowe dane w pliku: {entry}")
-                        except Exception as e:
-                            logger.error(f"Błąd podczas ładowania assetu {entry}: {e}")
+            assets = []
+            for entry in os.listdir(folder_path):
+                if entry.endswith(".asset"):
+                    asset_file_path = os.path.join(folder_path, entry)
+                    try:
+                        asset_data = load_from_file(asset_file_path)
+                        if asset_data and isinstance(asset_data, dict):
+                            assets.append(asset_data)
+                            logger.debug(f"Załadowano asset: {entry}")
+                        else:
+                            logger.warning(f"Nieprawidłowe dane w pliku: {entry}")
+                    except Exception as e:
+                        logger.error(f"Błąd podczas ładowania assetu {entry}: {e}")
 
-                logger.info(f"Załadowano {len(assets)} assetów z {folder_path}")
-                return assets
+            logger.info(f"Załadowano {len(assets)} assetów z {folder_path}")
+            return assets
 
-            except Exception as e:
-                logger.error(f"Błąd podczas ładowania assetów z {folder_path}: {e}")
-                return []
+        except Exception as e:
+            logger.error(f"Błąd podczas ładowania assetów z {folder_path}: {e}")
+            return []
 
 
 # Zachowanie kompatybilności wstecznej - funkcje globalne delegują do instancji

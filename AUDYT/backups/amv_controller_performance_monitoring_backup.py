@@ -23,7 +23,6 @@ from core.amv_models.control_panel_model import ControlPanelModel
 from core.amv_models.drag_drop_model import DragDropModel
 from core.amv_models.file_operations_model import FileOperationsModel
 from core.amv_models.selection_model import SelectionModel
-from core.performance_monitor import measure_operation
 
 from ..amv_views.asset_tile_view import AssetTileView
 from ..scanner import find_and_create_assets
@@ -321,70 +320,65 @@ class AmvController(QObject):
 
     def _rebuild_asset_grid(self, assets: list):
         """Przebudowuje siatkę kafelków na podstawie listy assetów"""
-        with measure_operation(
-            "amv_controller.rebuild_asset_grid", {"assets_count": len(assets)}
-        ):
-            self._clear_active_tiles()
+        self._clear_active_tiles()
 
-            if not assets:
-                self.view.update_gallery_placeholder(
-                    "Nie znaleziono assetów w tym folderze."
-                )
-                return
-
-            self.view.update_gallery_placeholder("")
-
-            cols = self.model.asset_grid_model.get_columns()
-            thumb_size = self.model.control_panel_model.get_thumbnail_size()
-            rows = (len(assets) + cols - 1) // cols if cols > 0 else 0
-            logger.debug(
-                "_rebuild_asset_grid: Rebuilding with %d cols, %d rows.",
-                cols,
-                rows,
+        if not assets:
+            self.view.update_gallery_placeholder(
+                "Nie znaleziono assetów w tym folderze."
             )
-            self.view.placeholder_label.hide()
+            return
 
-            for i, asset_stub in enumerate(assets):
-                asset_data = None
-                asset_name = asset_stub.get("name")
+        self.view.update_gallery_placeholder("")
 
-                if asset_stub.get("is_stub"):
-                    asset_data = self.model.asset_grid_model.get_asset_data_lazy(
-                        asset_name
+        cols = self.model.asset_grid_model.get_columns()
+        thumb_size = self.model.control_panel_model.get_thumbnail_size()
+        rows = (len(assets) + cols - 1) // cols if cols > 0 else 0
+        logger.debug(
+            "_rebuild_asset_grid: Rebuilding with %d cols, %d rows.",
+            cols,
+            rows,
+        )
+        self.view.placeholder_label.hide()
+
+        for i, asset_stub in enumerate(assets):
+            asset_data = None
+            asset_name = asset_stub.get("name")
+
+            if asset_stub.get("is_stub"):
+                asset_data = self.model.asset_grid_model.get_asset_data_lazy(asset_name)
+                if not asset_data:
+                    logger.warning(f"Could not lazy load asset: {asset_name}")
+                    continue
+            else:
+                asset_data = asset_stub
+
+            row, col = divmod(i, cols)
+            asset_file_path = None
+            if asset_data.get("type") != "special_folder":
+                current_folder = self.model.asset_grid_model.get_current_folder()
+                if current_folder and asset_name:
+                    asset_file_path = os.path.join(
+                        current_folder, f"{asset_name}.asset"
                     )
-                    if not asset_data:
-                        logger.warning(f"Could not lazy load asset: {asset_name}")
-                        continue
-                else:
-                    asset_data = asset_stub
 
-                row, col = divmod(i, cols)
-                asset_file_path = None
-                if asset_data.get("type") != "special_folder":
-                    current_folder = self.model.asset_grid_model.get_current_folder()
-                    if current_folder and asset_name:
-                        asset_file_path = os.path.join(
-                            current_folder, f"{asset_name}.asset"
-                        )
+            tile_model = AssetTileModel(asset_data, asset_file_path)
+            tile_view = self._get_tile_from_pool(
+                tile_model, thumb_size, i + 1, len(assets)
+            )
 
-                tile_model = AssetTileModel(asset_data, asset_file_path)
-                tile_view = self._get_tile_from_pool(
-                    tile_model, thumb_size, i + 1, len(assets)
-                )
+            self.view.gallery_layout.addWidget(tile_view, row, col)
+            self._active_tiles.append(tile_view)
+            tile_view.show()
 
-                self.view.gallery_layout.addWidget(tile_view, row, col)
-                self._active_tiles.append(tile_view)
-                tile_view.show()
+            tile_view.thumbnail_clicked.connect(self._on_tile_thumbnail_clicked)
+            tile_view.filename_clicked.connect(self._on_tile_filename_clicked)
 
-                tile_view.thumbnail_clicked.connect(self._on_tile_thumbnail_clicked)
-                tile_view.filename_clicked.connect(self._on_tile_filename_clicked)
+        self.view.gallery_container_widget.update()
+        self.view.gallery_container_widget.repaint()
+        self.view.scroll_area.viewport().update()
+        self.view.stacked_layout.setCurrentIndex(0)
 
-            self.view.gallery_container_widget.update()
-            self.view.gallery_container_widget.repaint()
-            self.view.scroll_area.viewport().update()
-            self.view.stacked_layout.setCurrentIndex(0)
-
-            logger.info(f"Asset grid rebuilt with {len(self._active_tiles)} tiles.")
+        logger.info(f"Asset grid rebuilt with {len(self._active_tiles)} tiles.")
 
     def _on_loading_state_changed(self, is_loading):
         logger.debug(f"Loading state changed: {is_loading}")
@@ -452,26 +446,18 @@ class AmvController(QObject):
         logger.debug(f"Scan progress: {progress}% - {message}")
 
     def _on_scan_completed(self, assets: list, duration: float, operation_type: str):
-        with measure_operation(
-            "amv_controller.scan_completed",
-            {
-                "assets_count": len(assets),
-                "duration": duration,
-                "operation_type": operation_type,
-            },
-        ):
-            logger.info(
-                "Controller: Scan completed - %d assets in %.2fs (%s)",
-                len(assets),
-                duration,
-                operation_type,
-            )
-            self.model.control_panel_model.set_progress(100)
-            self.view.update_gallery_placeholder("")
+        logger.info(
+            "Controller: Scan completed - %d assets in %.2fs (%s)",
+            len(assets),
+            duration,
+            operation_type,
+        )
+        self.model.control_panel_model.set_progress(100)
+        self.view.update_gallery_placeholder("")
 
-            # Zawsze przebuduj siatkę po zakończeniu skanowania
-            self.model.asset_grid_model.set_assets(assets)
-            logger.debug(f"Assets updated and grid rebuilt: {len(assets)} items")
+        # Zawsze przebuduj siatkę po zakończeniu skanowania
+        self.model.asset_grid_model.set_assets(assets)
+        logger.debug(f"Assets updated and grid rebuilt: {len(assets)} items")
 
     def _on_scan_error(self, error_msg: str):
         logger.error(f"Controller: Scan error: {error_msg}")
@@ -719,46 +705,36 @@ class AmvController(QObject):
     def _on_file_operation_completed(
         self, success_messages: list, error_messages: list
     ):
-        with measure_operation(
-            "amv_controller.file_operation_completed",
-            {
-                "success_count": len(success_messages),
-                "error_count": len(error_messages),
-            },
-        ):
-            # Wyłącz progress bar
-            self.model.control_panel_model.set_progress(0)
+        self.model.control_panel_model.set_progress(100)
+        self.view.update_gallery_placeholder("")  # Clear placeholder
 
-            # Przygotuj komunikat
-            if success_messages and error_messages:
-                message = (
-                    f"Operacja zakończona częściowo.\n\n"
-                    f"Pomyślnie: {len(success_messages)}\n"
-                    f"Błędy: {len(error_messages)}\n\n"
-                    f"Szczegóły błędów:\n" + "\n".join(error_messages)
-                )
-                QMessageBox.warning(self.view, "Operacja plików", message)
-            elif success_messages:
-                message = f"Operacja zakończona pomyślnie.\n\nPrzeniesiono: {len(success_messages)} plików"
-                QMessageBox.information(self.view, "Operacja plików", message)
-            elif error_messages:
-                message = f"Operacja zakończona z błędami.\n\nBłędy:\n" + "\n".join(
-                    error_messages
-                )
-                QMessageBox.critical(self.view, "Operacja plików", message)
-
-            # Wyczyść zaznaczenie po operacji
-            self.model.selection_model.clear_selection()
-
-            # Odśwież widok galerii
+        # Usuń przeniesione/usunięte assety z listy bez ponownego skanowania
+        if success_messages:
+            # Usuń assety z modelu danych
             current_assets = self.model.asset_grid_model.get_assets()
-            self._rebuild_asset_grid(current_assets)
+            updated_assets = [
+                asset
+                for asset in current_assets
+                if asset.get("name") not in success_messages
+            ]
+            self.model.asset_grid_model._assets = updated_assets
 
-            logger.info(
-                "File operation completed - Success: %d, Errors: %d",
+            # Usuń kafelki z widoku
+            self.view.remove_asset_tiles(success_messages)
+
+            # Usuń również z listy asset_tiles kontrolera
+            self.asset_tiles = [
+                tile
+                for tile in self.asset_tiles
+                if tile.model.get_name() not in success_messages
+            ]
+
+            logger.debug(
+                "Removed %d assets from list and view without rescanning",
                 len(success_messages),
-                len(error_messages),
             )
+
+        self.model.selection_model.clear_selection()  # Wyczyść zaznaczenie po operacji
 
     def _on_file_operation_error(self, error_msg: str):
         self.model.control_panel_model.set_progress(0)

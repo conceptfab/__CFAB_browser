@@ -5,11 +5,10 @@ from pathlib import Path
 from typing import Callable, Optional, Tuple
 
 from PIL import Image, ImageFile, UnidentifiedImageError
-from PyQt6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, pyqtSignal, QThreadPool, QRunnable, QTimer
 from PyQt6.QtGui import QPixmap
 
 from core.json_utils import load_from_file
-from core.performance_monitor import measure_operation
 
 # Dodanie loggera dla modułu
 logger = logging.getLogger(__name__)
@@ -326,40 +325,39 @@ class ThumbnailProcessor:
             ValueError: Gdy plik ma nieprawidłowy format
             RuntimeError: Przy błędach przetwarzania
         """
-        with measure_operation("thumbnail.process_image", {"filename": filename}):
-            # Walidacja input
-            image_path = self._validate_input(filename)
+        # Walidacja input
+        image_path = self._validate_input(filename)
 
-            # Pobierz konfigurację
-            config = self.config_manager.get_thumbnail_config()
-            thumbnail_size = config["size"]
+        # Pobierz konfigurację
+        config = self.config_manager.get_thumbnail_config()
+        thumbnail_size = config["size"]
 
-            # Inicjalizuj cache manager jeśli potrzebny
-            if self.cache_manager is None:
-                self.cache_manager = ThumbnailCacheManager(config["cache_dir_name"])
+        # Inicjalizuj cache manager jeśli potrzebny
+        if self.cache_manager is None:
+            self.cache_manager = ThumbnailCacheManager(config["cache_dir_name"])
 
-            # Sprawdź czy thumbnail już istnieje i jest aktualny
-            if self.cache_manager.is_thumbnail_current(image_path, thumbnail_size):
-                logger.debug(f"Using cached thumbnail for: {image_path.name}")
-                return filename, thumbnail_size
+        # Sprawdź czy thumbnail już istnieje i jest aktualny
+        if self.cache_manager.is_thumbnail_current(image_path, thumbnail_size):
+            logger.debug(f"Using cached thumbnail for: {image_path.name}")
+            return filename, thumbnail_size
 
-            # Przygotuj cache directory
-            cache_dir = self.cache_manager.get_cache_path(image_path)
-            if not self.cache_manager.ensure_cache_dir(cache_dir):
-                raise RuntimeError(f"Cannot create cache directory: {cache_dir}")
+        # Przygotuj cache directory
+        cache_dir = self.cache_manager.get_cache_path(image_path)
+        if not self.cache_manager.ensure_cache_dir(cache_dir):
+            raise RuntimeError(f"Cannot create cache directory: {cache_dir}")
 
-            # Wyczyść stare thumbnails o innym rozmiarze
-            self.cache_manager.cleanup_old_thumbnails(cache_dir, thumbnail_size)
+        # Wyczyść stare thumbnails o innym rozmiarze
+        self.cache_manager.cleanup_old_thumbnails(cache_dir, thumbnail_size)
 
-            # Przetwórz obraz
-            try:
-                self._process_and_save_thumbnail(image_path, config)
-                logger.debug(f"Generated thumbnail for: {image_path.name}")
-                return filename, thumbnail_size
+        # Przetwórz obraz
+        try:
+            self._process_and_save_thumbnail(image_path, config)
+            logger.debug(f"Generated thumbnail for: {image_path.name}")
+            return filename, thumbnail_size
 
-            except Exception as e:
-                logger.error(f"Failed to process thumbnail for {filename}: {e}")
-                raise RuntimeError(f"Thumbnail processing failed: {e}")
+        except Exception as e:
+            logger.error(f"Failed to process thumbnail for {filename}: {e}")
+            raise RuntimeError(f"Thumbnail processing failed: {e}")
 
     def _validate_input(self, filename: str) -> Path:
         """Waliduje input parameters"""
@@ -378,54 +376,48 @@ class ThumbnailProcessor:
 
     def _process_and_save_thumbnail(self, image_path: Path, config: dict):
         """Przetwarza i zapisuje thumbnail z atomic operations"""
-        with measure_operation(
-            "thumbnail.process_and_save_thumbnail",
-            {"image_path": str(image_path), "thumbnail_size": config["size"]},
-        ):
-            thumbnail_size = config["size"]
-            quality = config["quality"]
-            output_format = config["format"]
+        thumbnail_size = config["size"]
+        quality = config["quality"]
+        output_format = config["format"]
 
-            # Upewnij się że cache_manager jest zainicjalizowany
-            if self.cache_manager is None:
-                self.cache_manager = ThumbnailCacheManager(config["cache_dir_name"])
+        # Upewnij się że cache_manager jest zainicjalizowany
+        if self.cache_manager is None:
+            self.cache_manager = ThumbnailCacheManager(config["cache_dir_name"])
 
-            # Określ ścieżki
-            thumbnail_path = self.cache_manager.get_thumbnail_path(image_path)
-            temp_path = thumbnail_path.with_suffix(".tmp")
+        # Określ ścieżki
+        thumbnail_path = self.cache_manager.get_thumbnail_path(image_path)
+        temp_path = thumbnail_path.with_suffix(".tmp")
 
-            try:
-                # Otwórz i przetwórz obraz
-                with Image.open(image_path) as img:
-                    # Konwertuj format jeśli potrzeba
-                    processed_img = self._convert_image_format(img)
+        try:
+            # Otwórz i przetwórz obraz
+            with Image.open(image_path) as img:
+                # Konwertuj format jeśli potrzeba
+                processed_img = self._convert_image_format(img)
 
-                    # Przeskaluj i przyciąć
-                    thumbnail_img = self._resize_and_crop(processed_img, thumbnail_size)
+                # Przeskaluj i przyciąć
+                thumbnail_img = self._resize_and_crop(processed_img, thumbnail_size)
 
-                    # Zapisz atomically (najpierw do temp file, potem rename)
-                    self._save_thumbnail_atomic(
-                        thumbnail_img, temp_path, thumbnail_path, output_format, quality
-                    )
-
-            except UnidentifiedImageError:
-                raise ValueError(f"Cannot identify image format: {image_path}")
-            except Image.DecompressionBombError:
-                raise ValueError(
-                    f"Image too large (decompression bomb protection): {image_path}"
+                # Zapisz atomically (najpierw do temp file, potem rename)
+                self._save_thumbnail_atomic(
+                    thumbnail_img, temp_path, thumbnail_path, output_format, quality
                 )
-            except MemoryError:
-                raise RuntimeError(
-                    f"Insufficient memory to process image: {image_path}"
-                )
-            except Exception as e:
-                # Cleanup temp file jeśli istnieje
-                if temp_path.exists():
-                    try:
-                        temp_path.unlink()
-                    except OSError:
-                        pass
-                raise RuntimeError(f"Image processing error: {e}")
+
+        except UnidentifiedImageError:
+            raise ValueError(f"Cannot identify image format: {image_path}")
+        except Image.DecompressionBombError:
+            raise ValueError(
+                f"Image too large (decompression bomb protection): {image_path}"
+            )
+        except MemoryError:
+            raise RuntimeError(f"Insufficient memory to process image: {image_path}")
+        except Exception as e:
+            # Cleanup temp file jeśli istnieje
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except OSError:
+                    pass
+            raise RuntimeError(f"Image processing error: {e}")
 
     def _convert_image_format(self, img: Image.Image) -> Image.Image:
         """Konwertuje obraz do odpowiedniego formatu z zachowaniem przezroczystości"""
@@ -526,40 +518,57 @@ _thumbnail_processor = None
 
 def process_thumbnail(filename: str, async_mode: bool = False) -> Tuple[str, int]:
     """
-    Główna funkcja do przetwarzania thumbnail
+    Funkcja przetwarzająca thumbnail dla podanego pliku.
+
+    UWAGA: To jest wrapper function dla backward compatibility.
+    Rzeczywiste przetwarzanie odbywa się w ThumbnailProcessor.
 
     Args:
-        filename (str): Ścieżka do pliku obrazu
-        async_mode (bool): Czy używać trybu asynchronicznego
+        filename (str): Nazwa pliku do przetworzenia
+        async_mode (bool): Jeśli True, przetwarzanie odbywa się asynchronicznie
+                          w QThreadPool (dla nowych implementacji)
 
     Returns:
-        Tuple[str, int]: (nazwa pliku, rozmiar thumbnail)
+        tuple[str, int]: Krotka zawierająca nazwę pliku i wartość thumbnail
+        z config.json
+        
+        UWAGA: W trybie asynchronicznym zwraca natychmiast (filename, 0),
+        a rzeczywisty wynik będzie dostępny przez sygnał thumbnail_generated
+        w AsyncThumbnailManager
 
     Raises:
-        FileNotFoundError: Gdy plik nie istnieje
-        ValueError: Gdy plik ma nieprawidłowy format
-        RuntimeError: Przy błędach przetwarzania
+        FileNotFoundError: Gdy plik nie istnieje (tylko tryb synchroniczny)
+        ValueError: Gdy plik ma nieprawidłowy format (tylko tryb synchroniczny)
+        RuntimeError: Przy błędach przetwarzania lub I/O (tylko tryb synchroniczny)
     """
-    with measure_operation(
-        "thumbnail.process_thumbnail", {"filename": filename, "async_mode": async_mode}
-    ):
-        if async_mode:
-            # Użyj asynchronicznego manager-a
-            manager = get_async_thumbnail_manager()
-            manager.process_thumbnail_async(filename)
-            manager.wait_for_completion()
-            # Zwróć domyślne wartości - rzeczywisty wynik będzie w sygnale
-            return filename, 256
-        else:
-            # Użyj synchronicznego procesora
-            processor = ThumbnailProcessor()
-            return processor.process_image(filename)
+    global _thumbnail_processor
+
+    # Lazy initialization processora
+    if _thumbnail_processor is None:
+        _thumbnail_processor = ThumbnailProcessor()
+
+    # Tryb asynchroniczny - deleguj do AsyncThumbnailManager
+    if async_mode:
+        async_manager = get_async_thumbnail_manager()
+        async_manager.process_thumbnail_async(filename)
+        # W trybie async zwracamy natychmiast - rzeczywisty wynik przez sygnał
+        return (filename, 0)
+
+    # Tryb synchroniczny - zachowuje pełną kompatybilność wsteczną
+    try:
+        return _thumbnail_processor.process_image(filename)
+    except (FileNotFoundError, ValueError) as e:
+        # Re-raise validation errors bez zmiany
+        logger.error(f"Thumbnail processing failed for {filename}: {e}")
+        raise
+    except Exception as e:
+        # Wrap unexpected errors w RuntimeError dla consistency
+        logger.error(f"Unexpected error processing thumbnail {filename}: {e}")
+        raise RuntimeError(f"Thumbnail processing failed: {e}")
 
 
 def process_thumbnails_batch(
-    filenames: list[str],
-    progress_callback: Optional[Callable] = None,
-    async_mode: bool = False,
+    filenames: list[str], progress_callback: Optional[Callable] = None, async_mode: bool = False
 ) -> list[Tuple[str, int, bool]]:
     """
     Przetwarza wiele thumbnails w batch z progress tracking
@@ -571,7 +580,7 @@ def process_thumbnails_batch(
 
     Returns:
         Lista krotek (filename, thumbnail_size, success)
-
+        
         UWAGA: W trybie asynchronicznym zwraca natychmiast listę (filename, 0, True)
         dla wszystkich plików, a rzeczywiste rezultaty będą dostępne przez sygnały
     """
@@ -588,16 +597,16 @@ def process_thumbnails_batch(
         async_manager = get_async_thumbnail_manager()
         results = []
         total_files = len(filenames)
-
+        
         logger.debug(f"Starting async batch thumbnail processing: {total_files} files")
-
+        
         for i, filename in enumerate(filenames):
             if progress_callback:
                 progress_callback(i + 1, total_files, filename)
-
+            
             async_manager.process_thumbnail_async(filename)
             results.append((filename, 0, True))  # Placeholder results
-
+        
         logger.debug(f"Scheduled {total_files} thumbnails for async processing")
         return results
 
@@ -740,76 +749,65 @@ def validate_thumbnail_integrity(work_folder: str) -> dict:
 
 class ThumbnailGeneratorWorker(QRunnable):
     """Worker dla asynchronicznego generowania miniatur w QThreadPool"""
-
-    def __init__(
-        self,
-        filename: str,
-        processor: "ThumbnailProcessor",
-        callback_signal: QObject = None,
-    ):
+    
+    def __init__(self, filename: str, processor: 'ThumbnailProcessor', callback_signal: QObject = None):
         super().__init__()
         self.filename = filename
         self.processor = processor
         self.callback_signal = callback_signal
         self.setAutoDelete(True)
-
+    
     def run(self):
         """Wykonuje generowanie miniatury w tle"""
         try:
             result = self.processor.process_image(self.filename)
             if self.callback_signal:
                 # Emituj sygnał o zakończeniu
-                self.callback_signal.thumbnail_generated.emit(
-                    self.filename, result[0], result[1], True, None
-                )
+                self.callback_signal.thumbnail_generated.emit(self.filename, result[0], result[1], True, None)
         except Exception as e:
             logger.error(f"Async thumbnail generation failed for {self.filename}: {e}")
             if self.callback_signal:
-                self.callback_signal.thumbnail_generated.emit(
-                    self.filename, None, 0, False, str(e)
-                )
+                self.callback_signal.thumbnail_generated.emit(self.filename, None, 0, False, str(e))
 
 
 class AsyncThumbnailManager(QObject):
     """Manager dla asynchronicznego generowania miniatur"""
-
+    
     # Sygnał: filename, result_filename, thumbnail_size, success, error_message
     thumbnail_generated = pyqtSignal(str, str, int, bool, str)
-
+    
     def __init__(self):
         super().__init__()
         self.thread_pool = QThreadPool()
-        self.thread_pool.setMaxThreadCount(
-            4
-        )  # Maksymalnie 4 wątki dla generowania miniatur
+        self.thread_pool.setMaxThreadCount(4)  # Maksymalnie 4 wątki dla generowania miniatur
         self.processor = None  # Będzie zainicjalizowany lazy
-
+        
     def process_thumbnail_async(self, filename: str):
         """
         Procesuje miniaturę asynchronicznie w QThreadPool
-
+        
         Args:
             filename (str): Ścieżka do pliku obrazu
         """
         if self.processor is None:
             self.processor = ThumbnailProcessor()
-
+            
         worker = ThumbnailGeneratorWorker(filename, self.processor, self)
         self.thread_pool.start(worker)
         logger.debug(f"Scheduled async thumbnail generation for: {filename}")
-
+    
     def wait_for_completion(self, timeout_ms: int = 30000):
         """
         Czeka na zakończenie wszystkich zadań w puli wątków
-
+        
         Args:
             timeout_ms (int): Timeout w milisekundach
-
+            
         Returns:
             bool: True jeśli wszystkie zadania zostały zakończone
         """
         return self.thread_pool.waitForDone(timeout_ms)
-
+    
     def active_thread_count(self) -> int:
         """Zwraca liczbę aktywnych wątków"""
         return self.thread_pool.activeThreadCount()
