@@ -11,7 +11,6 @@ import sys
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-from ..amv_models.amv_model import AmvModel
 from ..amv_models.asset_tile_model import AssetTileModel
 from ..amv_views.asset_tile_view import AssetTileView
 from ..scanner import find_and_create_assets
@@ -127,16 +126,24 @@ class AmvController(QObject):
     # Sygnał emitowany przy zmianie folderu roboczego
     working_directory_changed = pyqtSignal(str)
 
-    def __init__(self, model: AmvModel, view):
+    def __init__(self, model, view):
+        from ..amv_models.amv_model import AmvModel
+
         super().__init__()
-        self.model = model
+        self.model: AmvModel = model
         self.view = view
         self.asset_tiles = []  # Lista do przechowywania kafelków
         self.asset_rebuilder = None  # Worker dla przebudowy assetów
+
+        # Object Pooling dla AssetTileView
+        self._tile_pool = []  # Pula nieużywanych kafelków
+        self._active_tiles = []  # Lista aktywnych kafelków
+        self._max_pool_size = 50  # Maksymalny rozmiar puli
+
         self._connect_signals()
         self._setup_folder_tree()
         self._setup_asset_grid()
-        logger.debug("AmvController initialized - ETAP 14")
+        logger.debug("AmvController initialized - ETAP 14 + Object Pooling")
 
     def _connect_signals(self):
         # --- Podstawowe sygnały UI ---
@@ -274,10 +281,7 @@ class AmvController(QObject):
 
     def _rebuild_asset_grid(self, assets: list):
         """Przebudowuje siatkę kafelków na podstawie listy assetów"""
-        # Wyczyść stare kafelki
-        for tile in self.asset_tiles:
-            tile.deleteLater()
-        self.asset_tiles.clear()
+        self._clear_active_tiles()
 
         if not assets:
             self.view.update_gallery_placeholder(
@@ -287,58 +291,55 @@ class AmvController(QObject):
 
         self.view.update_gallery_placeholder("")
 
-        cols = (
-            self.model.asset_grid_model.get_columns()
-        )  # Pobierz aktualną liczbę kolumn z modelu
+        cols = self.model.asset_grid_model.get_columns()
         thumb_size = self.model.control_panel_model.get_thumbnail_size()
-
-        # Oblicz liczbę rzędów
         rows = (len(assets) + cols - 1) // cols if cols > 0 else 0
         logger.debug(
-            "_rebuild_asset_grid: Rebuilding grid with %d columns and %d rows.",
+            "_rebuild_asset_grid: Rebuilding with %d cols, %d rows.",
             cols,
             rows,
         )
-
-        # Ukryj placeholder przed dodaniem kafelków
         self.view.placeholder_label.hide()
 
-        for i, asset_data in enumerate(assets):
+        for i, asset_stub in enumerate(assets):
+            asset_data = None
+            asset_name = asset_stub.get("name")
+
+            if asset_stub.get("is_stub"):
+                asset_data = self.model.asset_grid_model.get_asset_data_lazy(asset_name)
+                if not asset_data:
+                    logger.warning(f"Could not lazy load asset: {asset_name}")
+                    continue
+            else:
+                asset_data = asset_stub
+
             row, col = divmod(i, cols)
-            # Oblicz ścieżkę do pliku .asset (tylko dla prawdziwych assetów)
             asset_file_path = None
             if asset_data.get("type") != "special_folder":
                 current_folder = self.model.asset_grid_model.get_current_folder()
-                asset_name = asset_data.get("name", "")
                 if current_folder and asset_name:
                     asset_file_path = os.path.join(
                         current_folder, f"{asset_name}.asset"
                     )
+
             tile_model = AssetTileModel(asset_data, asset_file_path)
-            tile_view = AssetTileView(
-                tile_model,
-                thumb_size,
-                i + 1,
-                len(assets),
-                self.model.selection_model,
+            tile_view = self._get_tile_from_pool(
+                tile_model, thumb_size, i + 1, len(assets)
             )
 
             self.view.gallery_layout.addWidget(tile_view, row, col)
-            self.asset_tiles.append(tile_view)
+            self._active_tiles.append(tile_view)
+            tile_view.show()
 
-            # Podłącz sygnały kliknięć
             tile_view.thumbnail_clicked.connect(self._on_tile_thumbnail_clicked)
             tile_view.filename_clicked.connect(self._on_tile_filename_clicked)
 
-        # Wymuś odświeżenie widoku
         self.view.gallery_container_widget.update()
         self.view.gallery_container_widget.repaint()
         self.view.scroll_area.viewport().update()
-
-        # Wymuś przełączenie na siatkę galerii
         self.view.stacked_layout.setCurrentIndex(0)
 
-        logger.info(f"Asset grid rebuilt with {len(assets)} tiles.")
+        logger.info(f"Asset grid rebuilt with {len(self._active_tiles)} tiles.")
 
     def _on_loading_state_changed(self, is_loading):
         logger.debug(f"Loading state changed: {is_loading}")
@@ -915,3 +916,98 @@ class AmvController(QObject):
             logger.error(f"Błąd podczas filtrowania assetów: {e}")
             # W przypadku błędu, pokaż wszystkie assety
             self._filter_assets_by_stars(0)
+
+    def _get_tile_from_pool(
+        self,
+        tile_model: AssetTileModel,
+        thumbnail_size: int,
+        tile_number: int,
+        total_tiles: int,
+    ) -> AssetTileView:
+        """
+        Pobiera kafelek z puli lub tworzy nowy jeśli pula jest pusta.
+        """
+        if self._tile_pool:
+            # Pobierz kafelek z puli
+            tile_view = self._tile_pool.pop()
+            # Zaktualizuj rozmiar miniaturki jeśli się zmienił
+            if tile_view.thumbnail_size != thumbnail_size:
+                tile_view.update_thumbnail_size(thumbnail_size)
+            # Zaktualizuj dane kafelka
+            tile_view.update_asset_data(tile_model, tile_number, total_tiles)
+            asset_name = tile_model.get_name()
+            logger.debug(f"Reused tile from pool for asset: {asset_name}")
+        else:
+            # Utwórz nowy kafelek
+            tile_view = AssetTileView(
+                tile_model,
+                thumbnail_size,
+                tile_number,
+                total_tiles,
+                self.model.selection_model,
+            )
+            asset_name = tile_model.get_name()
+            logger.debug(f"Created new tile for asset: {asset_name}")
+
+        return tile_view
+
+    def _return_tile_to_pool(self, tile_view: AssetTileView):
+        """
+        Zwraca kafelek do puli do ponownego użycia.
+        """
+        try:
+            if not tile_view:
+                return
+
+            if len(self._tile_pool) < self._max_pool_size:
+                # Resetuj kafelek do stanu czystego
+                tile_view.reset_for_pool()
+
+                # Usuń kafelek z layoutu i ukryj
+                if tile_view.parent():
+                    tile_view.setParent(None)
+                tile_view.hide()
+
+                # Dodaj do puli
+                self._tile_pool.append(tile_view)
+                logger.debug(
+                    f"Returned tile to pool, new pool size: {len(self._tile_pool)}"
+                )
+            else:
+                # Pula jest pełna, usuń kafelek
+                tile_view.deleteLater()
+                logger.debug("Pool full, deleted tile")
+
+        except RuntimeError as e:
+            logger.warning(
+                f"Error returning tile to pool: {e} - tile may be already deleted"
+            )
+
+    def _clear_active_tiles(self):
+        """
+        Usuwa wszystkie aktywne kafelki i zwraca je do puli.
+        """
+        for tile_view in self._active_tiles:
+            try:
+                if tile_view:
+                    # Najpierw zwolnij zasoby, aby odblokować pliki
+                    tile_view.release_resources()
+
+                    # Następnie bezpiecznie odłącz sygnały
+                    try:
+                        tile_view.thumbnail_clicked.disconnect(
+                            self._on_tile_thumbnail_clicked
+                        )
+                        tile_view.filename_clicked.disconnect(
+                            self._on_tile_filename_clicked
+                        )
+                    except (TypeError, RuntimeError):
+                        pass  # Sygnały już odłączone
+
+                    # Na koniec zwróć do puli
+                    self._return_tile_to_pool(tile_view)
+            except RuntimeError:
+                logger.warning("Tried to access a deleted tile in _clear_active_tiles")
+                continue
+
+        self._active_tiles.clear()

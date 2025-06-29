@@ -4,7 +4,6 @@ Zarządza ogólnym stanem aplikacji i agreguje wszystkie inne modele.
 """
 
 import logging
-from typing import Optional
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
@@ -33,19 +32,7 @@ class AmvModel(QObject):
     splitter_state_changed = pyqtSignal(bool)
     state_initialized = pyqtSignal()
 
-    def __init__(
-        self,
-        folder_tree_model: Optional[FolderTreeModel] = None,
-        asset_grid_model: Optional[AssetGridModel] = None,
-        control_panel_model: Optional[ControlPanelModel] = None,
-        config_manager: Optional[ConfigManagerMV] = None,
-        folder_system_model: Optional[FolderSystemModel] = None,
-        workspace_folders_model: Optional[WorkspaceFoldersModel] = None,
-        asset_scanner_model: Optional[AssetScannerModelMV] = None,
-        selection_model: Optional[SelectionModel] = None,
-        file_operations_model: Optional[FileOperationsModel] = None,
-        drag_drop_model: Optional[DragDropModel] = None,
-    ):
+    def __init__(self):
         super().__init__()
         self._config = {}
         self._thumbnail_size = 256
@@ -53,21 +40,19 @@ class AmvModel(QObject):
         self._is_left_panel_collapsed = False
         self._last_splitter_sizes = [200, 800]
 
-        # Wstrzykiwanie zależności z fallback do domyślnych instancji
-        self.folder_tree_model = folder_tree_model or FolderTreeModel()
-        self.asset_grid_model = asset_grid_model or AssetGridModel()
-        self.control_panel_model = control_panel_model or ControlPanelModel()
-        self.config_manager = config_manager or ConfigManagerMV()
-        self.folder_system_model = folder_system_model or FolderSystemModel()
-        self.workspace_folders_model = workspace_folders_model or WorkspaceFoldersModel(
-            self.config_manager
-        )
-        self.asset_scanner_model = asset_scanner_model or AssetScannerModelMV()
-        self.selection_model = selection_model or SelectionModel()
-        self.file_operations_model = file_operations_model or FileOperationsModel()
-        self.drag_drop_model = drag_drop_model or DragDropModel()
+        # Inicjalizacja wszystkich modeli
+        self.folder_tree_model = FolderTreeModel()
+        self.asset_grid_model = AssetGridModel()
+        self.control_panel_model = ControlPanelModel()
+        self.config_manager = ConfigManagerMV()
+        self.folder_system_model = FolderSystemModel()
+        self.workspace_folders_model = WorkspaceFoldersModel(self.config_manager)
+        self.asset_scanner_model = AssetScannerModelMV()
+        self.selection_model = SelectionModel()
+        self.file_operations_model = FileOperationsModel()
+        self.drag_drop_model = DragDropModel()
 
-        logger.debug("AmvModel initialized with dependency injection - ETAP 15")
+        logger.debug("AmvModel initialized - ETAP 13")
 
     def initialize_state(self):
         """Inicjalizuje stan z konfiguracji. Wywoływane po utworzeniu kontrolera."""
@@ -86,34 +71,34 @@ class AmvModel(QObject):
             self._config = self.config_manager._get_default_config()
             self.state_initialized.emit()
 
-    def set_config(self, config: dict) -> None:
+    def set_config(self, config: dict):
         self._config = config
         self.config_changed.emit(config)
 
-    def set_thumbnail_size(self, size: int) -> None:
+    def set_thumbnail_size(self, size: int):
         self._thumbnail_size = size
         self.thumbnail_size_changed.emit(size)
 
-    def set_work_folder(self, folder_path: str) -> None:
+    def set_work_folder(self, folder_path: str):
         self._work_folder = folder_path
         self.work_folder_changed.emit(folder_path)
 
-    def toggle_left_panel(self) -> None:
+    def toggle_left_panel(self):
         self._is_left_panel_collapsed = not self._is_left_panel_collapsed
         self.splitter_state_changed.emit(not self._is_left_panel_collapsed)
         status = "collapsed" if self._is_left_panel_collapsed else "expanded"
         logger.info(f"Left panel {status}")
 
-    def set_splitter_sizes(self, sizes: list) -> None:
+    def set_splitter_sizes(self, sizes: list):
         if not self._is_left_panel_collapsed and len(sizes) == 2 and sizes[0] > 0:
             self._last_splitter_sizes = sizes[:]
             logger.debug(f"Splitter sizes saved: {sizes}")
 
-    def get_splitter_sizes(self) -> list:
+    def get_splitter_sizes(self):
         if self._is_left_panel_collapsed:
             return [0, 1000]
         else:
             return self._last_splitter_sizes[:]
 
-    def is_left_panel_collapsed(self) -> bool:
+    def is_left_panel_collapsed(self):
         return self._is_left_panel_collapsed

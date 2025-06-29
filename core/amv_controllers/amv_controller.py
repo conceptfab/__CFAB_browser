@@ -7,11 +7,23 @@ import logging
 import os
 import subprocess
 import sys
+from typing import Optional
 
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-from ..amv_models.asset_tile_model import AssetTileModel
+from core.amv_models.asset_grid_model import (
+    AssetGridModel,
+    AssetScannerModelMV,
+    FolderTreeModel,
+    WorkspaceFoldersModel,
+)
+from core.amv_models.asset_tile_model import AssetTileModel
+from core.amv_models.control_panel_model import ControlPanelModel
+from core.amv_models.drag_drop_model import DragDropModel
+from core.amv_models.file_operations_model import FileOperationsModel
+from core.amv_models.selection_model import SelectionModel
+
 from ..amv_views.asset_tile_view import AssetTileView
 from ..scanner import find_and_create_assets
 
@@ -126,12 +138,39 @@ class AmvController(QObject):
     # Sygnał emitowany przy zmianie folderu roboczego
     working_directory_changed = pyqtSignal(str)
 
-    def __init__(self, model, view):
+    def __init__(
+        self,
+        model,
+        view,
+        asset_grid_model: Optional[AssetGridModel] = None,
+        control_panel_model: Optional[ControlPanelModel] = None,
+        file_operations_model: Optional[FileOperationsModel] = None,
+        selection_model: Optional[SelectionModel] = None,
+        drag_drop_model: Optional[DragDropModel] = None,
+        asset_scanner_model: Optional[AssetScannerModelMV] = None,
+        folder_system_model: Optional[FolderTreeModel] = None,
+        workspace_folders_model: Optional[WorkspaceFoldersModel] = None,
+    ):
         from ..amv_models.amv_model import AmvModel
 
         super().__init__()
         self.model: AmvModel = model
         self.view = view
+
+        # Wstrzykiwanie bezpośrednich zależności z fallback do modelu
+        self.asset_grid_model = asset_grid_model or model.asset_grid_model
+        self.control_panel_model = control_panel_model or model.control_panel_model
+        self.file_operations_model = (
+            file_operations_model or model.file_operations_model
+        )
+        self.selection_model = selection_model or model.selection_model
+        self.drag_drop_model = drag_drop_model or model.drag_drop_model
+        self.asset_scanner_model = asset_scanner_model or model.asset_scanner_model
+        self.folder_system_model = folder_system_model or model.folder_system_model
+        self.workspace_folders_model = (
+            workspace_folders_model or model.workspace_folders_model
+        )
+
         self.asset_tiles = []  # Lista do przechowywania kafelków
         self.asset_rebuilder = None  # Worker dla przebudowy assetów
 
@@ -143,7 +182,7 @@ class AmvController(QObject):
         self._connect_signals()
         self._setup_folder_tree()
         self._setup_asset_grid()
-        logger.debug("AmvController initialized - ETAP 14 + Object Pooling")
+        logger.debug("AmvController initialized with dependency injection - ETAP 15")
 
     def _connect_signals(self):
         # --- Podstawowe sygnały UI ---
@@ -153,32 +192,32 @@ class AmvController(QObject):
         self.view.gallery_viewport_resized.connect(self._on_gallery_resized)
 
         # --- Sygnały modelu folderów ---
-        self.model.folder_system_model.folder_clicked.connect(self._on_folder_clicked)
-        self.model.folder_system_model.folder_structure_updated.connect(
+        self.folder_system_model.folder_clicked.connect(self._on_folder_clicked)
+        self.folder_system_model.folder_structure_updated.connect(
             self._on_folder_structure_changed
         )
-        self.model.workspace_folders_model.folders_updated.connect(
+        self.workspace_folders_model.folders_updated.connect(
             self.view.update_workspace_folder_buttons
         )
         self.view.workspace_folder_clicked.connect(self._on_workspace_folder_clicked)
 
         # --- Sygnały modelu siatki assetów ---
-        self.model.asset_grid_model.assets_changed.connect(self._on_assets_changed)
-        self.model.asset_grid_model.loading_state_changed.connect(
+        self.asset_grid_model.assets_changed.connect(self._on_assets_changed)
+        self.asset_grid_model.loading_state_changed.connect(
             self._on_loading_state_changed
         )
 
         # --- Sygnały panelu kontrolnego ---
-        self.model.control_panel_model.progress_changed.connect(
+        self.control_panel_model.progress_changed.connect(
             self.view.progress_bar.setValue
         )
-        self.model.control_panel_model.thumbnail_size_changed.connect(
+        self.control_panel_model.thumbnail_size_changed.connect(
             self._on_thumbnail_size_changed
         )
         self.view.thumbnail_size_slider.valueChanged.connect(
-            self.model.control_panel_model.set_thumbnail_size
+            self.control_panel_model.set_thumbnail_size
         )
-        self.model.control_panel_model.selection_state_changed.connect(
+        self.control_panel_model.selection_state_changed.connect(
             self._on_control_panel_selection_state_changed
         )
 

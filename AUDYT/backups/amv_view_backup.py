@@ -5,7 +5,6 @@ Zawiera kompletny interfejs użytkownika z panelem folderów i galerią.
 
 import logging
 import os
-from typing import Optional
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
@@ -41,12 +40,11 @@ class AmvView(QWidget):
     collapse_tree_requested = pyqtSignal()  # Sygnał do zwijania drzewa
     expand_tree_requested = pyqtSignal()  # Sygnał do rozwijania drzewa
 
-    def __init__(self, folder_tree_view: Optional["CustomFolderTreeView"] = None):
+    def __init__(self):
         super().__init__()
-        self._folder_tree_view = folder_tree_view
         self._load_icons()
         self._setup_ui()
-        logger.debug("AmvView initialized with dependency injection - ETAP 15")
+        logger.debug("AmvView initialized - ETAP 9")
 
     def _load_icons(self):
         """Ładuje ikony używane w widoku."""
@@ -193,8 +191,7 @@ class AmvView(QWidget):
         # Import tutaj aby uniknąć cyklicznych importów
         from .folder_tree_view import CustomFolderTreeView
 
-        # Użyj wstrzykniętego widżetu lub utwórz nowy
-        self.folder_tree_view = self._folder_tree_view or CustomFolderTreeView()
+        self.folder_tree_view = CustomFolderTreeView()
         self.folder_tree_view.setStyleSheet(
             """
             QTreeView {

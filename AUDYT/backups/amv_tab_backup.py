@@ -2,7 +2,6 @@ import logging
 import os
 import sys
 import time
-from typing import Optional
 
 from PyQt6.QtCore import (
     QMimeData,
@@ -92,28 +91,20 @@ logger = logging.getLogger(__name__)
 class AmvTab(QWidget):
     """
     Główna klasa zakładki AMV
-    Model/View/Controller pattern - ETAP 15 completed with dependency injection
+    Model/View/Controller pattern - ETAP 10 completed
     """
 
-    def __init__(
-        self,
-        model: Optional[AmvModel] = None,
-        view: Optional[AmvView] = None,
-        controller: Optional[AmvController] = None,
-    ):
+    def __init__(self):
         super().__init__()
-
-        # Wstrzykiwanie zależności z fallback do domyślnych instancji
-        self.model = model or AmvModel()
-        self.view = view or AmvView()
-        self.controller = controller or AmvController(self.model, self.view)
-
+        self.model = AmvModel()
+        self.view = AmvView()
+        self.controller = AmvController(self.model, self.view)
         self.model.initialize_state()
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.view)
         self.setLayout(layout)
-        logger.debug("AmvTab initialized with dependency injection - ETAP 15 completed")
+        logger.debug("AmvTab initialized successfully - ETAP 14 completed")
 
     def get_controller(self) -> AmvController:
         """Zwraca instancję kontrolera dla tej zakładki."""
