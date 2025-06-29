@@ -1094,11 +1094,11 @@ class AmvController(QObject):
         if self._tile_pool:
             # Pobierz kafelek z puli
             tile_view = self._tile_pool.pop()
+            # Zaktualizuj dane kafelka PRZED zmianą rozmiaru miniaturki
+            tile_view.update_asset_data(tile_model, tile_number, total_tiles)
             # Zaktualizuj rozmiar miniaturki jeśli się zmienił
             if tile_view.thumbnail_size != thumbnail_size:
                 tile_view.update_thumbnail_size(thumbnail_size)
-            # Zaktualizuj dane kafelka
-            tile_view.update_asset_data(tile_model, tile_number, total_tiles)
             asset_name = tile_model.get_name()
             logger.debug(f"Reused tile from pool for asset: {asset_name}")
         else:

@@ -7,11 +7,24 @@ import logging
 import os
 import subprocess
 import sys
+from typing import Optional
 
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
-from ..amv_models.asset_tile_model import AssetTileModel
+from core.amv_models.asset_grid_model import (
+    AssetGridModel,
+    AssetScannerModelMV,
+    FolderTreeModel,
+    WorkspaceFoldersModel,
+)
+from core.amv_models.asset_tile_model import AssetTileModel
+from core.amv_models.control_panel_model import ControlPanelModel
+from core.amv_models.drag_drop_model import DragDropModel
+from core.amv_models.file_operations_model import FileOperationsModel
+from core.amv_models.selection_model import SelectionModel
+from core.performance_monitor import measure_operation
+
 from ..amv_views.asset_tile_view import AssetTileView
 from ..scanner import find_and_create_assets
 
@@ -126,12 +139,39 @@ class AmvController(QObject):
     # Sygnał emitowany przy zmianie folderu roboczego
     working_directory_changed = pyqtSignal(str)
 
-    def __init__(self, model, view):
+    def __init__(
+        self,
+        model,
+        view,
+        asset_grid_model: Optional[AssetGridModel] = None,
+        control_panel_model: Optional[ControlPanelModel] = None,
+        file_operations_model: Optional[FileOperationsModel] = None,
+        selection_model: Optional[SelectionModel] = None,
+        drag_drop_model: Optional[DragDropModel] = None,
+        asset_scanner_model: Optional[AssetScannerModelMV] = None,
+        folder_system_model: Optional[FolderTreeModel] = None,
+        workspace_folders_model: Optional[WorkspaceFoldersModel] = None,
+    ):
         from ..amv_models.amv_model import AmvModel
 
         super().__init__()
         self.model: AmvModel = model
         self.view = view
+
+        # Wstrzykiwanie bezpośrednich zależności z fallback do modelu
+        self.asset_grid_model = asset_grid_model or model.asset_grid_model
+        self.control_panel_model = control_panel_model or model.control_panel_model
+        self.file_operations_model = (
+            file_operations_model or model.file_operations_model
+        )
+        self.selection_model = selection_model or model.selection_model
+        self.drag_drop_model = drag_drop_model or model.drag_drop_model
+        self.asset_scanner_model = asset_scanner_model or model.asset_scanner_model
+        self.folder_system_model = folder_system_model or model.folder_system_model
+        self.workspace_folders_model = (
+            workspace_folders_model or model.workspace_folders_model
+        )
+
         self.asset_tiles = []  # Lista do przechowywania kafelków
         self.asset_rebuilder = None  # Worker dla przebudowy assetów
 
@@ -143,7 +183,7 @@ class AmvController(QObject):
         self._connect_signals()
         self._setup_folder_tree()
         self._setup_asset_grid()
-        logger.debug("AmvController initialized - ETAP 14 + Object Pooling")
+        logger.debug("AmvController initialized with dependency injection - ETAP 15")
 
     def _connect_signals(self):
         # --- Podstawowe sygnały UI ---
@@ -153,32 +193,32 @@ class AmvController(QObject):
         self.view.gallery_viewport_resized.connect(self._on_gallery_resized)
 
         # --- Sygnały modelu folderów ---
-        self.model.folder_system_model.folder_clicked.connect(self._on_folder_clicked)
-        self.model.folder_system_model.folder_structure_updated.connect(
+        self.folder_system_model.folder_clicked.connect(self._on_folder_clicked)
+        self.folder_system_model.folder_structure_updated.connect(
             self._on_folder_structure_changed
         )
-        self.model.workspace_folders_model.folders_updated.connect(
+        self.workspace_folders_model.folders_updated.connect(
             self.view.update_workspace_folder_buttons
         )
         self.view.workspace_folder_clicked.connect(self._on_workspace_folder_clicked)
 
         # --- Sygnały modelu siatki assetów ---
-        self.model.asset_grid_model.assets_changed.connect(self._on_assets_changed)
-        self.model.asset_grid_model.loading_state_changed.connect(
+        self.asset_grid_model.assets_changed.connect(self._on_assets_changed)
+        self.asset_grid_model.loading_state_changed.connect(
             self._on_loading_state_changed
         )
 
         # --- Sygnały panelu kontrolnego ---
-        self.model.control_panel_model.progress_changed.connect(
+        self.control_panel_model.progress_changed.connect(
             self.view.progress_bar.setValue
         )
-        self.model.control_panel_model.thumbnail_size_changed.connect(
+        self.control_panel_model.thumbnail_size_changed.connect(
             self._on_thumbnail_size_changed
         )
         self.view.thumbnail_size_slider.valueChanged.connect(
-            self.model.control_panel_model.set_thumbnail_size
+            self.control_panel_model.set_thumbnail_size
         )
-        self.model.control_panel_model.selection_state_changed.connect(
+        self.control_panel_model.selection_state_changed.connect(
             self._on_control_panel_selection_state_changed
         )
 
@@ -281,65 +321,70 @@ class AmvController(QObject):
 
     def _rebuild_asset_grid(self, assets: list):
         """Przebudowuje siatkę kafelków na podstawie listy assetów"""
-        self._clear_active_tiles()
+        with measure_operation(
+            "amv_controller.rebuild_asset_grid", {"assets_count": len(assets)}
+        ):
+            self._clear_active_tiles()
 
-        if not assets:
-            self.view.update_gallery_placeholder(
-                "Nie znaleziono assetów w tym folderze."
+            if not assets:
+                self.view.update_gallery_placeholder(
+                    "Nie znaleziono assetów w tym folderze."
+                )
+                return
+
+            self.view.update_gallery_placeholder("")
+
+            cols = self.model.asset_grid_model.get_columns()
+            thumb_size = self.model.control_panel_model.get_thumbnail_size()
+            rows = (len(assets) + cols - 1) // cols if cols > 0 else 0
+            logger.debug(
+                "_rebuild_asset_grid: Rebuilding with %d cols, %d rows.",
+                cols,
+                rows,
             )
-            return
+            self.view.placeholder_label.hide()
 
-        self.view.update_gallery_placeholder("")
+            for i, asset_stub in enumerate(assets):
+                asset_data = None
+                asset_name = asset_stub.get("name")
 
-        cols = self.model.asset_grid_model.get_columns()
-        thumb_size = self.model.control_panel_model.get_thumbnail_size()
-        rows = (len(assets) + cols - 1) // cols if cols > 0 else 0
-        logger.debug(
-            "_rebuild_asset_grid: Rebuilding with %d cols, %d rows.",
-            cols,
-            rows,
-        )
-        self.view.placeholder_label.hide()
-
-        for i, asset_stub in enumerate(assets):
-            asset_data = None
-            asset_name = asset_stub.get("name")
-
-            if asset_stub.get("is_stub"):
-                asset_data = self.model.asset_grid_model.get_asset_data_lazy(asset_name)
-                if not asset_data:
-                    logger.warning(f"Could not lazy load asset: {asset_name}")
-                    continue
-            else:
-                asset_data = asset_stub
-
-            row, col = divmod(i, cols)
-            asset_file_path = None
-            if asset_data.get("type") != "special_folder":
-                current_folder = self.model.asset_grid_model.get_current_folder()
-                if current_folder and asset_name:
-                    asset_file_path = os.path.join(
-                        current_folder, f"{asset_name}.asset"
+                if asset_stub.get("is_stub"):
+                    asset_data = self.model.asset_grid_model.get_asset_data_lazy(
+                        asset_name
                     )
+                    if not asset_data:
+                        logger.warning(f"Could not lazy load asset: {asset_name}")
+                        continue
+                else:
+                    asset_data = asset_stub
 
-            tile_model = AssetTileModel(asset_data, asset_file_path)
-            tile_view = self._get_tile_from_pool(
-                tile_model, thumb_size, i + 1, len(assets)
-            )
+                row, col = divmod(i, cols)
+                asset_file_path = None
+                if asset_data.get("type") != "special_folder":
+                    current_folder = self.model.asset_grid_model.get_current_folder()
+                    if current_folder and asset_name:
+                        asset_file_path = os.path.join(
+                            current_folder, f"{asset_name}.asset"
+                        )
 
-            self.view.gallery_layout.addWidget(tile_view, row, col)
-            self._active_tiles.append(tile_view)
-            tile_view.show()
+                tile_model = AssetTileModel(asset_data, asset_file_path)
+                tile_view = self._get_tile_from_pool(
+                    tile_model, thumb_size, i + 1, len(assets)
+                )
 
-            tile_view.thumbnail_clicked.connect(self._on_tile_thumbnail_clicked)
-            tile_view.filename_clicked.connect(self._on_tile_filename_clicked)
+                self.view.gallery_layout.addWidget(tile_view, row, col)
+                self._active_tiles.append(tile_view)
+                tile_view.show()
 
-        self.view.gallery_container_widget.update()
-        self.view.gallery_container_widget.repaint()
-        self.view.scroll_area.viewport().update()
-        self.view.stacked_layout.setCurrentIndex(0)
+                tile_view.thumbnail_clicked.connect(self._on_tile_thumbnail_clicked)
+                tile_view.filename_clicked.connect(self._on_tile_filename_clicked)
 
-        logger.info(f"Asset grid rebuilt with {len(self._active_tiles)} tiles.")
+            self.view.gallery_container_widget.update()
+            self.view.gallery_container_widget.repaint()
+            self.view.scroll_area.viewport().update()
+            self.view.stacked_layout.setCurrentIndex(0)
+
+            logger.info(f"Asset grid rebuilt with {len(self._active_tiles)} tiles.")
 
     def _on_loading_state_changed(self, is_loading):
         logger.debug(f"Loading state changed: {is_loading}")
@@ -407,18 +452,26 @@ class AmvController(QObject):
         logger.debug(f"Scan progress: {progress}% - {message}")
 
     def _on_scan_completed(self, assets: list, duration: float, operation_type: str):
-        logger.info(
-            "Controller: Scan completed - %d assets in %.2fs (%s)",
-            len(assets),
-            duration,
-            operation_type,
-        )
-        self.model.control_panel_model.set_progress(100)
-        self.view.update_gallery_placeholder("")
+        with measure_operation(
+            "amv_controller.scan_completed",
+            {
+                "assets_count": len(assets),
+                "duration": duration,
+                "operation_type": operation_type,
+            },
+        ):
+            logger.info(
+                "Controller: Scan completed - %d assets in %.2fs (%s)",
+                len(assets),
+                duration,
+                operation_type,
+            )
+            self.model.control_panel_model.set_progress(100)
+            self.view.update_gallery_placeholder("")
 
-        # Zawsze przebuduj siatkę po zakończeniu skanowania
-        self.model.asset_grid_model.set_assets(assets)
-        logger.debug(f"Assets updated and grid rebuilt: {len(assets)} items")
+            # Zawsze przebuduj siatkę po zakończeniu skanowania
+            self.model.asset_grid_model.set_assets(assets)
+            logger.debug(f"Assets updated and grid rebuilt: {len(assets)} items")
 
     def _on_scan_error(self, error_msg: str):
         logger.error(f"Controller: Scan error: {error_msg}")
@@ -588,9 +641,11 @@ class AmvController(QObject):
 
         # Pobierz pełne dane assetów na podstawie ID
         all_assets = self.model.asset_grid_model.get_assets()
+        logger.debug(f"Drag&Drop asset_ids: {selected_asset_ids}")
         assets_to_move = [
             asset for asset in all_assets if asset.get("name") in selected_asset_ids
         ]
+        logger.debug(f"assets_to_move: {[a.get('name') for a in assets_to_move]}")
 
         if not assets_to_move:
             QMessageBox.warning(
@@ -666,36 +721,87 @@ class AmvController(QObject):
     def _on_file_operation_completed(
         self, success_messages: list, error_messages: list
     ):
-        self.model.control_panel_model.set_progress(100)
-        self.view.update_gallery_placeholder("")  # Clear placeholder
+        with measure_operation(
+            "amv_controller.file_operation_completed",
+            {
+                "success_count": len(success_messages),
+                "error_count": len(error_messages),
+            },
+        ):
+            # Wyłącz progress bar
+            self.model.control_panel_model.set_progress(0)
 
-        # Usuń przeniesione/usunięte assety z listy bez ponownego skanowania
-        if success_messages:
-            # Usuń assety z modelu danych
-            current_assets = self.model.asset_grid_model.get_assets()
-            updated_assets = [
-                asset
-                for asset in current_assets
-                if asset.get("name") not in success_messages
-            ]
-            self.model.asset_grid_model._assets = updated_assets
+            # Logowanie wyników operacji (bez wyskakujących okien)
+            if success_messages and error_messages:
+                logger.info(
+                    f"Operacja zakończona częściowo - Pomyślnie: {len(success_messages)}, Błędy: {len(error_messages)}"
+                )
+            elif success_messages:
+                logger.info(
+                    f"Operacja zakończona pomyślnie - Przeniesiono: {len(success_messages)} plików"
+                )
+            elif error_messages:
+                logger.error(f"Operacja zakończona z błędami: {error_messages}")
 
-            # Usuń kafelki z widoku
-            self.view.remove_asset_tiles(success_messages)
+            # Usuń przeniesione/usunięte assety z listy bez ponownego skanowania
+            if success_messages:
+                logger.debug(f"Success messages: {success_messages}")
 
-            # Usuń również z listy asset_tiles kontrolera
-            self.asset_tiles = [
-                tile
-                for tile in self.asset_tiles
-                if tile.model.get_name() not in success_messages
-            ]
+                # Usuń assety z modelu danych
+                current_assets = self.model.asset_grid_model.get_assets()
+                logger.debug(f"Current assets count: {len(current_assets)}")
 
-            logger.debug(
-                "Removed %d assets from list and view without rescanning",
+                # Debug: wyświetl wszystkie nazwy assetów
+                for i, asset in enumerate(current_assets):
+                    asset_name = asset.get("name")
+                    logger.debug(
+                        f"Asset {i}: name='{asset_name}', in success_messages: {asset_name in success_messages}"
+                    )
+
+                updated_assets = [
+                    asset
+                    for asset in current_assets
+                    if asset.get("name") not in success_messages
+                ]
+                logger.debug(f"Updated assets count: {len(updated_assets)}")
+                self.model.asset_grid_model._assets = updated_assets
+
+                # Usuń kafelki z widoku
+                logger.debug(
+                    f"Active tiles count before removal: {len(self._active_tiles)}"
+                )
+                for tile in self._active_tiles:
+                    logger.debug(
+                        f"Tile asset_id: '{tile.asset_id}', in success_messages: {tile.asset_id in success_messages}"
+                    )
+                self.view.remove_asset_tiles(success_messages)
+
+                # Usuń również z listy active_tiles kontrolera
+                self._active_tiles = [
+                    tile
+                    for tile in self._active_tiles
+                    if tile.asset_id not in success_messages
+                ]
+                logger.debug(
+                    f"Active tiles count after removal: {len(self._active_tiles)}"
+                )
+
+                # ODBUDUJ GALERIĘ po usunięciu assetów
+                self._rebuild_asset_grid(updated_assets)
+
+                logger.debug(
+                    "Removed %d assets from list and view without rescanning",
+                    len(success_messages),
+                )
+
+            # Wyczyść zaznaczenie po operacji
+            self.model.selection_model.clear_selection()
+
+            logger.info(
+                "File operation completed - Success: %d, Errors: %d",
                 len(success_messages),
+                len(error_messages),
             )
-
-        self.model.selection_model.clear_selection()  # Wyczyść zaznaczenie po operacji
 
     def _on_file_operation_error(self, error_msg: str):
         self.model.control_panel_model.set_progress(0)
@@ -717,9 +823,11 @@ class AmvController(QObject):
         )
         # Pobierz pełne dane assetów na podstawie ID
         all_assets = self.model.asset_grid_model.get_assets()
+        logger.debug(f"Drag&Drop asset_ids: {asset_ids}")
         assets_to_move = [
             asset for asset in all_assets if asset.get("name") in asset_ids
         ]
+        logger.debug(f"assets_to_move: {[a.get('name') for a in assets_to_move]}")
 
         if assets_to_move:
             self.model.file_operations_model.move_assets(
@@ -851,12 +959,20 @@ class AmvController(QObject):
 
     def _on_star_filter_clicked(self, star_rating: int):
         """Obsługuje kliknięcie w gwiazdkę filtrowania w panelu kontrolnym"""
-        logger.info(f"Kliknięto gwiazdkę {star_rating}")
+        logger.info(f"=== FILTROWANIE GWIAZDEK: Kliknięto gwiazdkę {star_rating} ===")
+
+        # Sprawdź czy star_checkboxes istnieje
+        if not hasattr(self.view, "star_checkboxes") or not self.view.star_checkboxes:
+            logger.error("BŁĄD: self.view.star_checkboxes nie istnieje!")
+            return
+
+        logger.debug(f"Znaleziono {len(self.view.star_checkboxes)} checkboxów gwiazdek")
 
         # Sprawdź aktualny stan gwiazdek PRZED zablokowaniem sygnałów
         # (checkbox już zmienił stan po kliknięciu)
         clicked_checkbox = self.view.star_checkboxes[star_rating - 1]
         was_checked_before = not clicked_checkbox.isChecked()  # Odwrócony stan
+        logger.debug(f"Checkbox {star_rating} was_checked_before: {was_checked_before}")
 
         # Zablokuj sygnały żeby uniknąć rekurencji
         for cb in self.view.star_checkboxes:
@@ -866,44 +982,92 @@ class AmvController(QObject):
         if was_checked_before:
             for cb in self.view.star_checkboxes:
                 cb.setChecked(False)
-            self._filter_assets_by_stars(0)
             logger.info("Odznaczono wszystkie gwiazdki - pokazano wszystkie assety")
+            # BEZPOŚREDNIE WYWOŁANIE
+            self._filter_assets_by_stars(0)
         else:
             # Zaznacz gwiazdki od 1 do klikniętej (jak na kafelkach)
             for i, cb in enumerate(self.view.star_checkboxes):
                 cb.setChecked(i < star_rating)
-            self._filter_assets_by_stars(star_rating)
             logger.info(f"Zaznaczono {star_rating} gwiazdek - filtrowanie")
+            # BEZPOŚREDNIE WYWOŁANIE
+            self._filter_assets_by_stars(star_rating)
 
         # Odblokuj sygnały
         for cb in self.view.star_checkboxes:
             cb.blockSignals(False)
 
+        logger.info(f"=== KONIEC FILTROWANIA GWIAZDEK ===")
+
     def _filter_assets_by_stars(self, min_stars: int):
         """Filtruje assety według minimalnej liczby gwiazdek"""
         try:
             all_assets = self.model.asset_grid_model.get_all_assets()
+            logger.debug(
+                f"Filtrowanie {len(all_assets)} assetów dla min_stars={min_stars}"
+            )
 
             if min_stars == 0:
                 # Pokaż wszystkie assety
-                filtered_assets = all_assets
+                filtered_assets = []
+                for asset_data in all_assets:
+                    # Jeśli stub, pobierz pełne dane
+                    if asset_data.get("is_stub"):
+                        full_data = self.model.asset_grid_model.get_asset_data_lazy(
+                            asset_data.get("name")
+                        )
+                        if full_data:
+                            filtered_assets.append(full_data)
+                        else:
+                            filtered_assets.append(asset_data)
+                    else:
+                        filtered_assets.append(asset_data)
                 logger.debug("Pokazano wszystkie assety (brak filtrowania)")
             else:
                 # Filtruj assety z odpowiednią liczbą gwiazdek
                 filtered_assets = []
-                for asset_data in all_assets:
+                for i, asset_data in enumerate(all_assets):
+                    # Jeśli stub, pobierz pełne dane
+                    if asset_data.get("is_stub"):
+                        asset_data_full = (
+                            self.model.asset_grid_model.get_asset_data_lazy(
+                                asset_data.get("name")
+                            )
+                        )
+                        if asset_data_full:
+                            asset_data = asset_data_full
                     # Zawsze dodaj specjalne foldery (nie filtruj ich)
                     if asset_data.get("type") == "special_folder":
                         filtered_assets.append(asset_data)
+                        logger.debug(
+                            f"Asset {i}: {asset_data.get('name')} - specjalny folder, dodany"
+                        )
                         continue
 
                     # Filtruj tylko prawdziwe assety
-                    asset_stars = asset_data.get("stars", 0)
-                    if (
-                        isinstance(asset_stars, (int, float))
-                        and asset_stars >= min_stars
-                    ):
+                    asset_stars = asset_data.get("stars")
+                    logger.debug(
+                        f"Asset {i}: {asset_data.get('name')} - stars={asset_stars} (type: {type(asset_stars)})"
+                    )
+
+                    # Rzutowanie na int jeśli się da
+                    try:
+                        if asset_stars is None:
+                            asset_stars_int = 0
+                        else:
+                            asset_stars_int = int(asset_stars)
+                    except (ValueError, TypeError):
+                        asset_stars_int = 0
+
+                    if asset_stars_int >= min_stars:
                         filtered_assets.append(asset_data)
+                        logger.debug(
+                            f"Asset {i}: {asset_data.get('name')} - DODANY (stars={asset_stars_int} >= {min_stars})"
+                        )
+                    else:
+                        logger.debug(
+                            f"Asset {i}: {asset_data.get('name')} - POMINIĘTY (stars={asset_stars_int} < {min_stars})"
+                        )
 
                 logger.debug(
                     f"Przefiltrowano {len(filtered_assets)} assetów z {min_stars}+ gwiazdkami"
