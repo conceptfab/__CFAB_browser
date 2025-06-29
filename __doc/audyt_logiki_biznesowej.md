@@ -54,19 +54,25 @@ Ten audyt opiera się na trzech kluczowych filarach, które stanowią najwyższe
 
 #### 2️⃣ **STABILNOŚĆ OPERACJI** 🛡️
 
-- Niezawodność procesów biznesowych
-- Proper error handling i recovery w operacjach krytycznych
-- Thread safety w operacjach wielowątkowych
-- Eliminacja memory leaks w długotrwałych procesach
-- Przewidywalność zachowania przy różnych scenariuszach danych
+Niezawodność procesów biznesowych
+Przewidywalność zachowania przy różnych scenariuszach danych
+Error Recovery Mechanisms: Implementacja robust error handling
+Thread Safety: Zabezpieczenie operacji wielowątkowych
+Resource Cleanup: Prawidłowe zwalnianie zasobów UI i systemowych
+Signal-Slot Safety: Weryfikacja bezpiecznych połączeń signal-slot
+Memory Leak Prevention: Wykrywanie i eliminacja wycieków pamięci
+Atomic Operations: Zapewnienie atomowości krytycznych operacji
+Graceful Degradation: Płynne degradowanie funkcjonalności przy błędach
 
 #### 3️⃣ **WYELIMINOWANIE OVER-ENGINEERING** 🎯
 
-- Uproszczenie nadmiernie skomplikowanych algorytmów
-- Eliminacja niepotrzebnych abstrakcji w logice biznesowej
-- Redukcja liczby warstw przetwarzania
-- Konsolidacja rozproszonej logiki biznesowej
-- Zastąpienie skomplikowanych wzorców prostszymi rozwiązaniami
+Architecture Simplification: Uproszczenie nadmiernie złożonych wzorców
+Code Deduplication: Eliminacja duplikacji kodu
+Dependency Reduction: Zmniejszenie liczby zależności
+Layer Consolidation: Konsolidacja niepotrzebnych warstw abstrakcji
+Pattern Optimization: Zastąpienie złożonych wzorców prostszymi rozwiązaniami
+API Simplification: Uproszczenie interfejsów programowych
+Configuration Reduction: Zmniejszenie liczby parametrów konfiguracyjnych
 
 ### 🖼️ **KRYTYCZNY PROCES PREZENTACJI DANYCH W INTERFEJSIE UŻYTKOWNIKA**
 
@@ -604,7 +610,7 @@ Przeanalizuj **WSZYSTKIE** pliki logiki biznesowej pod kątem:
 
 **W folderze `__doc/` znajdują się szablony:**
 
-- `refactoring_rules.md` - Główne zasady, do których linkują pozostałe dokumenty.
+- `__doc/refactoring_rules.md` - **GŁÓWNE ZASADY REFAKTORYZACJI** (obowiązkowe do przeczytania przed każdą poprawką)
 - `correction_template.md` - Szablon dla plików `*_correction.md`.
 - `patch_code_template.md` - Szablon dla plików `*_patch_code.md`.
 
@@ -751,6 +757,8 @@ Przed utworzeniem dokumentu sprawdź:
 
 ### 📋 UZUPEŁNIANIE PLANU IMPLEMENTACJI
 
+**⚠️ UWAGA: Wszystkie poprawki muszą być zgodne z zasadami z `__doc/refactoring_rules.md`!**
+
 **PO KAŻDEJ UKOŃCZONEJ ANALIZIE PLIKU LOGIKI BIZNESOWEJ:**
 
 1. **Skopiuj szablon** (jeśli `AUDYT/implementation_plan.md` nie istnieje):
@@ -784,7 +792,7 @@ Przed utworzeniem dokumentu sprawdź:
       - `AUDYT/corrections/[nazwa_pliku]_correction.md`
    2. Wprowadź zmiany w plikach:
       - **`[PLIK]`:** [OPIS_ZMIAN_Z_PATCH_CODE.MD]
-   3. Po każdej logicznej zmianie, upewnij się, że kod działa poprawnie i nie wprowadza regresji. Odwołaj się do zasad w `poprawki.md`.
+   3. Po każdej logicznej zmianie, upewnij się, że kod działa poprawnie i nie wprowadza regresji. Odwołaj się do zasad w `__doc/refactoring_rules.md`.
 
    4. Zaktualizuj pliki patchujące:
       - `AUDYT/patches/[nazwa_pliku]_patch_code.md`

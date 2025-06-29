@@ -1,5 +1,7 @@
 # SZABLON PLANU IMPLEMENTACJI POPRAWEK - AUDYT LOGIKI BIZNESOWEJ
 
+> **⚠️ KRYTYCZNE: Przed rozpoczęciem implementacji zapoznaj się z ogólnymi zasadami refaktoryzacji, poprawek i testowania opisanymi w pliku [\_\_doc/refactoring_rules.md](__doc/refactoring_rules.md).**
+
 > **LOKALIZACJA:** `AUDYT/implementation_plan.md`  
 > **STATUS:** Dokument finalny audytu logiki biznesowej  
 > **AKTUALIZACJA:** Progresywna - po każdej ukończonej analizie pliku
@@ -52,7 +54,7 @@
 2. Wprowadź zmiany w plikach:
    - **`[PLIK_1]`:** [OPIS_ZMIAN]
    - **`[PLIK_2]`:** [OPIS_ZMIAN]
-3. Po każdej logicznej zmianie, upewnij się, że kod działa poprawnie i nie wprowadza regresji. Odwołaj się do zasad w `poprawki.md`.
+3. Po każdej logicznej zmianie, upewnij się, że kod działa poprawnie i nie wprowadza regresji. Odwołaj się do zasad w `__doc/refactoring_rules.md`.
 
 4. Zaktualizuj pliki patchujące:
    - `AUDYT/patches/[plik1]_patch_code.md`
@@ -222,7 +224,7 @@
 
 ### 📖 Dokumenty pomocnicze
 
-- `__doc/refactoring_rules.md` - Zasady refaktoryzacji
+- `__doc/refactoring_rules.md` - **GŁÓWNE ZASADY REFAKTORYZACJI** (obowiązkowe do przeczytania)
 - `poprawki.md` - Wytyczne implementacji
 - `__doc/correction_template.md` - Szablon analiz
 - `__doc/patch_code_template.md` - Szablon patchów
