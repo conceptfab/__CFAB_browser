@@ -641,9 +641,11 @@ class AmvController(QObject):
 
         # Pobierz pełne dane assetów na podstawie ID
         all_assets = self.model.asset_grid_model.get_assets()
+        logger.debug(f"Drag&Drop asset_ids: {selected_asset_ids}")
         assets_to_move = [
             asset for asset in all_assets if asset.get("name") in selected_asset_ids
         ]
+        logger.debug(f"assets_to_move: {[a.get('name') for a in assets_to_move]}")
 
         if not assets_to_move:
             QMessageBox.warning(
@@ -729,30 +731,71 @@ class AmvController(QObject):
             # Wyłącz progress bar
             self.model.control_panel_model.set_progress(0)
 
-            # Przygotuj komunikat
+            # Logowanie wyników operacji (bez wyskakujących okien)
             if success_messages and error_messages:
-                message = (
-                    f"Operacja zakończona częściowo.\n\n"
-                    f"Pomyślnie: {len(success_messages)}\n"
-                    f"Błędy: {len(error_messages)}\n\n"
-                    f"Szczegóły błędów:\n" + "\n".join(error_messages)
+                logger.info(
+                    f"Operacja zakończona częściowo - Pomyślnie: {len(success_messages)}, Błędy: {len(error_messages)}"
                 )
-                QMessageBox.warning(self.view, "Operacja plików", message)
             elif success_messages:
-                message = f"Operacja zakończona pomyślnie.\n\nPrzeniesiono: {len(success_messages)} plików"
-                QMessageBox.information(self.view, "Operacja plików", message)
-            elif error_messages:
-                message = f"Operacja zakończona z błędami.\n\nBłędy:\n" + "\n".join(
-                    error_messages
+                logger.info(
+                    f"Operacja zakończona pomyślnie - Przeniesiono: {len(success_messages)} plików"
                 )
-                QMessageBox.critical(self.view, "Operacja plików", message)
+            elif error_messages:
+                logger.error(f"Operacja zakończona z błędami: {error_messages}")
+
+            # Usuń przeniesione/usunięte assety z listy bez ponownego skanowania
+            if success_messages:
+                logger.debug(f"Success messages: {success_messages}")
+
+                # Usuń assety z modelu danych
+                current_assets = self.model.asset_grid_model.get_assets()
+                logger.debug(f"Current assets count: {len(current_assets)}")
+
+                # Debug: wyświetl wszystkie nazwy assetów
+                for i, asset in enumerate(current_assets):
+                    asset_name = asset.get("name")
+                    logger.debug(
+                        f"Asset {i}: name='{asset_name}', in success_messages: {asset_name in success_messages}"
+                    )
+
+                updated_assets = [
+                    asset
+                    for asset in current_assets
+                    if asset.get("name") not in success_messages
+                ]
+                logger.debug(f"Updated assets count: {len(updated_assets)}")
+                self.model.asset_grid_model._assets = updated_assets
+
+                # Usuń kafelki z widoku
+                logger.debug(
+                    f"Active tiles count before removal: {len(self._active_tiles)}"
+                )
+                for tile in self._active_tiles:
+                    logger.debug(
+                        f"Tile asset_id: '{tile.asset_id}', in success_messages: {tile.asset_id in success_messages}"
+                    )
+                self.view.remove_asset_tiles(success_messages)
+
+                # Usuń również z listy active_tiles kontrolera
+                self._active_tiles = [
+                    tile
+                    for tile in self._active_tiles
+                    if tile.asset_id not in success_messages
+                ]
+                logger.debug(
+                    f"Active tiles count after removal: {len(self._active_tiles)}"
+                )
+
+                # ODBUDUJ GALERIĘ po usunięciu assetów
+                self._rebuild_asset_grid(updated_assets)
+
+                logger.debug(
+                    "Removed %d assets from list and view without rescanning",
+                    len(success_messages),
+                )
 
             # Wyczyść zaznaczenie po operacji
             self.model.selection_model.clear_selection()
-
-            # Odśwież widok galerii
-            current_assets = self.model.asset_grid_model.get_assets()
-            self._rebuild_asset_grid(current_assets)
 
             logger.info(
                 "File operation completed - Success: %d, Errors: %d",
@@ -780,9 +823,11 @@ class AmvController(QObject):
         )
         # Pobierz pełne dane assetów na podstawie ID
         all_assets = self.model.asset_grid_model.get_assets()
+        logger.debug(f"Drag&Drop asset_ids: {asset_ids}")
         assets_to_move = [
             asset for asset in all_assets if asset.get("name") in asset_ids
         ]
+        logger.debug(f"assets_to_move: {[a.get('name') for a in assets_to_move]}")
 
         if assets_to_move:
             self.model.file_operations_model.move_assets(
@@ -914,12 +959,20 @@ class AmvController(QObject):
 
     def _on_star_filter_clicked(self, star_rating: int):
         """Obsługuje kliknięcie w gwiazdkę filtrowania w panelu kontrolnym"""
-        logger.info(f"Kliknięto gwiazdkę {star_rating}")
+        logger.info(f"=== FILTROWANIE GWIAZDEK: Kliknięto gwiazdkę {star_rating} ===")
+
+        # Sprawdź czy star_checkboxes istnieje
+        if not hasattr(self.view, "star_checkboxes") or not self.view.star_checkboxes:
+            logger.error("BŁĄD: self.view.star_checkboxes nie istnieje!")
+            return
+
+        logger.debug(f"Znaleziono {len(self.view.star_checkboxes)} checkboxów gwiazdek")
 
         # Sprawdź aktualny stan gwiazdek PRZED zablokowaniem sygnałów
         # (checkbox już zmienił stan po kliknięciu)
         clicked_checkbox = self.view.star_checkboxes[star_rating - 1]
         was_checked_before = not clicked_checkbox.isChecked()  # Odwrócony stan
+        logger.debug(f"Checkbox {star_rating} was_checked_before: {was_checked_before}")
 
         # Zablokuj sygnały żeby uniknąć rekurencji
         for cb in self.view.star_checkboxes:
@@ -929,44 +982,92 @@ class AmvController(QObject):
         if was_checked_before:
             for cb in self.view.star_checkboxes:
                 cb.setChecked(False)
-            self._filter_assets_by_stars(0)
             logger.info("Odznaczono wszystkie gwiazdki - pokazano wszystkie assety")
+            # BEZPOŚREDNIE WYWOŁANIE
+            self._filter_assets_by_stars(0)
         else:
             # Zaznacz gwiazdki od 1 do klikniętej (jak na kafelkach)
             for i, cb in enumerate(self.view.star_checkboxes):
                 cb.setChecked(i < star_rating)
-            self._filter_assets_by_stars(star_rating)
             logger.info(f"Zaznaczono {star_rating} gwiazdek - filtrowanie")
+            # BEZPOŚREDNIE WYWOŁANIE
+            self._filter_assets_by_stars(star_rating)
 
         # Odblokuj sygnały
         for cb in self.view.star_checkboxes:
             cb.blockSignals(False)
 
+        logger.info(f"=== KONIEC FILTROWANIA GWIAZDEK ===")
+
     def _filter_assets_by_stars(self, min_stars: int):
         """Filtruje assety według minimalnej liczby gwiazdek"""
         try:
             all_assets = self.model.asset_grid_model.get_all_assets()
+            logger.debug(
+                f"Filtrowanie {len(all_assets)} assetów dla min_stars={min_stars}"
+            )
 
             if min_stars == 0:
                 # Pokaż wszystkie assety
-                filtered_assets = all_assets
+                filtered_assets = []
+                for asset_data in all_assets:
+                    # Jeśli stub, pobierz pełne dane
+                    if asset_data.get("is_stub"):
+                        full_data = self.model.asset_grid_model.get_asset_data_lazy(
+                            asset_data.get("name")
+                        )
+                        if full_data:
+                            filtered_assets.append(full_data)
+                        else:
+                            filtered_assets.append(asset_data)
+                    else:
+                        filtered_assets.append(asset_data)
                 logger.debug("Pokazano wszystkie assety (brak filtrowania)")
             else:
                 # Filtruj assety z odpowiednią liczbą gwiazdek
                 filtered_assets = []
-                for asset_data in all_assets:
+                for i, asset_data in enumerate(all_assets):
+                    # Jeśli stub, pobierz pełne dane
+                    if asset_data.get("is_stub"):
+                        asset_data_full = (
+                            self.model.asset_grid_model.get_asset_data_lazy(
+                                asset_data.get("name")
+                            )
+                        )
+                        if asset_data_full:
+                            asset_data = asset_data_full
                     # Zawsze dodaj specjalne foldery (nie filtruj ich)
                     if asset_data.get("type") == "special_folder":
                         filtered_assets.append(asset_data)
+                        logger.debug(
+                            f"Asset {i}: {asset_data.get('name')} - specjalny folder, dodany"
+                        )
                         continue
 
                     # Filtruj tylko prawdziwe assety
-                    asset_stars = asset_data.get("stars", 0)
-                    if (
-                        isinstance(asset_stars, (int, float))
-                        and asset_stars >= min_stars
-                    ):
+                    asset_stars = asset_data.get("stars")
+                    logger.debug(
+                        f"Asset {i}: {asset_data.get('name')} - stars={asset_stars} (type: {type(asset_stars)})"
+                    )
+
+                    # Rzutowanie na int jeśli się da
+                    try:
+                        if asset_stars is None:
+                            asset_stars_int = 0
+                        else:
+                            asset_stars_int = int(asset_stars)
+                    except (ValueError, TypeError):
+                        asset_stars_int = 0
+
+                    if asset_stars_int >= min_stars:
                         filtered_assets.append(asset_data)
+                        logger.debug(
+                            f"Asset {i}: {asset_data.get('name')} - DODANY (stars={asset_stars_int} >= {min_stars})"
+                        )
+                    else:
+                        logger.debug(
+                            f"Asset {i}: {asset_data.get('name')} - POMINIĘTY (stars={asset_stars_int} < {min_stars})"
+                        )
 
                 logger.debug(
                     f"Przefiltrowano {len(filtered_assets)} assetów z {min_stars}+ gwiazdkami"

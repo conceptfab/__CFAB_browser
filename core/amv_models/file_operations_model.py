@@ -57,6 +57,7 @@ class FileOperationsWorker(QThread):
                 return
         for i, asset_data in enumerate(self.assets_data):
             asset_name = asset_data.get("name", "Unknown Asset")
+            logger.debug(f"Processing asset {i}: name='{asset_name}'")
             self.operation_progress.emit(
                 i + 1, total_assets, f"Przenoszenie: {asset_name}"
             )
@@ -65,8 +66,8 @@ class FileOperationsWorker(QThread):
                     asset_data, asset_name
                 )
                 if result["success"]:
-                    success_asset_names.append(result["final_name"])
-                    logger.debug(result["message"])
+                    success_asset_names.append(asset_name)
+                    logger.debug(f"Successfully moved asset: {asset_name}")
                 else:
                     error_messages.append(result["message"])
                     logger.error(result["message"])
