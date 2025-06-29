@@ -40,6 +40,105 @@ Plan implementacji poprawek w optymalnej kolejności, bazujący na wszystkich pl
 - **Harmonogram** - fazy implementacji
 - **Monitoring** - metryki i kontrola jakości
 
+### 🎯 ELASTYCZNA KOLEJNOŚĆ IMPLEMENTACJI
+
+**Model może zmienić kolejność etapów jeśli uzna, że warto coś zrobić wcześniej lub później!**
+
+**Kryteria zmiany kolejności:**
+
+1. **Zależności architektoniczne** - Plik A musi być poprawiony przed plikiem B
+2. **Optymalizacja procesu** - Łatwiejsze poprawki mogą być wykonane wcześniej
+3. **Business impact** - Poprawki o większym wpływie na biznes mogą mieć priorytet
+4. **Risk assessment** - Poprawki o mniejszym ryzyku mogą być wykonane wcześniej
+5. **Resource availability** - Dostępność zasobów może wpłynąć na kolejność
+
+**Plan implementacji ma być mapą drogową dla modelu wprowadzającego poprawki - im będzie lepiej zbudowany, informacje będą logiczne i w prawidłowej kolejności, tym większa szansa, że cały proces przebiegnie sprawniej i zakończy się sukcesem.**
+
+## 🎯 DWUFAZOWY PROCES OKREŚLANIA PRIORYTETÓW
+
+### 📋 FAZA 1: PRIORYTET PLIKU W STRUKTURZE PROJEKTU
+
+**Cel:** Określenie jak ważny jest dany plik w kontekście projektu i jaki ma wpływ na realizowanie logiki biznesowej.
+
+**Kryteria oceny:**
+
+#### ⚫⚫⚫⚫ KRYTYCZNE (Podstawowa funkcjonalność)
+
+- Główne algorytmy biznesowe aplikacji
+- Core procesy przetwarzania danych
+- Główne komponenty UI odpowiedzialne za UX
+- Kontrolery koordynujące procesy biznesowe
+- Modele danych biznesowych
+- Serwisy odpowiedzialne za główne operacje
+
+#### 🔴🔴🔴 WYSOKIE (Ważne operacje biznesowe)
+
+- Ważne algorytmy pomocnicze
+- Komponenty UI drugiego poziomu
+- Workery i serwisy pomocnicze
+- Modele konfiguracji i cache
+- Operacje na plikach i I/O
+
+#### 🟡🟡 ŚREDNIE (Funkcjonalności pomocnicze)
+
+- Komponenty UI pomocnicze
+- Narzędzia i utility
+- Modele pomocnicze
+- Konfiguracje i walidacje
+
+#### 🟢 NISKIE (Funkcjonalności dodatkowe)
+
+- Logowanie i debugowanie
+- Narzędzia deweloperskie
+- Komponenty eksperymentalne
+- Dokumentacja i testy
+
+### 📋 FAZA 2: PRIORYTET POTRZEBY POPRAWEK/REFAKTORYZACJI
+
+**Cel:** Identyfikacja "złego/brudnego kodu" - określenie potrzeby wykonania poprawek.
+
+**Kryteria oceny:**
+
+#### ⚫⚫⚫⚫ KRYTYCZNE (Wymaga natychmiastowej poprawki)
+
+- Błędy logiczne wpływające na funkcjonalność
+- Memory leaks w długotrwałych procesach
+- Thread safety issues w UI
+- Performance bottlenecks w głównych algorytmach
+- Błędy w obsłudze błędów (error handling)
+
+#### 🔴🔴🔴 WYSOKIE (Wymaga poprawki w najbliższym czasie)
+
+- Code smells (duplikacja, długie funkcje, magic numbers)
+- Problemy z wydajnością w operacjach I/O
+- Nieoptymalne algorytmy
+- Problemy z zarządzaniem pamięcią
+- Brak walidacji danych
+
+#### 🟡🟡 ŚREDNIE (Warto poprawić)
+
+- Nieczytelny kod
+- Brak dokumentacji
+- Nieoptymalne wzorce projektowe
+- Problemy z konfiguracją
+
+#### 🟢 NISKIE (Można poprawić przy okazji)
+
+- Styl kodu
+- Brak komentarzy
+- Nieużywane importy
+- Drobne optymalizacje
+
+### 🎯 FINALNY PRIORYTET IMPLEMENTACJI
+
+**Reguła:** Jeśli plik ma dwa niskie priorytety → może zostać pominięty w analizie.
+
+**Przykłady:**
+
+- Plik z priorytetem struktury ⚫⚫⚫⚫ i priorytetem poprawek 🔴🔴🔴 → **Finalny: ⚫⚫⚫⚫**
+- Plik z priorytetem struktury 🔴🔴🔴 i priorytetem poprawek ⚫⚫⚫⚫ → **Finalny: ⚫⚫⚫⚫**
+- Plik z priorytetem struktury 🟢 i priorytetem poprawek 🟢 → **Finalny: POMINIĘTY**
+
 ### 🏛️ TRZY FILARY AUDYTU LOGIKI BIZNESOWEJ
 
 Ten audyt opiera się na trzech kluczowych filarach, które stanowią najwyższe priorytety każdej analizy procesów biznesowych:
@@ -304,7 +403,7 @@ def utility_function():        # 🟢 - funkcjonalność dodatkowa
 - Jakie są oczekiwane metryki wydajnościowe?
 - Jakie technologie są używane w aplikacji?
 
-#### 🎯 **DYNAMICZNE OKREŚLANIE PRIORYTETÓW**
+### 🎯 **DYNAMICZNE OKREŚLANIE PRIORYTETÓW**
 
 **Model MUSI przeanalizować każdy plik i określić priorytet na podstawie:**
 
@@ -686,7 +785,7 @@ Przed utworzeniem dokumentu sprawdź:
 - **✅ UZUPEŁNIONO BUSINESS_LOGIC_MAP.MD:** TAK/NIE
 - **✅ UZUPEŁNIONO IMPLEMENTATION_PLAN.MD:** TAK/NIE
 
-**OBOWIĄZKOWE KROKI PO KAŻDYM ETAPIE:**
+**OBOWIĄZKOWE KROKI PO KAŻDEJ ANALIZIE:**
 
 1. ✅ **Ukończ analizę pliku** - utwórz correction.md i patch_code.md
 2. ✅ **UZUPEŁNIJ business_logic_map.md** - dodaj status ukończenia

@@ -1,7 +1,7 @@
 # PATCH-CODE DLA: [NAZWA_PLIKU]
 
-**Powiązany plik z analizą:** `../corrections/[NAZWA_PLIKU]_correction.md`
-**Zasady ogólne:** `../refactoring_rules.md`
+**Powiązany plik z analizą:** `AUDYT/corrections/[NAZWA_PLIKU]_correction.md`
+**Zasady ogólne:** `__doc/refactoring_rules.md`
 
 ---
 
