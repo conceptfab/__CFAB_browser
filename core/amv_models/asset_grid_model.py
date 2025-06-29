@@ -13,15 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class AssetGridModel(QObject):
-    """
-    Model dla siatki assetów - architektura M/V z Lazy Loading
-
-    Thread Safety:
-    - Wszystkie modyfikacje stanu modelu odbywają się poprzez sloty
-    - Sygnały są automatycznie dostarczane do głównego wątku przez PyQt
-    - Dostęp do danych jest synchronizowany z wątkiem UI
-    - Brak bezpośrednich modyfikacji z innych wątków
-    """
+    """Model dla siatki assetów - architektura M/V z Lazy Loading"""
 
     assets_changed = pyqtSignal(list)
     grid_layout_changed = pyqtSignal(int)
@@ -30,7 +22,6 @@ class AssetGridModel(QObject):
 
     def __init__(self):
         super().__init__()
-        # Thread-safe: Wszystkie atrybuty są modyfikowane tylko w głównym wątku
         self._assets = []
         self._columns = 4
         self._is_loading = False
@@ -52,11 +43,6 @@ class AssetGridModel(QObject):
     def _get_cached_asset_data(self, asset_id: str, folder_path: str) -> Optional[Dict]:
         """
         Pobiera dane assetu z cache lub ładuje z dysku (z LRU cache).
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Używa LRU cache, który jest thread-safe
-        - Operacje na plikach są read-only
-        - Zwraca kopię danych, nie modyfikuje stanu modelu
         """
         # Ładuj dane z dysku
         asset_file_path = os.path.join(folder_path, f"{asset_id}.asset")
@@ -80,11 +66,6 @@ class AssetGridModel(QObject):
     def get_asset_data_lazy(self, asset_id: str) -> Optional[Dict]:
         """
         Publiczna metoda do lazy loading danych assetu.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Nie modyfikuje stanu modelu
-        - Zwraca kopię danych
-        - Może być wywoływana z dowolnego wątku
         """
         if not self._current_folder_path:
             return None
@@ -94,10 +75,6 @@ class AssetGridModel(QObject):
     def invalidate_cache(self):
         """
         Czyści cache assetów (np. po zmianie folderu).
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Operacje na cache są atomic
         """
         self._asset_cache.clear()
         self._thumbnail_cache.clear()
@@ -105,13 +82,6 @@ class AssetGridModel(QObject):
         logger.debug("Asset cache invalidated")
 
     def set_assets(self, assets: list):
-        """
-        Ustawia listę assetów.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Emituje sygnał, który jest automatycznie dostarczany do głównego wątku
-        """
         # Wyczyść cache przy zmianie assetów
         self.invalidate_cache()
 
@@ -133,85 +103,34 @@ class AssetGridModel(QObject):
             self._assets = assets
             logger.debug(f"Assets set with full data: {len(self._assets)} items")
 
-        # Thread-safe: Sygnał jest automatycznie dostarczany do głównego wątku
         self.assets_changed.emit(self._assets)
 
     def get_assets(self):
-        """
-        Zwraca listę assetów.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Zwraca kopię danych
-        - Nie modyfikuje stanu modelu
-        """
         return self._assets
 
     def get_all_assets(self):
-        """
-        Zwraca wszystkie assety (alias dla get_assets dla czytelności)
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Zwraca kopię danych
-        - Nie modyfikuje stanu modelu
-        """
+        """Zwraca wszystkie assety (alias dla get_assets dla czytelności)"""
         return self._assets
 
     def set_columns(self, columns: int):
-        """
-        Ustawia liczbę kolumn w siatce.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Emituje sygnał, który jest automatycznie dostarczany do głównego wątku
-        """
         if self._columns != columns:
             self._columns = max(1, columns)
-            # Thread-safe: Sygnał jest automatycznie dostarczany do głównego wątku
             self.grid_layout_changed.emit(self._columns)
             logger.debug(f"Grid columns updated to: {self._columns}")
 
     def get_columns(self):
-        """
-        Zwraca liczbę kolumn w siatce.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Zwraca wartość prymitywną
-        - Nie modyfikuje stanu modelu
-        """
         return self._columns
 
     def set_loading_state(self, is_loading: bool):
-        """
-        Ustawia stan ładowania.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Emituje sygnał, który jest automatycznie dostarczany do głównego wątku
-        """
         if self._is_loading != is_loading:
             self._is_loading = is_loading
-            # Thread-safe: Sygnał jest automatycznie dostarczany do głównego wątku
             self.loading_state_changed.emit(is_loading)
             logger.debug(f"Loading state changed: {is_loading}")
 
     def is_loading(self):
-        """
-        Sprawdza, czy model jest w stanie ładowania.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Zwraca wartość prymitywną
-        - Nie modyfikuje stanu modelu
-        """
         return self._is_loading
 
     def set_current_folder(self, folder_path: str):
-        """
-        Ustawia aktualny folder.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Wywołuje invalidate_cache(), która jest thread-safe
-        """
         if self._current_folder_path != folder_path:
             # Wyczyść cache przy zmianie folderu
             self.invalidate_cache()
@@ -220,39 +139,19 @@ class AssetGridModel(QObject):
         logger.debug(f"Current folder set: {folder_path}")
 
     def get_current_folder(self):
-        """
-        Zwraca aktualny folder.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Zwraca string
-        - Nie modyfikuje stanu modelu
-        """
         return self._current_folder_path
 
     def request_recalculate_columns(self, available_width: int, thumbnail_size: int):
-        """
-        Żąda przeliczenia kolumn z debouncingiem.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Używa QTimer, który jest thread-safe
-        """
+        """Żąda przeliczenia kolumn z debouncingiem."""
         logger.debug(
-            f"AssetGridModel: Request recalculate columns - "
-            f"width: {available_width}, thumb_size: {thumbnail_size}"
+            f"AssetGridModel: Request recalculate columns - width: {available_width}, thumb_size: {thumbnail_size}"
         )
         self._last_available_width = available_width
         self._last_thumbnail_size = thumbnail_size
         self._recalc_timer.start(100)  # 100ms delay
 
     def _perform_recalculate_columns(self):
-        """
-        Wykonuje przeliczenie kolumn i emituje sygnał.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana przez QTimer w głównym wątku
-        - Emituje sygnały, które są automatycznie dostarczane do głównego wątku
-        """
+        """Wykonuje przeliczenie kolumn i emituje sygnał."""
         calculated_columns = self._calculate_columns_cached(
             self._last_available_width, self._last_thumbnail_size
         )
@@ -261,7 +160,6 @@ class AssetGridModel(QObject):
             self.set_columns(
                 calculated_columns
             )  # Ustawia i emituje grid_layout_changed
-        # Thread-safe: Sygnał jest automatycznie dostarczany do głównego wątku
         self.recalculate_columns_requested.emit(
             self._last_available_width, self._last_thumbnail_size
         )
@@ -269,14 +167,7 @@ class AssetGridModel(QObject):
     def _calculate_columns_cached(
         self, available_width: int, thumbnail_size: int
     ) -> int:
-        """
-        Oblicza optymalną liczbę kolumn.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Nie modyfikuje stanu modelu
-        - Zwraca wartość prymitywną
-        - Może być wywoływana z dowolnego wątku
-        """
+        """Oblicza optymalną liczbę kolumn."""
         # Rzeczywisty rozmiar kafelka (z AssetTileView: thumbnail_size + (2 * margins_size) = thumbnail_size + 16)
         tile_width = thumbnail_size + 16
 

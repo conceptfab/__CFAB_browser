@@ -1,13 +1,3 @@
-"""
-Preview Gallery z Object Pooling
-
-Thread Safety:
-- Wszystkie operacje na widżetach UI są wykonywane w głównym wątku
-- Połączenia sygnał-slot są domyślnie bezpieczne dla wątków w PyQt
-- Proper cleanup połączeń przy niszczeniu obiektu
-- Object pooling jest thread-safe w kontekście głównego wątku
-"""
-
 import logging
 
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -19,15 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class PreviewGalleryView(QWidget):
-    """
-    Preview Gallery z Object Pooling
-
-    Thread Safety:
-    - Wszystkie operacje na widżetach UI są wykonywane w głównym wątku
-    - Połączenia sygnał-slot są automatycznie dostarczane do głównego wątku
-    - Proper cleanup połączeń przy niszczeniu obiektu
-    - Object pooling jest thread-safe w kontekście głównego wątku
-    """
+    """Preview Gallery z Object Pooling"""
 
     preview_selected = pyqtSignal(str)
     preview_clicked = pyqtSignal(str)
@@ -48,10 +30,6 @@ class PreviewGalleryView(QWidget):
     def _get_tile_from_pool(self, path: str, thumbnail_size: int) -> PreviewTile:
         """
         Pobiera kafelek z puli lub tworzy nowy jeśli pula jest pusta.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Operacje na puli są atomic
         """
         if self._tile_pool:
             # Pobierz kafelek z puli
@@ -69,11 +47,6 @@ class PreviewGalleryView(QWidget):
     def _return_tile_to_pool(self, tile: PreviewTile):
         """
         Zwraca kafelek do puli do ponownego użycia.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Proper cleanup połączeń sygnał-slot
-        - Operacje na puli są atomic
         """
         if len(self._tile_pool) < self._max_pool_size:
             # Resetuj kafelek do stanu czystego
@@ -95,11 +68,6 @@ class PreviewGalleryView(QWidget):
     def _clear_active_tiles(self):
         """
         Usuwa wszystkie aktywne kafelki i zwraca je do puli.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Proper cleanup połączeń sygnał-slot
-        - Bezpieczne zwracanie kafelków do puli
         """
         for tile in self._active_tiles:
             # Odłącz sygnały
@@ -113,33 +81,6 @@ class PreviewGalleryView(QWidget):
             self._return_tile_to_pool(tile)
 
         self._active_tiles.clear()
-
-    def closeEvent(self, event):
-        """
-        Obsługa zamknięcia widżetu z proper cleanup.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Proper cleanup wszystkich połączeń sygnał-slot
-        - Bezpieczne czyszczenie puli kafelków
-        """
-        try:
-            # Wyczyść aktywne kafelki
-            self._clear_active_tiles()
-
-            # Wyczyść pulę kafelków
-            for tile in self._tile_pool:
-                try:
-                    tile.deleteLater()
-                except RuntimeError:
-                    pass  # Widget już usunięty
-
-            self._tile_pool.clear()
-
-        except RuntimeError:
-            pass  # Obiekt już usunięty
-
-        super().closeEvent(event)
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)

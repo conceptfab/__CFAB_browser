@@ -473,6 +473,12 @@ class AmvController(QObject):
             self.model.asset_grid_model.set_assets(assets)
             logger.debug(f"Assets updated and grid rebuilt: {len(assets)} items")
 
+            # Sprawdź czy były zaznaczone gwiazdki i ponownie zastosuj filtr
+            current_stars = self.view.get_current_star_filter()
+            if current_stars > 0:
+                logger.info(f"Ponowne zastosowanie filtru gwiazdek: {current_stars}")
+                self._filter_assets_by_stars(current_stars)
+
     def _on_scan_error(self, error_msg: str):
         logger.error(f"Controller: Scan error: {error_msg}")
         self.model.control_panel_model.set_progress(0)

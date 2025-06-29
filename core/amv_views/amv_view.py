@@ -615,3 +615,23 @@ class AmvView(QWidget):
         # Po usunięciu kafelków, zaktualizuj widok, aby odświeżyć układ
         self.gallery_layout.update()
         logger.info(f"Successfully removed {len(widgets_to_remove)} asset tiles.")
+
+    def clear_stars(self):
+        for cb in self.star_checkboxes:
+            cb.setChecked(False)
+
+    def clear_star_filter(self):
+        """Resetuje stan gwiazdek w panelu kontrolnym."""
+        for cb in self.star_checkboxes:
+            # Blokuj sygnały aby uniknąć wywołania filtrowania
+            cb.blockSignals(True)
+            cb.setChecked(False)
+            cb.blockSignals(False)
+        logger.debug("Star filter cleared in control panel")
+
+    def get_current_star_filter(self):
+        """Zwraca aktualnie zaznaczoną liczbę gwiazdek (0 = brak filtru)."""
+        for i in range(len(self.star_checkboxes) - 1, -1, -1):
+            if self.star_checkboxes[i].isChecked():
+                return i + 1
+        return 0

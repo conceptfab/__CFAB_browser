@@ -1,13 +1,3 @@
-"""
-Preview Window z asynchronicznym ładowaniem obrazów
-
-Thread Safety:
-- Asynchroniczne ładowanie obrazów w worker thread
-- Thread-safe komunikacja przez signal/slot
-- Wszystkie operacje UI w głównym wątku
-- Proper cleanup zasobów w wielowątkowym środowisku
-"""
-
 import logging
 import os
 import sys
@@ -21,14 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class ImageLoader(QObject):
-    """
-    Worker class for asynchronous image loading.
-    
-    Thread Safety:
-    - Wykonuje się w worker thread
-    - Thread-safe komunikacja przez signal/slot
-    - Bezpieczne operacje na QPixmap w worker thread
-    """
+    """Worker class for asynchronous image loading."""
 
     image_loaded = pyqtSignal(QPixmap, str)  # pixmap, error_message
     image_scaled = pyqtSignal(QPixmap)
@@ -39,14 +22,7 @@ class ImageLoader(QObject):
         self.max_size = max_size
 
     def load_image(self) -> None:
-        """
-        Load and pre-scale image asynchronously.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w worker thread
-        - Thread-safe operacje na QPixmap
-        - Komunikacja przez signal/slot
-        """
+        """Load and pre-scale image asynchronously."""
         try:
             absolute_image_path = os.path.abspath(self.image_path)
             pixmap = QPixmap(absolute_image_path)
@@ -65,14 +41,7 @@ class ImageLoader(QObject):
             self.image_loaded.emit(QPixmap(), f"Błąd ładowania obrazu: {e}")
 
     def scale_image(self, pixmap: QPixmap, target_size: QSize) -> None:
-        """
-        Scale image to target size asynchronously.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w worker thread
-        - Thread-safe operacje na QPixmap
-        - Komunikacja przez signal/slot
-        """
+        """Scale image to target size asynchronously."""
         try:
             scaled_pixmap = pixmap.scaled(
                 target_size,
@@ -85,13 +54,7 @@ class ImageLoader(QObject):
             self.image_scaled.emit(QPixmap())
 
     def _pre_scale_pixmap(self, pixmap: QPixmap) -> QPixmap:
-        """
-        Pre-scale pixmap to maximum display size to optimize performance.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w worker thread
-        - Thread-safe operacje na QPixmap
-        """
+        """Pre-scale pixmap to maximum display size to optimize performance."""
         if (
             pixmap.width() <= self.max_size.width()
             and pixmap.height() <= self.max_size.height()
@@ -116,16 +79,6 @@ class ImageLoader(QObject):
 
 
 class PreviewWindow(QDialog):
-    """
-    Preview Window z asynchronicznym ładowaniem obrazów.
-    
-    Thread Safety:
-    - Asynchroniczne ładowanie obrazów w worker thread
-    - Thread-safe komunikacja przez signal/slot
-    - Wszystkie operacje UI w głównym wątku
-    - Proper cleanup zasobów w wielowątkowym środowisku
-    """
-    
     def __init__(self, image_path: str, parent=None):
         super().__init__(parent)
         self.image_path = image_path
@@ -145,13 +98,7 @@ class PreviewWindow(QDialog):
         self.setup_ui()
 
     def setup_ui(self) -> None:
-        """
-        Setup the user interface.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w głównym wątku
-        - Wszystkie operacje UI w głównym wątku
-        """
+        """Setup the user interface."""
         self.setWindowTitle(f"Podgląd - {os.path.basename(self.image_path)}")
         self.setModal(False)
         self.setStyleSheet(
@@ -170,14 +117,7 @@ class PreviewWindow(QDialog):
         self.activateWindow()
 
     def load_image_and_resize(self) -> None:
-        """
-        Load image asynchronously and resize window.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w głównym wątku
-        - Thread-safe komunikacja przez signal/slot
-        - Asynchroniczne ładowanie w worker thread
-        """
+        """Load image asynchronously and resize window."""
         try:
             # Calculate maximum display size
             screen = QApplication.primaryScreen().availableGeometry()
@@ -198,13 +138,7 @@ class PreviewWindow(QDialog):
             logger.error(f"Błąd ładowania obrazu: {e}")
 
     def _on_image_loaded(self, pixmap: QPixmap, error_message: str) -> None:
-        """
-        Handle image loaded signal.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w głównym wątku (automatycznie przez signal/slot)
-        - Wszystkie operacje UI w głównym wątku
-        """
+        """Handle image loaded signal."""
         if error_message:
             self.image_label.setText(error_message)
             return
@@ -235,24 +169,12 @@ class PreviewWindow(QDialog):
         self.load_image()
 
     def _on_image_scaled(self, scaled_pixmap: QPixmap) -> None:
-        """
-        Handle image scaled signal.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w głównym wątku (automatycznie przez signal/slot)
-        - Operacje UI w głównym wątku
-        """
+        """Handle image scaled signal."""
         if not scaled_pixmap.isNull():
             self.image_label.setPixmap(scaled_pixmap)
 
     def load_image(self) -> None:
-        """
-        Load and display image at current window size.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w głównym wątku
-        - Operacje na QPixmap w głównym wątku
-        """
+        """Load and display image at current window size."""
         if self.pre_scaled_pixmap:
             # Use pre-scaled pixmap for better performance
             self.image_label.setPixmap(
@@ -264,13 +186,7 @@ class PreviewWindow(QDialog):
             )
 
     def resizeEvent(self, event) -> None:
-        """
-        Handle window resize event with debounced scaling.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w głównym wątku
-        - Debounced scaling zapobiega nadmiernym operacjom
-        """
+        """Handle window resize event with debounced scaling."""
         super().resizeEvent(event)
 
         # Debounce resize events to avoid excessive scaling
@@ -278,34 +194,21 @@ class PreviewWindow(QDialog):
         self.scale_timer.start(50)  # 50ms delay
 
     def _perform_scaling(self) -> None:
-        """
-        Perform actual scaling after resize debounce.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w głównym wątku
-        - Asynchroniczne skalowanie w worker thread
-        """
+        """Perform actual scaling after resize debounce."""
         if self.pre_scaled_pixmap and self.image_loader:
             # Scale asynchronously to avoid blocking UI
             self.image_loader.scale_image(self.pre_scaled_pixmap, self.size())
 
     def closeEvent(self, event) -> None:
-        """
-        Clean up resources when window is closed.
-        
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Wykonuje się w głównym wątku
-        - Proper cleanup zasobów w wielowątkowym środowisku
-        - Thread-safe zakończenie wątków
-        """
-        # Stop any pending operations in main thread
+        """Clean up resources when window is closed."""
+        # Stop any pending operations
         self.scale_timer.stop()
 
-        # Clear pixmaps in main thread
+        # Clear pixmaps to free memory
         self.original_pixmap = None
         self.pre_scaled_pixmap = None
 
-        # Wait for background threads to finish (thread-safe)
+        # Wait for background threads to finish
         self.thread_pool.waitForDone(1000)  # Wait up to 1 second
 
         super().closeEvent(event)

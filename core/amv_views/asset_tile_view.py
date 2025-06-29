@@ -1,11 +1,6 @@
 """
 AssetTileView - Widok dla pojedynczego kafelka assetu
 Prezentuje miniaturkę, nazwę pliku, gwiazdki i checkbox dla assetu.
-
-Thread Safety:
-- Wszystkie operacje na widżetach UI są wykonywane w głównym wątku
-- Połączenia sygnał-slot są domyślnie bezpieczne dla wątków w PyQt
-- Proper cleanup połączeń przy niszczeniu obiektu
 """
 
 import logging
@@ -30,14 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class AssetTileView(QFrame):
-    """
-    Widok dla pojedynczego kafelka assetu - ETAP 15 + Object Pooling
-
-    Thread Safety:
-    - Wszystkie operacje na widżetach UI są wykonywane w głównym wątku
-    - Połączenia sygnał-slot są automatycznie dostarczane do głównego wątku
-    - Proper cleanup połączeń przy niszczeniu obiektu
-    """
+    """Widok dla pojedynczego kafelka assetu - ETAP 15 + Object Pooling"""
 
     thumbnail_clicked = pyqtSignal(str)  # Ścieżka do pliku podglądu
     filename_clicked = pyqtSignal(str)  # Ścieżka do pliku archiwum
@@ -65,7 +53,6 @@ class AssetTileView(QFrame):
 
         self.margins_size = 8
         self._setup_ui()
-        # Thread-safe: Połączenie sygnał-slot jest automatycznie dostarczane do głównego wątku
         self.model.data_changed.connect(self.update_ui)
 
     def update_asset_data(
@@ -74,11 +61,6 @@ class AssetTileView(QFrame):
         """
         Aktualizuje dane kafelka dla Object Pooling.
         Pozwala na ponowne wykorzystanie istniejącej instancji AssetTileView.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Proper cleanup starych połączeń sygnał-slot
-        - Nowe połączenia są automatycznie dostarczane do głównego wątku
         """
         # Odłącz stare połączenie sygnału
         if hasattr(self, "model") and self.model:
@@ -94,7 +76,6 @@ class AssetTileView(QFrame):
         self.asset_id = self.model.get_name()
 
         # Podłącz nowe połączenie sygnału
-        # Thread-safe: Połączenie jest automatycznie dostarczane do głównego wątku
         self.model.data_changed.connect(self.update_ui)
 
         # Natychmiast zaktualizuj UI z nowymi danymi
@@ -106,11 +87,6 @@ class AssetTileView(QFrame):
     def reset_for_pool(self):
         """
         Resetuje kafelek do stanu gotowego do ponownego użycia w puli.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Proper cleanup połączeń sygnał-slot
-        - Bezpieczne czyszczenie UI
         """
         try:
             # Odłącz połączenia sygnałów
@@ -152,26 +128,6 @@ class AssetTileView(QFrame):
 
         except RuntimeError as e:
             logger.debug(f"Error in reset_for_pool: {e} - object already deleted")
-
-    def closeEvent(self, event):
-        """
-        Obsługa zamknięcia widżetu z proper cleanup.
-
-        Thread Safety: Metoda jest thread-safe, ponieważ:
-        - Jest wywoływana tylko w głównym wątku
-        - Proper cleanup połączeń sygnał-slot
-        """
-        try:
-            # Odłącz połączenia sygnałów przed zniszczeniem
-            if hasattr(self, "model") and self.model:
-                try:
-                    self.model.data_changed.disconnect(self.update_ui)
-                except (TypeError, RuntimeError):
-                    pass  # Połączenie już odłączone lub obiekt usunięty
-        except RuntimeError:
-            pass  # Obiekt już usunięty
-
-        super().closeEvent(event)
 
     def _setup_ui(self):
         self.setStyleSheet(
