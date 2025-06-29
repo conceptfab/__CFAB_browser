@@ -119,25 +119,4 @@ Prace opierają się na trzech kluczowych filarach:
 
 ## 📋 HISTORIA POPRAWEK
 
-### [2025-06-29] POPRAWKA: Reset gwiazdek przy zmianie folderu
-
-**Problem:**
-Gdy użytkownik ma zaznaczone gwiazdki w panelu kontrolnym i zmienia folder, w nowym folderze gwiazdki są ignorowane - nowy folder nie jest filtrowany według wcześniej zaznaczonych gwiazdek.
-
-**Rozwiązanie:**
-
-1. Dodano metodę `clear_star_filter()` w `AmvView` do resetowania stanu gwiazdek w panelu kontrolnym
-2. Wywołania metody `clear_star_filter()` zostały dodane w trzech miejscach w `AmvController`:
-   - `_on_folder_clicked()` - przy kliknięciu folderu w drzewie
-   - `_on_workspace_folder_clicked()` - przy kliknięciu przycisku folderu roboczego
-   - `_on_tree_item_clicked()` - przy kliknięciu elementu w drzewie folderów
-
-**Zmienione pliki:**
-
-- `core/amv_views/amv_view.py` - dodana metoda `clear_star_filter()`
-- `core/amv_controllers/amv_controller.py` - dodane wywołania resetowania gwiazdek
-
-**Rezultat:**
-Teraz przy zmianie folderu gwiazdki w panelu kontrolnym są automatycznie resetowane (odznaczane), co eliminuje problem z ignorowaniem filtrów gwiazdek w nowych folderach.
-
-**Status:** ✅ UKOŃCZONE
+#
