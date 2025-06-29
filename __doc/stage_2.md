@@ -2,6 +2,11 @@
 
 WAŻNE! Wszystkie pliki wynikowe audytu (np. business_logic_map.md, corrections.md, patch_code.md, pliki z analizami i poprawkami) MUSZĄ być zapisywane wyłącznie w katalogu AUDYT. Tylko tam należy ich szukać!
 
+📁 LOKALIZACJA PLIKÓW PATCH_CODE - KRYTYCZNE!
+🚨 PLIKI PATCH_CODE MUSZĄ BYĆ TWORZONE W: `AUDYT/patches/[nazwa_pliku]_patch_code.md`
+🚨 JEDEN PLIK ANALIZOWANY = JEDEN PLIK PATCH_CODE
+🚨 WSZYSTKIE PLIKI WYNIKOWE W KATALOGU AUDYT!
+
 🎯 CEL
 Kompleksowa analiza, optymalizacja i uproszczenie logiki biznesowej aplikacji z naciskiem na wydajność procesów, stabilność operacji i eliminację over-engineering w warstwie biznesowej. Szczególny fokus na modernizację architektury PyQt6 zgodnie z najnowszymi standardami 2025.
 🏛️ CZTERY FILARY AUDYTU LOGIKI BIZNESOWEJ
@@ -113,7 +118,13 @@ Context Managers: Wykorzystanie do zarządzania zasobami
 Dataclasses: Modernizacja struktur danych
 
 📜 ZASADY I PROCEDURY
-Wszystkie szczegółowe zasady, procedury i checklisty zostały zebrane w pliku __doc/refactoring_rules.md. Należy się z nim zapoznać przed rozpoczęciem pracy.
+Wszystkie szczegółowe zasady, procedury i checklisty zostały zebrane w pliku \_\_doc/refactoring_rules.md. Należy się z nim zapoznać przed rozpoczęciem pracy.
+
+📁 KRYTYCZNE ZASADY LOKALIZACJI PLIKÓW:
+🚨 PLIKI PATCH_CODE: `AUDYT/patches/[nazwa_pliku]_patch_code.md`
+🚨 PLIKI CORRECTIONS: `AUDYT/corrections/[nazwa_pliku]_correction.md`
+🚨 JEDEN PLIK ANALIZOWANY = JEDEN PLIK PATCH_CODE
+🚨 WSZYSTKIE PLIKI WYNIKOWE W KATALOGU AUDYT!
 
 📊 ETAP 1: MAPOWANIE LOGIKI BIZNESOWEJ Z PRIORYTETAMI MODERNIZACJI
 🗺️ DYNAMICZNE GENEROWANIE MAPY PLIKÓW LOGIKI BIZNESOWEJ
@@ -122,9 +133,9 @@ WAŻNE: Mapa NIE jest statyczna! Musi być generowana na podstawie aktualnego ko
 KROK 1: DYNAMICZNE ODKRYWANIE STRUKTURY PROJEKTU
 Model MUSI dynamicznie przeanalizować strukturę projektu z fokusem na komponenty wydajnościowe:
 bash# Model MUSI wykonać te komendy aby odkryć aktualną strukturę:
-find core/ -type f -name "*.py" | head -30  # Znajdź pliki .py
-ls -la core/                                # Sprawdź główne katalogi
-tree core/ -I "__pycache__|*.pyc"           # Pełna struktura (jeśli dostępna)
+find core/ -type f -name "_.py" | head -30 # Znajdź pliki .py
+ls -la core/ # Sprawdź główne katalogi
+tree core/ -I "**pycache**|_.pyc" # Pełna struktura (jeśli dostępna)
 KROK 2: IDENTYFIKACJA KATALOGÓW Z LOGIKĄ BIZNESOWĄ - PRIORYTETY WYDAJNOŚCI
 Model MUSI przeanalizować każdy katalog i określić czy zawiera logikę biznesową z klasyfikacją wydajnościową:
 KRYTERIA KLASYFIKACJI WYDAJNOŚCIOWEJ:
@@ -141,7 +152,7 @@ WYDAJNOŚCIOWE ANTI-PATTERNS:
 
 Synchronous I/O w głównym wątku: file.read(), os.listdir() w UI thread
 Memory leaks w UI: Brak deleteLater() dla widgets
-Inefficient loops: Nested loops w _rebuild_asset_grid()
+Inefficient loops: Nested loops w \_rebuild_asset_grid()
 Blocking operations: Długie operacje bez progress indicators
 Resource leaks: Niedomykane pliki, connections, timers
 
@@ -161,12 +172,13 @@ Circular dependencies: Cykliczne importy między modułami
 
 🔍 METODA ANALIZY FUNKCJI LOGIKI BIZNESOWEJ Z FOKUSEM NA WYDAJNOŚĆ
 Dla każdego pliku .py model MUSI przeanalizować:
+
 1. ANALIZA WYDAJNOŚCIOWA:
-python# Przykład analizy wydajnościowej:
-def sync_file_operation():        # 🚨 KRYTYCZNE - blocking I/O
-def heavy_computation():          # ⚡ WYSOKIE - CPU intensive  
-def ui_update_method():          # 🎨 ŚREDNIE - UI thread safety
-def helper_function():           # 🟢 NISKIE - utility function
+   python# Przykład analizy wydajnościowej:
+   def sync_file_operation(): # 🚨 KRYTYCZNE - blocking I/O
+   def heavy_computation(): # ⚡ WYSOKIE - CPU intensive  
+   def ui_update_method(): # 🎨 ŚREDNIE - UI thread safety
+   def helper_function(): # 🟢 NISKIE - utility function
 2. KRYTERIA LOGIKI BIZNESOWEJ - ROZSZERZONE:
 
 Performance Bottlenecks - Funkcje spowalniające aplikację
@@ -188,7 +200,7 @@ Czy implementuje proper error handling?
 Czy wykorzystuje najnowsze funkcje Python 3.9+?
 
 4. OKREŚLANIE PRIORYTETU - Z FOKUSEM NA WYDAJNOŚĆ:
-⚫⚫⚫⚫ KRYTYCZNE - PERFORMANCE BLOCKING:
+   ⚫⚫⚫⚫ KRYTYCZNE - PERFORMANCE BLOCKING:
 
 Funkcje blokujące główny wątek UI
 Memory leaks w komponentach UI
@@ -226,21 +238,24 @@ markdown### 🗺️ MAPA PLIKÓW FUNKCJONALNOŚCI BIZNESOWEJ - ANALIZA WYDAJNOŚ
 - [KATALOG_3] - [OPIS ROLI W LOGICE BIZNESOWEJ] - [PRIORYTET WYDAJNOŚCI]
 
 #### **[NAZWA_KATALOGU_1]** ([ŚCIEŻKA_KATALOGU]) - 🚀 PERFORMANCE CRITICAL
+
 [ŚCIEŻKA_KATALOGU]/
 ├── [nazwa_pliku].py [PRIORYTET] - [OPIS] - 🚨 BLOCKING I/O DETECTED
 ├── [nazwa_pliku].py [PRIORYTET] - [OPIS] - ⚡ MEMORY INTENSIVE
 └── [nazwa_pliku].py [PRIORYTET] - [OPIS] - 🎨 UI THREAD SAFETY
 
 **Zidentyfikowane bottlenecki:**
+
 - [BOTTLENECK_1]: [OPIS PROBLEMU WYDAJNOŚCI]
 - [BOTTLENECK_2]: [OPIS PROBLEMU WYDAJNOŚCI]
 
 **Rekomendowane modernizacje:**
+
 - [MODERNIZATION_1]: [OPIS POTRZEBNEJ MODERNIZACJI]
 - [MODERNIZATION_2]: [OPIS POTRZEBNEJ MODERNIZACJI]
-📋 ZAKRES ANALIZY LOGIKI BIZNESOWEJ - ROZSZERZONY
-Przeanalizuj WSZYSTKIE pliki logiki biznesowej pod kątem modernizacji i wydajności:
-🔍 Szukaj - Rozszerzone Kryteria
+  📋 ZAKRES ANALIZY LOGIKI BIZNESOWEJ - ROZSZERZONY
+  Przeanalizuj WSZYSTKIE pliki logiki biznesowej pod kątem modernizacji i wydajności:
+  🔍 Szukaj - Rozszerzone Kryteria
 
 ❌ Performance Bottlenecks - Synchronous I/O, blocking operations, memory leaks
 ❌ Thread Safety Issues - UI operations w background threads, race conditions
@@ -387,29 +402,35 @@ Czy interfejs pozostanie responsywny? - UX priority
 
 📁 STRUKTURA PLIKÓW WYNIKOWYCH - ROZSZERZONA
 Nowa struktura z analizą wydajności:
+
+🚨 KRYTYCZNE LOKALIZACJE PLIKÓW:
+📁 AUDYT/patches/[nazwa_pliku]\_patch_code.md - POPRAWKI KODU
+📁 AUDYT/corrections/[nazwa_pliku]\_correction.md - ANALIZY POPRAWEK
+📁 AUDYT/ - WSZYSTKIE PLIKI WYNIKOWE
+
 AUDYT/
-├── business_logic_map.md              # Główna mapa z priorytetami wydajności
-├── performance_analysis.md            # Szczegółowa analiza wydajności
-├── modernization_roadmap.md           # Plan modernizacji architektury
+├── business_logic_map.md # Główna mapa z priorytetami wydajności
+├── performance_analysis.md # Szczegółowa analiza wydajności
+├── modernization_roadmap.md # Plan modernizacji architektury
 ├── corrections/
-│   ├── [plik]_correction.md          # Standardowe poprawki
-│   ├── [plik]_performance.md         # Analiza wydajności
-│   └── [plik]_modernization.md       # Plan modernizacji
+│ ├── [plik]\_correction.md # Standardowe poprawki
+│ ├── [plik]\_performance.md # Analiza wydajności
+│ └── [plik]\_modernization.md # Plan modernizacji
 ├── patches/
-│   ├── [plik]_patch_code.md          # Poprawki kodu
-│   ├── [plik]_async_patch.md         # Konwersja async/await
-│   └── [plik]_optimization_patch.md  # Optymalizacje wydajności
+│ ├── [plik]\_patch_code.md # Poprawki kodu
+│ ├── [plik]\_async_patch.md # Konwersja async/await
+│ └── [plik]\_optimization_patch.md # Optymalizacje wydajności
 └── monitoring/
-    ├── performance_metrics.md         # Metryki wydajności
-    ├── memory_analysis.md             # Analiza pamięci
-    └── threading_analysis.md          # Analiza wielowątkowości
+├── performance_metrics.md # Metryki wydajności
+├── memory_analysis.md # Analiza pamięci
+└── threading_analysis.md # Analiza wielowątkowości
 🚫 ZASADA INDYWIDUALNEGO GENEROWANIA DOKUMENTÓW - ROZSZERZONA
 NOWE TYPY DOKUMENTÓW:
 
-Performance Analysis - [nazwa]_performance.md - Analiza wydajności
-Modernization Plan - [nazwa]_modernization.md - Plan modernizacji
-Async Conversion - [nazwa]_async_patch.md - Konwersja async/await
-Optimization Patches - [nazwa]_optimization_patch.md - Optymalizacje
+Performance Analysis - [nazwa]\_performance.md - Analiza wydajności
+Modernization Plan - [nazwa]\_modernization.md - Plan modernizacji
+Async Conversion - [nazwa]\_async_patch.md - Konwersja async/await
+Optimization Patches - [nazwa]\_optimization_patch.md - Optymalizacje
 
 📈 OBOWIĄZKOWA KONTROLA POSTĘPU - ROZSZERZONA
 PRZYKŁAD ROZSZERZONEGO RAPORTU POSTĘPU:
@@ -466,6 +487,12 @@ Czekam na Twój pierwszy wynik: zawartość pliku business_logic_map.md z mapą 
 UWAGA: Mapa musi być wygenerowana na podstawie analizy aktualnego kodu z fokusem na wydajność oraz kontekstu biznesowego z README.md!
 🚨 KRYTYCZNE ZASADY - MODEL MUSI PAMIĘTAĆ! - ROZSZERZONE
 📋 OBOWIĄZKOWE UZUPEŁNIANIE DOKUMENTÓW MODERNIZACJI
+
+🚨 LOKALIZACJA PLIKÓW - KRYTYCZNE!
+📁 PATCH_CODE: `AUDYT/patches/[nazwa_pliku]_patch_code.md`
+📁 CORRECTIONS: `AUDYT/corrections/[nazwa_pliku]_correction.md`
+📁 WSZYSTKIE PLIKI WYNIKOWE: `AUDYT/`
+
 🚨 MODEL MUSI PAMIĘTAĆ: Po każdej ukończonej analizie pliku logiki biznesowej OBOWIĄZKOWO uzupełnić wszystkie dokumenty modernizacji!
 OBOWIĄZKOWE KROKI PO KAŻDEJ ANALIZIE:
 
@@ -478,6 +505,11 @@ OBOWIĄZKOWE KROKI PO KAŻDEJ ANALIZIE:
 ✅ UZUPEŁNIJ modernization_roadmap.md - dodaj plan modernizacji
 
 FORMAT UZUPEŁNIENIA - ROZSZERZONY:
+
+🚨 KRYTYCZNE ŚCIEŻKI PLIKÓW WYNIKOWYCH:
+📁 AUDYT/patches/[nazwa_pliku]\_patch_code.md - POPRAWKI KODU
+📁 AUDYT/corrections/[nazwa_pliku]\_correction.md - ANALIZY POPRAWEK
+
 markdown### 📄 [NAZWA_PLIKU].PY
 
 - **Status:** ✅ UKOŃCZONA ANALIZA
@@ -494,4 +526,4 @@ markdown### 📄 [NAZWA_PLIKU].PY
   - `AUDYT/patches/[nazwa_pliku]_patch_code.md`
   - `AUDYT/patches/[nazwa_pliku]_async_patch.md`
   - `AUDYT/patches/[nazwa_pliku]_optimization_patch.md`
-🚨 MODEL NIE MOŻE ZAPOMNIEĆ O WSZYSTKICH KROKACH MODERNIZACJI!
+    🚨 MODEL NIE MOŻE ZAPOMNIEĆ O WSZYSTKICH KROKACH MODERNIZACJI!
