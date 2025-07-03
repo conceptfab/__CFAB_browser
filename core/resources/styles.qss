@@ -230,7 +230,7 @@ TileBase:hover, .AssetTileView:hover {
     background: transparent;
     margin: 0px;
     padding: 0px;
-    border: none;
+    border: 1px solid #7882cd;
 }
 
 /* ===================== KAFELKI ASSETÓW - DOLNY PAS ===================== */

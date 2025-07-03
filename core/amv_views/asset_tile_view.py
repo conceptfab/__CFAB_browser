@@ -135,7 +135,9 @@ class AssetTileView(TileBase):
         # Usunięto podwójne tworzenie thumbnail_container - przeniesione do _setup_ui_without_styles()
         # Najpierw utwórz ikonę tekstury!
         self.texture_icon = BaseLabel()
-        self.texture_icon.setObjectName("AssetTileTextureIcon")  # Ikona tekstury (16x16px)
+        self.texture_icon.setObjectName(
+            "AssetTileTextureIcon"
+        )  # Ikona tekstury (16x16px)
         self.texture_icon.setFixedSize(16, 16)
         self.texture_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.texture_icon.setVisible(False)
@@ -158,7 +160,9 @@ class AssetTileView(TileBase):
         )
         # Dodaj label na numer kafelka
         self.tile_number_label = QLabel()
-        self.tile_number_label.setObjectName("AssetTileNumberLabel")  # Numer kafelka (lewy)
+        self.tile_number_label.setObjectName(
+            "AssetTileNumberLabel"
+        )  # Numer kafelka (lewy)
         self.tile_number_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.tile_number_label.setSizePolicy(
             QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
@@ -180,7 +184,9 @@ class AssetTileView(TileBase):
     def _setup_ui_without_styles(self):
         # Najpierw utwórz miniaturkę!
         self.thumbnail_container = BaseLabel()
-        self.thumbnail_container.setObjectName("AssetTileThumbnail")  # Miniaturka (góra)
+        self.thumbnail_container.setObjectName(
+            "AssetTileThumbnail"
+        )  # Miniaturka (góra)
         thumb_size = self.thumbnail_size
         self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
         self.thumbnail_container.setSizePolicy(
@@ -198,7 +204,15 @@ class AssetTileView(TileBase):
         # Bardziej precyzyjne obliczanie rozmiaru
         tile_padding = 6  # z CSS
         tile_border = 1  # z CSS
-        tile_width = self.thumbnail_size + (2 * tile_padding) + (2 * tile_border)
+
+        # Oblicz szerokość na podstawie kolumn
+        # ikona(60) + nazwa(136) + rozmiar(60) + odstępy(16)
+        filename_width = 60 + 136 + 60 + 16  # 272px
+        tile_width = (
+            max(self.thumbnail_size, filename_width)
+            + (2 * tile_padding)
+            + (2 * tile_border)
+        )
         tile_height = self.thumbnail_size + 70 + (2 * tile_padding) + (2 * tile_border)
         self.setFixedSize(tile_width, tile_height)
 
@@ -214,9 +228,19 @@ class AssetTileView(TileBase):
         # Pasek z nazwą pliku, ikonką tekstury i rozmiarem
         filename_container = QHBoxLayout()
         filename_container.setContentsMargins(0, 0, 0, 0)
-        filename_container.setSpacing(8)
+        filename_container.setSpacing(0)
+
+        # Ustaw stałe szerokości dla kolumn
+        self.texture_icon.setFixedWidth(60)
+        self.name_label.setFixedWidth(136)
+        self.size_label.setFixedWidth(60)
+
         filename_container.addWidget(self.texture_icon, 0, Qt.AlignmentFlag.AlignLeft)
-        filename_container.addWidget(self.name_label, 1)
+        filename_container.addStretch()  # Rozciągacz między ikoną a nazwą
+        filename_container.addWidget(
+            self.name_label, 0
+        )  # Zmieniono z 1 na 0 (nie rozciągaj)
+        filename_container.addStretch()  # Rozciągacz między nazwą a MB
         filename_container.addWidget(self.size_label, 0, Qt.AlignmentFlag.AlignRight)
         filename_bg = QWidget()
         filename_bg.setObjectName("AssetTileFilenameContainer")  # Kontener nazwy pliku
@@ -225,7 +249,9 @@ class AssetTileView(TileBase):
 
         # Pasek z numerem, gwiazdkami i checkboxem w jednej linii
         bottom_row_bg = QWidget()
-        bottom_row_bg.setObjectName("AssetTileBottomRow")  # Dolny pasek (numer+gwiazdki+checkbox)
+        bottom_row_bg.setObjectName(
+            "AssetTileBottomRow"
+        )  # Dolny pasek (numer+gwiazdki+checkbox)
         bottom_row_layout = QHBoxLayout(bottom_row_bg)
         bottom_row_layout.setContentsMargins(0, 0, 0, 0)  # Margines dolny 6px
         bottom_row_layout.setSpacing(4)
