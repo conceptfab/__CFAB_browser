@@ -32,7 +32,7 @@ class FileNameCleanerApp(QMainWindow):
 
         # --- Przycisk Start ---
         self.start_button = QPushButton("Rozpocznij porządkowanie")
-        self.start_button.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.start_button.setProperty("class", "start-button")
 
         # --- Okno logów ---
         log_label = QLabel("Log operacji:")

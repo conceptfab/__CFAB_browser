@@ -1348,7 +1348,7 @@ class ToolsTab(QWidget):
 
         # Sekcja wyboru trybu
         mode_label = QLabel("Wybierz tryb operacji:")
-        mode_label.setStyleSheet("font-weight: bold; margin-bottom: 5px;")
+        mode_label.setProperty("class", "mode-label")
         layout.addWidget(mode_label)
 
         # Radio buttony do wyboru trybu
@@ -1373,9 +1373,7 @@ class ToolsTab(QWidget):
 
         # Sekcja wprowadzania tekstu
         text_label = QLabel("Tekst do usunięcia (wielkość liter ma znaczenie):")
-        text_label.setStyleSheet(
-            "font-weight: bold; margin-top: 10px; margin-bottom: 5px;"
-        )
+        text_label.setProperty("class", "text-label")
         layout.addWidget(text_label)
 
         # Większe pole tekstowe
@@ -1384,14 +1382,14 @@ class ToolsTab(QWidget):
         text_edit.setPlaceholderText(
             "Wpisz tekst który ma być usunięty z nazw plików..."
         )
-        text_edit.setStyleSheet("font-size: 12px; padding: 5px;")
+        text_edit.setProperty("class", "tool-text")
         layout.addWidget(text_edit)
 
         # Przykłady
         example_label = QLabel(
             "Przykłady: _8K, _FINAL, temp_, backup_, ' 0' (spacja+zero)"
         )
-        example_label.setStyleSheet("color: #666; font-style: italic; font-size: 10px;")
+        example_label.setProperty("class", "example-label")
         layout.addWidget(example_label)
 
         # Przyciski
@@ -1478,7 +1476,7 @@ class ToolsTab(QWidget):
 
         # Nagłówek
         header_label = QLabel(f"Znaleziono {len(pairs)} par plików do przetworzenia:")
-        header_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        header_label.setProperty("class", "dialog-header")
         layout.addWidget(header_label)
 
         # Lista par

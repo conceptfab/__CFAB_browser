@@ -157,7 +157,7 @@ class RenamerApp(QMainWindow):
         form_layout.addRow(QLabel("Tryb operacji:"), radio_layout)
 
         self.start_button = QPushButton("Rozpocznij zmianę nazw")
-        self.start_button.setStyleSheet("font-size: 14px; padding: 10px;")
+        self.start_button.setProperty("class", "start-button")
         self.start_button.clicked.connect(self.start_renaming)
         main_layout.addWidget(self.start_button)
 

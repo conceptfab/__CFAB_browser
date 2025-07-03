@@ -224,7 +224,10 @@ class AmvView(BaseWidget):
         self._create_scroll_area()
         self._create_control_panel()
         gallery_vertical_layout.addWidget(self.scroll_area)
-        gallery_vertical_layout.addWidget(self.control_panel)
+        # Wyśrodkowanie panelu kontrolnego
+        gallery_vertical_layout.addWidget(
+            self.control_panel, alignment=Qt.AlignmentFlag.AlignHCenter
+        )
         self.gallery_panel.setLayout(gallery_vertical_layout)
         self.splitter.addWidget(self.gallery_panel)
 
@@ -280,10 +283,11 @@ class AmvView(BaseWidget):
     def _create_control_panel(self):
         self.control_panel = QFrame()
         self.control_panel.setFixedHeight(32)
+        self.control_panel.setFixedWidth(1000)  # Stała szerokość panelu
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(0, 0, 0, 0)
         control_layout.setSpacing(8)
-        control_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        control_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Wyśrodkowanie
         self.progress_bar = QProgressBar()
         self.progress_bar.setFixedHeight(12)  # Chudszy progress bar
         self.progress_bar.setMinimumWidth(200)  # Minimalna szerokość
@@ -295,6 +299,7 @@ class AmvView(BaseWidget):
         self.thumbnail_size_slider.setMinimum(50)
         self.thumbnail_size_slider.setMaximum(256)
         self.thumbnail_size_slider.setValue(256)
+        self.thumbnail_size_slider.setFixedWidth(200)  # SZTYWNA SZEROKOŚĆ
         self.selection_buttons = []
         # Styl kompaktowy jak na przyciskach Zwiń/Rozwiń
         button_style = """

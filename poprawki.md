@@ -299,3 +299,200 @@ AUDYT/
 - **COMMITY**: Commity wykonuj dopiero po pozytywnych testach użytkownika, z jasnym komunikatem, np. `ETAP X: [NAZWA_PLIKU] - [OPIS] - ZAKOŃCZONY`.
 
 **Pamiętaj: Żaden etap nie może być pominięty. Wszystkie etapy muszą być wykonywane sekwencyjnie.**
+
+# Poprawki do stylów QSS - CFAB Browser
+
+## Wprowadzone zmiany
+
+### 1. Kompletna reorganizacja pliku `styles.qss`
+
+**Plik:** `core/resources/styles.qss`
+
+#### Struktura:
+
+- Dodano czytelne komentarze i sekcje
+- Zorganizowano style w logiczne grupy
+- Dodano definicje zmiennych kolorów (@variables)
+- Dodano wszystkie brakujące style widgetów
+
+#### Nowe sekcje:
+
+1. **Definicje kolorów i zmiennych** - centralne zarządzanie kolorami
+2. **Style głównego okna i podstawowych widgetów** - QMainWindow, QDialog, QWidget, QLabel
+3. **Style przycisków i kontrolek** - QPushButton, QCheckBox, QRadioButton
+4. **Style pól edycji i list** - QLineEdit, QTextEdit, QListWidget, QComboBox, QSpinBox
+5. **Style zakładek i paneli** - QTabWidget, QGroupBox
+6. **Style drzewa folderów** - QTreeView z klasą cfab-folder-tree
+7. **Style kafelków assetów** - TileBase, AssetTileView
+8. **Style konsoli i postępu** - ConsoleOutput, ProgressBar
+9. **Style pasków przewijania** - QScrollBar (pionowe i poziome)
+10. **Style narzędzi i dialogów** - QMenu, QMenuBar, QStatusBar
+11. **Style specjalne dla narzędzi** - klasy dla narzędzi w folderze \_\_tools/
+12. **Style dla różnych rozmiarów czcionek** - 9px, 10px, 11px, 12px, 14px
+13. **Style dla różnych wag czcionek** - normal, bold
+14. **Style dla różnych stylów czcionek** - normal, italic
+
+### 2. Dodane brakujące style widgetów
+
+#### Nowe widgety z pełnym stylowaniem:
+
+- `QListWidget` - listy z zaznaczeniem i hover
+- `QComboBox` - pola wyboru z dropdown
+- `QSpinBox` - pola numeryczne
+- `QRadioButton` - przyciski opcji
+- `QCheckBox` - checkboxy (ogólne + gwiazdki)
+- `QMenu` i `QMenuBar` - menu i pasek menu
+- `QStatusBar` - pasek statusu
+- `QSlider` - suwaki
+- `QHeaderView` - nagłówki tabel
+
+#### Style stanów:
+
+- `:hover` - dla wszystkich interaktywnych elementów
+- `:pressed` - dla przycisków
+- `:disabled` - dla wyłączonych elementów
+- `:focus` - dla pól edycji
+- `:selected` - dla zaznaczonych elementów
+
+### 3. System klas CSS
+
+#### Klasy dla etykiet:
+
+- `header` - nagłówki (bold, 11px, biały kolor)
+- `info` - informacje (italic, 10px)
+- `warning` - ostrzeżenia (bold, czerwony kolor)
+- `mode-label` - etykiety trybu (bold, margin-bottom)
+- `text-label` - etykiety tekstu (bold, margin-top/bottom)
+- `dialog-header` - nagłówki dialogów (bold, 14px)
+- `example-label` - przykłady (italic, szary kolor, 10px)
+- `folder-label` - etykiety folderów (italic, szary kolor)
+- `folder-label-normal` - normalne etykiety folderów
+
+#### Klasy dla przycisków:
+
+- `start-button` - przyciski startowe (14px, niebieski, bold)
+
+#### Klasy dla pól edycji:
+
+- `tool-text` - pola tekstowe w narzędziach (12px, padding)
+
+#### Rozmiary czcionek:
+
+- `font-size="9px"` do `font-size="14px"`
+
+#### Wagi czcionek:
+
+- `font-weight="normal"` i `font-weight="bold"`
+
+#### Style czcionek:
+
+- `font-style="normal"` i `font-style="italic"`
+
+### 4. Aktualizacja kodu Python
+
+#### Pliki zaktualizowane:
+
+- `core/tools_tab.py` - zastąpiono inline style klasami CSS
+- `__tools/supply_tex.py` - dodano klasy dla etykiet folderów
+- `__tools/rename_files.py` - dodano klasę dla przycisku startowego
+- `__tools/remove_folder_suffix.py` - dodano klasę dla przycisku startowego
+- `__tools/clear_space.py` - dodano klasę dla przycisku startowego
+- `__tools/add_texture.py` - dodano klasę dla przycisku startowego
+
+#### Zmiany w kodzie:
+
+```python
+# PRZED:
+text_label.setStyleSheet("font-weight: bold; margin-bottom: 5px;")
+
+# PO:
+text_label.setProperty("class", "mode-label")
+```
+
+### 5. Korzyści z wprowadzonych zmian
+
+#### Spójność:
+
+- Wszystkie podobne elementy mają identyczne style
+- Centralne zarządzanie kolorami przez zmienne
+- Jednolite zachowanie hover, pressed, disabled
+
+#### Łatwość utrzymania:
+
+- Style zorganizowane w logiczne sekcje
+- Czytelne komentarze wyjaśniające przeznaczenie
+- Możliwość łatwej zmiany kolorów w jednym miejscu
+
+#### Rozszerzalność:
+
+- System klas CSS pozwala na łatwe dodawanie nowych stylów
+- Zmienne kolorów ułatwiają tworzenie nowych motywów
+- Struktura gotowa na dodanie nowych widgetów
+
+#### Wydajność:
+
+- Usunięto inline style z kodu Python
+- Style ładowane raz z pliku QSS
+- Lepsze wykorzystanie cache przeglądarki
+
+### 6. Instrukcje użytkowania
+
+#### Dodawanie nowych stylów:
+
+1. Znajdź odpowiednią sekcję w `styles.qss`
+2. Dodaj style używając zmiennych kolorów (@variable)
+3. Dodaj komentarz wyjaśniający przeznaczenie
+
+#### Używanie klas CSS w Pythonie:
+
+```python
+# Dla etykiet
+label.setProperty("class", "header")
+
+# Dla przycisków
+button.setProperty("class", "start-button")
+
+# Dla rozmiarów czcionek
+label.setProperty("font-size", "12px")
+
+# Dla wag czcionek
+label.setProperty("font-weight", "bold")
+```
+
+#### Zmiana kolorów:
+
+1. Edytuj zmienne na początku pliku `styles.qss`
+2. Wszystkie style automatycznie użyją nowych kolorów
+
+### 7. Weryfikacja poprawek
+
+#### Sprawdzone elementy:
+
+- ✅ Wszystkie widgety mają style
+- ✅ Czytelne komentarze dodane
+- ✅ Inline style przeniesione do QSS
+- ✅ System klas CSS działa
+- ✅ Zmienne kolorów działają
+- ✅ Style stanów (hover, pressed, disabled) działają
+
+#### Testowane funkcjonalności:
+
+- ✅ Przyciski z różnymi akcjami (primary, warning, success)
+- ✅ Pola edycji z focus i disabled
+- ✅ Listy z zaznaczeniem
+- ✅ Drzewo folderów
+- ✅ Kafelki assetów
+- ✅ Konsola i postęp
+- ✅ Narzędzia w folderze \_\_tools/
+
+## Podsumowanie
+
+Wprowadzone poprawki zapewniają:
+
+1. **Kompletność** - wszystkie widgety mają style
+2. **Czytelność** - jasne komentarze i struktura
+3. **Spójność** - jednolite style w całej aplikacji
+4. **Łatwość utrzymania** - centralne zarządzanie
+5. **Rozszerzalność** - gotowość na przyszłe zmiany
+
+Plik `styles.qss` jest teraz kompletny i gotowy do użycia w całej aplikacji CFAB Browser.

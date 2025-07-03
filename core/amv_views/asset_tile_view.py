@@ -223,7 +223,7 @@ class AssetTileView(TileBase):
         # Pasek z numerem, gwiazdkami i checkboxem w jednej linii
         bottom_row_bg = QWidget()
         bottom_row_layout = QHBoxLayout(bottom_row_bg)
-        bottom_row_layout.setContentsMargins(0, 0, 0, 2)  # Margines dolny 6px
+        bottom_row_layout.setContentsMargins(0, 0, 0, 0)  # Margines dolny 6px
         bottom_row_layout.setSpacing(4)
         # NR do lewej
         bottom_row_layout.addWidget(self.tile_number_label)
