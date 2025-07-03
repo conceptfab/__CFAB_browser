@@ -402,6 +402,14 @@ class AssetTileView(TileBase):
             # Sprawdź, który widget został kliknięty
             clicked_widget = self.childAt(event.position().toPoint())
 
+            # Jeśli wciśnięty jest Shift, nie pokazuj podglądu ani archiwum
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                logger.debug(
+                    "Shift wciśnięty - blokada podglądu/archiwum, tylko drag and drop"
+                )
+                super().mousePressEvent(event)
+                return
+
             # Obsługa kliknięć na miniaturkę
             if clicked_widget == self.thumbnail_container or (
                 clicked_widget and clicked_widget.parent() == self.thumbnail_container
