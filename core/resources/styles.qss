@@ -484,9 +484,9 @@ QSlider::handle:horizontal {
 QCheckBox.star {
     spacing: 0px;
     color: #888888;
-    font-size: 18px;
-    min-width: 20px;
-    min-height: 20px;
+    font-size: 10.8px;
+    min-width: 12px;
+    min-height: 12px;
 }
 QCheckBox.star::indicator {
     width: 0px;
@@ -507,7 +507,6 @@ TileBase, .AssetTileView {
     background-color: #23232a;
     border: 1px solid #3F3F46;
     border-radius: 6px;
-    padding: 6px;  /* Zmniejszone z 4px na 6px dla lepszej symetrii */
     margin: 0px;
 }
 
@@ -522,4 +521,16 @@ QLabel[class="thumbnail-container"] {
     background: transparent;
     margin: 0px;
     padding: 0px;
+}
+
+/* Styl dla numeru kafelka i checkboxa - usunięcie marginesów */
+#AssetTileNumberLabel, #AssetTileCheckBox {
+    margin: 0px;
+    padding: 0px;
+    border: none;
+}
+
+/* Przesunięcie numeru kafelka 4px niżej */
+#AssetTileNumberLabel {
+    margin-top: 4px;
 }

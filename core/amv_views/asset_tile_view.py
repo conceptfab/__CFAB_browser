@@ -220,16 +220,21 @@ class AssetTileView(TileBase):
         filename_bg.setLayout(filename_container)
         layout.addWidget(filename_bg)
 
-        # Pasek z gwiazdkami, numerem i checkboxem
+        # Pasek z numerem, gwiazdkami i checkboxem w jednej linii
         bottom_row_bg = QWidget()
         bottom_row_layout = QHBoxLayout(bottom_row_bg)
-        bottom_row_layout.setContentsMargins(0, 0, 0, 0)
-        bottom_row_layout.setSpacing(10)
+        bottom_row_layout.setContentsMargins(0, 0, 0, 2)  # Margines dolny 6px
+        bottom_row_layout.setSpacing(4)
+        # NR do lewej
         bottom_row_layout.addWidget(self.tile_number_label)
+        # Rozciągnij do środka
         bottom_row_layout.addStretch()
+        # Gwiazdki do środka
         for star_cb in self.star_checkboxes:
             bottom_row_layout.addWidget(star_cb)
+        # Rozciągnij do prawej
         bottom_row_layout.addStretch()
+        # Checkbox do prawej
         bottom_row_layout.addWidget(self.checkbox)
         layout.addWidget(bottom_row_bg)
 
