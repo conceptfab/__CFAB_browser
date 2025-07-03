@@ -8,7 +8,14 @@ import os
 
 from PyQt6.QtCore import QMimeData, QPoint, QSize, Qt, QThreadPool, pyqtSignal
 from PyQt6.QtGui import QColor, QDrag, QPixmap
-from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout
+from PyQt6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 from core.base_widgets import BaseCheckBox, BaseLabel, StarCheckBoxBase, TileBase
 from core.thumbnail_cache import thumbnail_cache
@@ -125,34 +132,7 @@ class AssetTileView(TileBase):
         logger.debug("AssetTileView reset for pool reuse")
 
     def _setup_ui(self):
-        self.setStyleSheet(
-            """
-            AssetTileView {
-                background-color: #252526;
-                border: 1px solid #3F3F46;
-                border-radius: 6px;
-            }
-            AssetTileView:hover {
-                border-color: #007ACC;
-                background-color: #2D2D30;
-            }
-        """
-        )
-
-        # Kafelki mają sztywny rozmiar zależny od miniatury
-        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-
-        # Ustaw sztywny rozmiar kafelka na podstawie miniatury
-        tile_width = self.thumbnail_size + (2 * self.margins_size)
-        tile_height = self.thumbnail_size + 70
-        self.setFixedSize(tile_width, tile_height)
-
-        layout = QVBoxLayout(self)
-        layout.setSpacing(10)
-        margins = self.margins_size
-        layout.setContentsMargins(margins, margins, margins, margins)
-
-        # RZĄD 1: Miniaturka
+        # Najpierw utwórz miniaturkę!
         self.thumbnail_container = BaseLabel()
         thumb_size = self.thumbnail_size
         self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
@@ -160,11 +140,13 @@ class AssetTileView(TileBase):
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
         self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
-        # NAPRAWIONO: Użyj właściwego mechanizmu kliknięć zamiast bezpośredniego przypisania
-        # self.thumbnail_container.mousePressEvent = self._on_thumbnail_clicked
-
-        # RZĄD 2: Dolna sekcja (tekst, gwiazdki, etc.)
-        # Nazwa pliku
+        # Najpierw utwórz ikonę tekstury!
+        self.texture_icon = BaseLabel()
+        self.texture_icon.setFixedSize(16, 16)
+        self.texture_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.texture_icon.setVisible(False)
+        self._load_texture_icon()
+        # Najpierw utwórz label na nazwę pliku!
         self.name_label = QLabel()
         self.name_label.setObjectName("AssetNameLabel")
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -173,74 +155,127 @@ class AssetTileView(TileBase):
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         self.name_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        # NAPRAWIONO: Użyj właściwego mechanizmu kliknięć
-        # self.name_label.mousePressEvent = self._on_filename_clicked
+        # Dodaj label na rozmiar pliku
+        self.size_label = QLabel()
+        self.size_label.setObjectName("AssetSizeLabel")
+        self.size_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.size_label.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
+        )
+        # Dodaj label na numer kafelka
+        self.tile_number_label = QLabel()
+        self.tile_number_label.setObjectName("AssetTileNumberLabel")
+        self.tile_number_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.tile_number_label.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
+        )
+        # Dodaj checkbox
+        self.checkbox = BaseCheckBox()
+        self.checkbox.setObjectName("AssetTileCheckBox")
+        # Dodaj gwiazdki (5)
+        self.star_checkboxes = [StarCheckBoxBase() for _ in range(5)]
+        for i, star_cb in enumerate(self.star_checkboxes):
+            star_cb.setObjectName(f"AssetTileStar_{i+1}")
+            star_cb.setProperty("class", "star")
+            star_cb.setText("★")
+            star_cb.clicked.connect(
+                lambda checked, rating=i + 1: self._on_star_clicked(rating)
+            )
+        self._setup_ui_without_styles()
 
-        # Ikona texture (ukryta domyślnie)
+    def _setup_ui_without_styles(self):
+        # Najpierw utwórz miniaturkę!
+        self.thumbnail_container = BaseLabel()
+        thumb_size = self.thumbnail_size
+        self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
+        self.thumbnail_container.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
+        self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Najpierw utwórz ikonę tekstury!
         self.texture_icon = BaseLabel()
         self.texture_icon.setFixedSize(16, 16)
         self.texture_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.texture_icon.setVisible(False)  # Ukryta domyślnie
+        self.texture_icon.setVisible(False)
         self._load_texture_icon()
-
-        # Dolny rząd z numerem, gwiazdki i checkboxem
-        bottom_row = QHBoxLayout()
-        bottom_row.setSpacing(6)
-
-        # Numer kafelka
-        self.tile_number_label = BaseLabel()
-        style = (
-            "color: #888888; background-color: transparent; "
-            "font-size: 9px; font-weight: bold;"
+        # Najpierw utwórz label na nazwę pliku!
+        self.name_label = QLabel()
+        self.name_label.setObjectName("AssetNameLabel")
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_label.setWordWrap(True)
+        self.name_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
-        self.tile_number_label.setStyleSheet(style)
-
-        # Gwiazdki
-        self.star_checkboxes = []
-        for i in range(5):
-            star_cb = StarCheckBoxBase("★")
-            star_cb.clicked.connect(
-                lambda checked, star_index=i: self._on_star_clicked(star_index + 1)
-            )
-            self.star_checkboxes.append(star_cb)
-
-        # Checkbox
-        self.checkbox = BaseCheckBox()
-        self.checkbox.setFixedSize(16, 16)
-        self.checkbox.stateChanged.connect(self._on_checkbox_state_changed)
-
-        bottom_row.addWidget(self.tile_number_label)
-        bottom_row.addStretch()  # Rozpycha elementy
-        for star_cb in self.star_checkboxes:
-            bottom_row.addWidget(star_cb)
-        bottom_row.addStretch()  # Rozpycha elementy
-        bottom_row.addWidget(self.checkbox)
-
-        # Dodanie elementów do głównego layoutu
-        layout.addWidget(self.thumbnail_container)
-
-        # Dodajemy nazwę pliku, ikonkę tekstury i rozmiar MB w jednym poziomym układzie
-        filename_container = QHBoxLayout()
-        filename_container.setContentsMargins(0, 0, 0, 0)
-        filename_container.setSpacing(6)
-        # Ikonka tekstury po lewej
-        filename_container.addWidget(self.texture_icon, 0, Qt.AlignmentFlag.AlignLeft)
-        # Nazwa pliku na środku
-        filename_container.addWidget(self.name_label, 1)
-        # Label na rozmiar MB po prawej
+        self.name_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Dodaj label na rozmiar pliku
         self.size_label = QLabel()
         self.size_label.setObjectName("AssetSizeLabel")
-        self.size_label.setAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        self.size_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.size_label.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
         )
+        # Dodaj label na numer kafelka
+        self.tile_number_label = QLabel()
+        self.tile_number_label.setObjectName("AssetTileNumberLabel")
+        self.tile_number_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.tile_number_label.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
+        )
+        # Dodaj checkbox
+        self.checkbox = BaseCheckBox()
+        self.checkbox.setObjectName("AssetTileCheckBox")
+        # Dodaj gwiazdki (5)
+        self.star_checkboxes = [StarCheckBoxBase() for _ in range(5)]
+        for i, star_cb in enumerate(self.star_checkboxes):
+            star_cb.setObjectName(f"AssetTileStar_{i+1}")
+            star_cb.setProperty("class", "star")
+            star_cb.setText("★")
+            star_cb.clicked.connect(
+                lambda checked, rating=i + 1: self._on_star_clicked(rating)
+            )
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+        # Ustaw sztywny rozmiar kafelka na podstawie miniatury
+        tile_width = self.thumbnail_size + (2 * self.margins_size)
+        tile_height = self.thumbnail_size + 70
+        self.setFixedSize(tile_width, tile_height)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(6)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # MINIATURKA - najważniejsza, 10px marginesów wokół
+        thumb_container = QWidget()
+        thumb_layout = QVBoxLayout(thumb_container)
+        thumb_layout.setContentsMargins(10, 10, 10, 10)
+        thumb_layout.setSpacing(0)
+        self.thumbnail_container.setContentsMargins(0, 0, 0, 0)
+        thumb_layout.addWidget(self.thumbnail_container)
+        layout.addWidget(thumb_container)
+
+        # Pasek z nazwą pliku, ikonką tekstury i rozmiarem
+        filename_container = QHBoxLayout()
+        filename_container.setContentsMargins(12, 6, 12, 6)
+        filename_container.setSpacing(8)
+        filename_container.addWidget(self.texture_icon, 0, Qt.AlignmentFlag.AlignLeft)
+        filename_container.addWidget(self.name_label, 1)
         filename_container.addWidget(self.size_label, 0, Qt.AlignmentFlag.AlignRight)
-        layout.addLayout(filename_container)
+        filename_bg = QWidget()
+        filename_bg.setLayout(filename_container)
+        layout.addWidget(filename_bg)
 
-        # Dodajemy mały stretch, ale nie rozciągamy na całą wysokość
-        layout.addStretch(0)
-
-        # Dolny rząd z numerem, gwiazdkami i checkboxem
-        layout.addLayout(bottom_row)
+        # Pasek z gwiazdkami, numerem i checkboxem
+        bottom_row_bg = QWidget()
+        bottom_row_layout = QHBoxLayout(bottom_row_bg)
+        bottom_row_layout.setContentsMargins(12, 6, 12, 12)
+        bottom_row_layout.setSpacing(10)
+        bottom_row_layout.addWidget(self.tile_number_label)
+        bottom_row_layout.addStretch()
+        for star_cb in self.star_checkboxes:
+            bottom_row_layout.addWidget(star_cb)
+        bottom_row_layout.addStretch()
+        bottom_row_layout.addWidget(self.checkbox)
+        layout.addWidget(bottom_row_bg)
 
         self.setAcceptDrops(False)  # D&D będzie obsługiwane przez Controller
         self.setMouseTracking(True)

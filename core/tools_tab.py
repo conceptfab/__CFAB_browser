@@ -1360,41 +1360,6 @@ class ToolsTab(QWidget):
         prefix_radio = QRadioButton("Usuń PREFIX (początek nazwy)")
         suffix_radio = QRadioButton("Usuń SUFFIX (koniec nazwy)")
 
-        # Styling radio buttonów
-        radio_style = """
-        QRadioButton {
-            font-size: 12px;
-            font-weight: bold;
-            padding: 10px;
-            spacing: 10px;
-        }
-        QRadioButton::indicator {
-            width: 20px;
-            height: 20px;
-        }
-        QRadioButton::indicator:unchecked {
-            border: 2px solid #ccc;
-            border-radius: 10px;
-            background-color: white;
-        }
-        QRadioButton::indicator:checked {
-            border: 2px solid #2196F3;
-            border-radius: 10px;
-            background-color: #2196F3;
-        }
-        QRadioButton::indicator:checked:after {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 4px;
-            background-color: white;
-            margin: 4px;
-        }
-        """
-
-        prefix_radio.setStyleSheet(radio_style)
-        suffix_radio.setStyleSheet(radio_style)
-
         # Dodaj do grupy (tylko jeden może być aktywny)
         button_group.addButton(prefix_radio)
         button_group.addButton(suffix_radio)
@@ -1433,11 +1398,6 @@ class ToolsTab(QWidget):
         button_layout = QHBoxLayout()
         ok_button = QPushButton("USUŃ")
         cancel_button = QPushButton("Anuluj")
-
-        ok_button.setStyleSheet(
-            "background-color: #2196F3; color: white; font-weight: bold; padding: 8px;"
-        )
-        cancel_button.setStyleSheet("padding: 8px;")
 
         ok_button.clicked.connect(dialog.accept)
         cancel_button.clicked.connect(dialog.reject)

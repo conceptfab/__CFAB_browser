@@ -44,15 +44,16 @@
 
 @statusBarColor: #161720;
 
+/* GŁÓWNY KOLOR TŁA UI */
 QMainWindow, QDialog {
-    background-color: #1E1E1E; /* background */
-    color: #CCCCCC; /* text_color */
+    background-color: #161720;
+    color: #CCCCCC;
 }
 
 QPushButton {
-    background-color: #252526; /* surface */
-    color: #CCCCCC; /* text_color */
-    border: 1px solid #3F3F46; /* border_color */
+    background-color: #252526;
+    color: #CCCCCC;
+    border: 1px solid #3F3F46;
     border-radius: 2px;
     padding: 4px 12px;
     min-height: 24px;
@@ -477,4 +478,39 @@ QSlider::handle:horizontal {
 .cfab-folder-tree QScrollBar::add-line:vertical,
 .cfab-folder-tree QScrollBar::sub-line:vertical {
     height: 0px;
+}
+
+/* Styl gwiazdek - QCheckBox z klasą 'star' */
+QCheckBox.star {
+    spacing: 0px;
+    color: #888888;
+    font-size: 18px;
+    min-width: 20px;
+    min-height: 20px;
+}
+QCheckBox.star::indicator {
+    width: 0px;
+    height: 0px;
+    border: none;
+    background: transparent;
+}
+QCheckBox.star:checked {
+    color: #FFD700;
+    font-weight: bold;
+}
+QCheckBox.star:hover {
+    color: #FFA500;
+}
+
+/* Styl kafelków z assetami */
+TileBase, .AssetTileView {
+    background-color: #23232a;
+    border: 1px solid #3F3F46;
+    border-radius: 6px;
+    padding: 4px;
+    margin: 2px;
+}
+TileBase:hover, .AssetTileView:hover {
+    border-color: #007ACC;
+    background-color: #282838;
 }

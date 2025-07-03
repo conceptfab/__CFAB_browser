@@ -101,9 +101,6 @@ class PreviewWindow(QDialog):
         """Setup the user interface."""
         self.setWindowTitle(f"Podgląd - {os.path.basename(self.image_path)}")
         self.setModal(False)
-        self.setStyleSheet(
-            "QDialog { background-color: #1E1E1E; " "border: 2px solid #3F3F46; }"
-        )
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         self.image_label = QLabel()

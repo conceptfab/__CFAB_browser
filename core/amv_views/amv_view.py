@@ -76,14 +76,6 @@ class AmvView(BaseWidget):
         self.left_panel.setFrameStyle(QFrame.Shape.NoFrame)
         self.left_panel.setMinimumWidth(250)
         self.left_panel.setMaximumWidth(350)
-        self.left_panel.setStyleSheet(
-            """
-            QFrame {
-                background-color: #1E1E1E;
-                border-right: 1px solid #3F3F46;
-            }
-        """
-        )
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -96,14 +88,6 @@ class AmvView(BaseWidget):
     def _create_left_panel_header(self, layout):
         header_frame = QFrame()
         header_frame.setFixedHeight(40)
-        header_frame.setStyleSheet(
-            """
-            QFrame {
-                background-color: #252526;
-                border-bottom: 1px solid #3F3F46;
-            }
-        """
-        )
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(12, 8, 12, 8)
 
@@ -112,72 +96,12 @@ class AmvView(BaseWidget):
         self.collapse_button.setObjectName("collapseButton")
         self.collapse_button.setFixedHeight(16)  # Mała wysokość
         self.collapse_button.setFixedWidth(60)  # Identyczna szerokość
-        self.collapse_button.setStyleSheet(
-            """
-            PanelButtonBase {
-                background-color: #2D2D30;
-                color: #CCCCCC;
-                border: 1px solid #3F3F46;
-                border-radius: 2px;
-                font-size: 9px;
-                font-weight: bold;
-                padding: 0px 2px;
-                text-align: center;
-                max-height: 16px;
-            }
-            PanelButtonBase:hover {
-                background-color: #3F3F46;
-                border-color: #007ACC;
-                color: #FFFFFF;
-            }
-            PanelButtonBase:pressed {
-                background-color: #007ACC;
-                color: #FFFFFF;
-                border-color: #005A9E;
-            }
-            PanelButtonBase:disabled {
-                background-color: #1E1E1E;
-                color: #666666;
-                border-color: #3F3F46;
-            }
-        """
-        )
         self.collapse_button.clicked.connect(self._on_collapse_tree_clicked)
 
         self.expand_button = PanelButtonBase("Rozwiń")
         self.expand_button.setObjectName("expandButton")
         self.expand_button.setFixedHeight(16)  # Mała wysokość
         self.expand_button.setFixedWidth(60)  # Identyczna szerokość
-        self.expand_button.setStyleSheet(
-            """
-            PanelButtonBase {
-                background-color: #2D2D30;
-                color: #CCCCCC;
-                border: 1px solid #3F3F46;
-                border-radius: 2px;
-                font-size: 9px;
-                font-weight: bold;
-                padding: 0px 2px;
-                text-align: center;
-                max-height: 16px;
-            }
-            PanelButtonBase:hover {
-                background-color: #3F3F46;
-                border-color: #007ACC;
-                color: #FFFFFF;
-            }
-            PanelButtonBase:pressed {
-                background-color: #007ACC;
-                color: #FFFFFF;
-                border-color: #005A9E;
-            }
-            PanelButtonBase:disabled {
-                background-color: #1E1E1E;
-                color: #666666;
-                border-color: #3F3F46;
-            }
-        """
-        )
         self.expand_button.clicked.connect(self._on_expand_tree_clicked)
 
         self.toggle_button = QPushButton()
@@ -214,14 +138,6 @@ class AmvView(BaseWidget):
     def _create_folder_buttons_panel(self, folder_layout):
         self.buttons_frame = QFrame()
         self.buttons_frame.setFixedHeight(140)
-        self.buttons_frame.setStyleSheet(
-            """
-            QFrame {
-                background-color: #252526;
-                border-top: 1px solid #3F3F46;
-            }
-        """
-        )
         self.buttons_layout = QGridLayout()
         self.buttons_layout.setContentsMargins(8, 8, 8, 8)
         self.buttons_layout.setSpacing(4)
@@ -301,7 +217,6 @@ class AmvView(BaseWidget):
     def _create_gallery_panel(self):
         self.gallery_panel = QFrame()
         self.gallery_panel.setFrameStyle(QFrame.Shape.NoFrame)
-        self.gallery_panel.setStyleSheet("background-color: transparent; border: none;")
         gallery_vertical_layout = QVBoxLayout()
         gallery_vertical_layout.setSpacing(0)
         gallery_vertical_layout.setContentsMargins(0, 0, 0, 0)
@@ -323,31 +238,6 @@ class AmvView(BaseWidget):
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
         self.scroll_area.setFrameStyle(QScrollArea.Shape.NoFrame)
-        self.scroll_area.setStyleSheet(
-            """
-            QScrollArea { background-color: #1E1E1E; border: none; }
-            QScrollBar:vertical {
-                background-color: #2D2D30; width: 12px; border-radius: 6px; margin: 0px;
-            }
-            QScrollBar::handle:vertical {
-                background-color: #424242; border-radius: 6px;
-                min-height: 20px; margin: 2px;
-            }
-            QScrollBar::handle:vertical:hover { background-color: #535353; }
-            QScrollBar::handle:vertical:pressed { background-color: #007ACC; }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
-            QScrollBar:horizontal {
-                background-color: #2D2D30; height: 12px; border-radius: 6px; margin: 0px;
-            }
-            QScrollBar::handle:horizontal {
-                background-color: #424242; border-radius: 6px;
-                min-width: 20px; margin: 2px;
-            }
-            QScrollBar::handle:horizontal:hover { background-color: #535353; }
-            QScrollBar::handle:horizontal:pressed { background-color: #007ACC; }
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
-        """
-        )
         self.scroll_area.setWidget(self.gallery_container_widget)
 
     def _create_gallery_content_widget(self):
@@ -364,14 +254,6 @@ class AmvView(BaseWidget):
         self.placeholder_widget = QWidget()
         placeholder_layout = QVBoxLayout(self.placeholder_widget)
         self.placeholder_label = QLabel("Panel galerii\n(Oczekiwanie na wybór folderu)")
-        self.placeholder_label.setStyleSheet(
-            """
-            QLabel {
-                color: #CCCCCC; font-size: 14px; padding: 50px;
-                background-color: #1E1E1E; font-style: italic;
-            }
-        """
-        )
         self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         placeholder_layout.addWidget(self.placeholder_label)
 
@@ -398,9 +280,6 @@ class AmvView(BaseWidget):
     def _create_control_panel(self):
         self.control_panel = QFrame()
         self.control_panel.setFixedHeight(32)
-        self.control_panel.setStyleSheet(
-            "QFrame { background-color: #252526; border-top: 1px solid #3F3F46; border-left: 1px solid #3F3F46; }"
-        )
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(0, 0, 0, 0)
         control_layout.setSpacing(8)
@@ -411,46 +290,11 @@ class AmvView(BaseWidget):
         self.progress_bar.setMaximumWidth(400)  # Maksymalna szerokość
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(True)  # Upewniamy się, że jest widoczny
-        self.progress_bar.setStyleSheet(
-            """
-            QProgressBar {
-                border: 1px solid #555555; background-color: #2D2D30;
-                text-align: center; color: #FFFFFF; border-radius: 6px;
-                font-size: 10px; font-weight: bold;
-                margin-left: 5px;
-                min-width: 200px;
-            }
-            QProgressBar::chunk {
-                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #007ACC, stop:1 #1C97EA);
-                border-radius: 5px;
-            }
-        """
-        )
         self.thumbnail_size_slider = QSlider(Qt.Orientation.Horizontal)
         self.thumbnail_size_slider.setFixedHeight(12)  # Chudszy slider
         self.thumbnail_size_slider.setMinimum(50)
         self.thumbnail_size_slider.setMaximum(256)
         self.thumbnail_size_slider.setValue(256)
-        self.thumbnail_size_slider.setStyleSheet(
-            """
-            QSlider::groove:horizontal {
-                border: 1px solid #3F3F46;
-                height: 3px;
-                background: transparent !important;
-                margin: 2px 0;
-                border-radius: 2px;
-            }
-            QSlider::handle:horizontal {
-                background-color: #007ACC;
-                border: 1px solid #007ACC;
-                width: 12px;
-                height: 12px;
-                margin: -5px 0;
-                border-radius: 6px;
-            }
-        """
-        )
         self.selection_buttons = []
         # Styl kompaktowy jak na przyciskach Zwiń/Rozwiń
         button_style = """
@@ -507,6 +351,7 @@ class AmvView(BaseWidget):
         self.star_checkboxes = []
         for i in range(5):
             star_cb = StarCheckBoxBase("★")
+            star_cb.setProperty("class", "star")
             self.star_checkboxes.append(star_cb)
 
         control_layout.addWidget(self.progress_bar, 3)  # Większy stretch factor

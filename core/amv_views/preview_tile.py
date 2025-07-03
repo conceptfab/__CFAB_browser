@@ -28,19 +28,6 @@ class PreviewTile(QWidget):
 
     def init_ui(self):
         self.setContentsMargins(5, 5, 5, 5)
-        self.setStyleSheet(
-            """
-            PreviewTile {
-                background-color: #252526;
-                border: 1px solid #3F3F46;
-                border-radius: 6px;
-            }
-            PreviewTile:hover {
-                border-color: #007ACC;
-                background-color: #2D2D30;
-            }
-        """
-        )
 
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
@@ -51,18 +38,6 @@ class PreviewTile(QWidget):
         self.thumbnail_label = QLabel()
         self.thumbnail_label.setFixedSize(self.thumbnail_size, self.thumbnail_size)
         self.thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.thumbnail_label.setStyleSheet(
-            """
-            QLabel {
-                background-color: #2A2D2E;
-                border: 2px solid transparent;
-                border-radius: 4px;
-            }
-            QLabel:hover {
-                border-color: #007ACC;
-            }
-        """
-        )
         self.thumbnail_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.thumbnail_label.mousePressEvent = self._on_thumbnail_clicked
         main_layout.addWidget(self.thumbnail_label)
@@ -71,19 +46,10 @@ class PreviewTile(QWidget):
         self.filename_label = QLabel(self.file_name)
         self.filename_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.filename_label.setWordWrap(True)
-        self.filename_label.setFixedWidth(self.thumbnail_size)  # Ogranicz szerokość do rozmiaru miniatury
+        self.filename_label.setFixedWidth(
+            self.thumbnail_size
+        )  # Ogranicz szerokość do rozmiaru miniatury
         self.filename_label.setMaximumHeight(40)  # Maksymalna wysokość dla nazwy pliku
-        self.filename_label.setStyleSheet(
-            """
-            QLabel {
-                color: #CCCCCC; background-color: transparent; font-size: 9px;
-                padding: 2px;
-            }
-            QLabel:hover {
-                font-weight: bold; color: #FFFFFF;
-            }
-        """
-        )
         self.filename_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.filename_label.mousePressEvent = self._on_filename_clicked
         main_layout.addWidget(self.filename_label)
@@ -99,7 +65,9 @@ class PreviewTile(QWidget):
 
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.setFixedWidth(self.thumbnail_size + 10)  # 5px padding on each side
-        self.setFixedHeight(self.thumbnail_size + 70)  # Zwiększona wysokość dla nazwy pliku + checkbox
+        self.setFixedHeight(
+            self.thumbnail_size + 70
+        )  # Zwiększona wysokość dla nazwy pliku + checkbox
 
     def load_thumbnail(self):
         if not os.path.exists(self.file_path):
@@ -118,7 +86,7 @@ class PreviewTile(QWidget):
                 print(f"PreviewTile: Failed to load pixmap for: {self.file_path}")
                 self._create_placeholder_thumbnail()
                 return
-        
+
         # Przeskaluj z cache'a
         self._scale_cached_pixmap()
 
@@ -147,7 +115,7 @@ class PreviewTile(QWidget):
         painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "NO PREVIEW")
         painter.end()
         self.thumbnail_label.setPixmap(pixmap)
-        
+
         # Cache placeholder jako specjalny typ
         self._cached_pixmap = pixmap
         self._is_placeholder = True
@@ -174,8 +142,9 @@ class PreviewTile(QWidget):
         self.setFixedWidth(self.thumbnail_size + 10)
         self.setFixedHeight(self.thumbnail_size + 70)  # Stała wysokość
         self.thumbnail_label.setFixedSize(self.thumbnail_size, self.thumbnail_size)
-        self.filename_label.setFixedWidth(self.thumbnail_size)  # Dopasuj szerokość nazwy pliku
+        self.filename_label.setFixedWidth(
+            self.thumbnail_size
+        )  # Dopasuj szerokość nazwy pliku
         # Używaj cache'a zamiast ładowania z dysku!
         self._scale_cached_pixmap()
         self.updateGeometry()
-
