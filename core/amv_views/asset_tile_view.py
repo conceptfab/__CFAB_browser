@@ -135,13 +135,14 @@ class AssetTileView(TileBase):
         # Usunięto podwójne tworzenie thumbnail_container - przeniesione do _setup_ui_without_styles()
         # Najpierw utwórz ikonę tekstury!
         self.texture_icon = BaseLabel()
+        self.texture_icon.setObjectName("AssetTileTextureIcon")  # Ikona tekstury (16x16px)
         self.texture_icon.setFixedSize(16, 16)
         self.texture_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.texture_icon.setVisible(False)
         self._load_texture_icon()
         # Najpierw utwórz label na nazwę pliku!
         self.name_label = QLabel()
-        self.name_label.setObjectName("AssetNameLabel")
+        self.name_label.setObjectName("AssetTileNameLabel")  # Nazwa pliku (centrum)
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.name_label.setWordWrap(True)
         self.name_label.setSizePolicy(
@@ -150,25 +151,25 @@ class AssetTileView(TileBase):
         self.name_label.setCursor(Qt.CursorShape.PointingHandCursor)
         # Dodaj label na rozmiar pliku
         self.size_label = QLabel()
-        self.size_label.setObjectName("AssetSizeLabel")
+        self.size_label.setObjectName("AssetTileSizeLabel")  # Rozmiar pliku (prawy)
         self.size_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.size_label.setSizePolicy(
             QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
         )
         # Dodaj label na numer kafelka
         self.tile_number_label = QLabel()
-        self.tile_number_label.setObjectName("AssetTileNumberLabel")
+        self.tile_number_label.setObjectName("AssetTileNumberLabel")  # Numer kafelka (lewy)
         self.tile_number_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.tile_number_label.setSizePolicy(
             QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
         )
         # Dodaj checkbox
         self.checkbox = BaseCheckBox()
-        self.checkbox.setObjectName("AssetTileCheckBox")
+        self.checkbox.setObjectName("AssetTileCheckBox")  # Checkbox zaznaczenia (prawy)
         # Dodaj gwiazdki (5)
         self.star_checkboxes = [StarCheckBoxBase() for _ in range(5)]
         for i, star_cb in enumerate(self.star_checkboxes):
-            star_cb.setObjectName(f"AssetTileStar_{i+1}")
+            star_cb.setObjectName(f"AssetTileStar_{i+1}")  # Gwiazdki 1-5 (środek)
             star_cb.setProperty("class", "star")
             star_cb.setText("★")
             star_cb.clicked.connect(
@@ -179,6 +180,7 @@ class AssetTileView(TileBase):
     def _setup_ui_without_styles(self):
         # Najpierw utwórz miniaturkę!
         self.thumbnail_container = BaseLabel()
+        self.thumbnail_container.setObjectName("AssetTileThumbnail")  # Miniaturka (góra)
         thumb_size = self.thumbnail_size
         self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
         self.thumbnail_container.setSizePolicy(
@@ -217,11 +219,13 @@ class AssetTileView(TileBase):
         filename_container.addWidget(self.name_label, 1)
         filename_container.addWidget(self.size_label, 0, Qt.AlignmentFlag.AlignRight)
         filename_bg = QWidget()
+        filename_bg.setObjectName("AssetTileFilenameContainer")  # Kontener nazwy pliku
         filename_bg.setLayout(filename_container)
         layout.addWidget(filename_bg)
 
         # Pasek z numerem, gwiazdkami i checkboxem w jednej linii
         bottom_row_bg = QWidget()
+        bottom_row_bg.setObjectName("AssetTileBottomRow")  # Dolny pasek (numer+gwiazdki+checkbox)
         bottom_row_layout = QHBoxLayout(bottom_row_bg)
         bottom_row_layout.setContentsMargins(0, 0, 0, 0)  # Margines dolny 6px
         bottom_row_layout.setSpacing(4)

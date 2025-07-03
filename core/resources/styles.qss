@@ -123,8 +123,8 @@ QTabBar::tab {
     color: #a9b7c6;
     padding: 5px 10px;
     margin-right: 2px;
-    border-top-left-radius: 2px;
-    border-top-right-radius: 2px;
+    /* border-top-left-radius: 2px; */
+    /* border-top-right-radius: 2px; */
     border: 1px solid #3a3a3a;
     min-width: 80px;
     max-height: 25px;
@@ -170,7 +170,7 @@ QGroupBox::title {
 
 /* ===================== DRZEWO FOLDERÓW ===================== */
 QTreeView, #cfabFolderTree, .cfab-folder-tree QTreeView {
-    background-color: #2b2b2b;
+    background-color: #1C1E2A;
     color: #a9b7c6;
     border: none;
     outline: none;
@@ -181,7 +181,7 @@ QTreeView::item {
     border: none;
 }
 QTreeView::item:hover {
-    background-color: #3a3a3a;
+    background-color: #1C1E2A;
 }
 QTreeView::item:selected, QTreeView::item[dropTarget="true"] {
     background-color: #214383;
@@ -191,7 +191,7 @@ QTreeView::item[dropTarget="true"] {
     border: 2px solid #287bde;
 }
 QTreeView::branch {
-    background-color: #313335;
+    background-color: #1C1E2A;
 }
 
 /* ===================== KAFELKI ASSETÓW ===================== */
@@ -205,23 +205,62 @@ TileBase:hover, .AssetTileView:hover {
     background-color: rgba(40, 120, 222, 0.10);
     border-color: #287bde;
 }
-QLabel[class="thumbnail-container"] {
+
+/* ===================== KAFELKI ASSETÓW - MINIATURKA ===================== */
+/* Styluje kontener miniaturki w kafelku */
+#AssetTileThumbnail {
     border: none;
     background: transparent;
     margin: 0px;
     padding: 0px;
 }
-#AssetTileNumberLabel, #AssetTileCheckBox {
+
+/* ===================== KAFELKI ASSETÓW - IKONA TEKSTURY ===================== */
+/* Styluje ikonę tekstury (16x16px) w kafelku */
+#AssetTileTextureIcon {
+    background: transparent;
     margin: 0px;
     padding: 0px;
     border: none;
 }
-#AssetTileNumberLabel {
-    margin-top: 4px;
+
+/* ===================== KAFELKI ASSETÓW - KONTENER NAZWY PLIKU ===================== */
+/* Styluje kontener z nazwą pliku, ikoną tekstury i rozmiarem */
+#AssetTileFilenameContainer {
+    background: transparent;
+    margin: 0px;
+    padding: 0px;
+    border: none;
 }
-#AssetNameLabel:hover {
-    font-weight: bold;
-    color: #ffffff;
+
+/* ===================== KAFELKI ASSETÓW - DOLNY PAS ===================== */
+/* Styluje dolny pas z numerem, gwiazdkami i checkboxem */
+#AssetTileBottomRow {
+    background: transparent;
+    margin: 0px;
+    padding: 0px;
+    border: none;
+}
+
+/* ===================== KAFELKI ASSETÓW - GWIAZDKI ===================== */
+/* Styluje gwiazdki oceny (1-5) w kafelku */
+#AssetTileStar_1, #AssetTileStar_2, #AssetTileStar_3, #AssetTileStar_4, #AssetTileStar_5 {
+    background: transparent;
+    color: #cc7832;
+    font-size: 14px;
+    margin: 0px;
+    padding: 0px;
+    border: none;
+}
+#AssetTileStar_1:hover, #AssetTileStar_2:hover, #AssetTileStar_3:hover, #AssetTileStar_4:hover, #AssetTileStar_5:hover {
+    color: #ffcc66;
+}
+
+QLabel[class="thumbnail-container"] {
+    border: none;
+    background: transparent;
+    margin: 0px;
+    padding: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z NAZWĄ ===================== */
@@ -233,6 +272,10 @@ QLabel[class="thumbnail-container"] {
     font-size: 12px;
     padding: 2px 8px;
     border-bottom: 1px solid #202230;
+}
+#AssetTileNameLabel:hover {
+    font-weight: bold;
+    color: #ffffff;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z GWIAZDKAMI ===================== */
@@ -350,8 +393,8 @@ QProgressBar {
     background-color: #313335;
     text-align: center;
     color: #a9b7c6;
-    border-radius: 2px;
-    min-width: 200px;
+    border-radius: 6px;
+    margin: 4px;    min-width: 200px;
     max-width: 200px;
 }
 QProgressBar::chunk {
@@ -412,7 +455,7 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
 
 /* ===================== MENU, STATUSBAR, SEPARATORY ===================== */
 QMenu {
-    background-color: #313335;
+    background-color: #1C1E2A;
     color: #a9b7c6;
     border: 1px solid #3a3a3a;
     padding: 2px;
@@ -426,7 +469,7 @@ QMenu::separator {
     margin: 2px 0px;
 }
 QMenuBar {
-    background-color: #2b2b2b;
+    background-color: #1C1E2A;
     color: #a9b7c6;
     border-bottom: 1px solid #3a3a3a;
 }
@@ -441,7 +484,7 @@ QMenuBar::item:pressed {
     background-color: #214383;
 }
 QStatusBar {
-    background-color: #2b2b2b;
+    background-color: #1C1E2A;
     color: #a9b7c6;
     border-top: 1px solid #3a3a3a;
 }
