@@ -5,8 +5,8 @@ Zawiera niestandardowy QTreeView z funkcjonalnością przeciągania assetów.
 
 import logging
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QMenu, QTreeView
 
 from core.file_utils import open_path_in_explorer
@@ -33,9 +33,14 @@ class CustomFolderTreeView(QTreeView):
         self.rebuild_callback = None  # Callback do przebudowy assetów
         self.open_in_explorer_callback = None  # Callback do otwierania w eksploratorze
         self.refresh_folder_callback = None  # Callback do odświeżania folderu
+        self._active_folder_index = None  # Indeks aktywnego folderu
 
         # Włącz obsługę drop
         self.setAcceptDrops(True)
+
+        # Podpięcie sygnałów expanded/collapsed
+        self.expanded.connect(self._on_item_expanded)
+        self.collapsed.connect(self._on_item_collapsed)
 
     def set_models(
         self,
@@ -61,6 +66,16 @@ class CustomFolderTreeView(QTreeView):
     def set_refresh_folder_callback(self, callback):
         """Ustawia callback do odświeżania folderu."""
         self.refresh_folder_callback = callback
+
+    def setModel(self, model):
+        super().setModel(model)
+        # Podpinaj sygnał currentChanged z opóźnieniem, by selectionModel już istniał
+        QTimer.singleShot(0, self._connect_selection_model)
+
+    def _connect_selection_model(self):
+        sel_model = self.selectionModel()
+        if sel_model:
+            sel_model.currentChanged.connect(self._on_current_folder_changed)
 
     def contextMenuEvent(self, event):
         """Obsługuje menu kontekstowe dla folderu."""
@@ -415,3 +430,29 @@ class CustomFolderTreeView(QTreeView):
         except Exception as e:
             logger.error(f"Error clearing folder highlight: {e}")
             self._highlighted_index = None
+
+    def _on_item_expanded(self, index):
+        item = self.model().itemFromIndex(index)
+        if item:
+            item.setIcon(QIcon("core/resources/img/open_folder_icon.png"))
+
+    def _on_item_collapsed(self, index):
+        item = self.model().itemFromIndex(index)
+        if item:
+            item.setIcon(QIcon("core/resources/img/folder_icon.png"))
+
+    def _on_current_folder_changed(self, current, previous):
+        # Przywróć ikonę poprzedniemu folderowi
+        if previous.isValid():
+            prev_item = self.model().itemFromIndex(previous)
+            if prev_item:
+                if self.isExpanded(previous):
+                    prev_item.setIcon(QIcon("core/resources/img/open_folder_icon.png"))
+                else:
+                    prev_item.setIcon(QIcon("core/resources/img/folder_icon.png"))
+        # Ustaw ikonę aktywnego folderu
+        if current.isValid():
+            curr_item = self.model().itemFromIndex(current)
+            if curr_item:
+                curr_item.setIcon(QIcon("core/resources/img/workfolder_icon.png"))
+        self._active_folder_index = current

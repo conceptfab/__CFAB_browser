@@ -44,6 +44,14 @@ class FolderTreeController(QObject):
                 self.on_folder_refresh_requested
             )
 
+        # Podpięcie sygnału currentChanged po ustawieniu modelu
+        if hasattr(self.view.folder_tree_view, "_on_current_folder_changed"):
+            sel_model = self.view.folder_tree_view.selectionModel()
+            if sel_model:
+                sel_model.currentChanged.connect(
+                    self.view.folder_tree_view._on_current_folder_changed
+                )
+
         logger.debug("Folder system model connected to view - ETAP 6")
 
     def on_folder_structure_changed(self, tree_model):

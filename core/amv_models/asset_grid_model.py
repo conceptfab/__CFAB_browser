@@ -256,7 +256,7 @@ class FolderSystemModel(QObject):
             logger.debug(
                 f"_load_folder_structure - root_item data: {root_item.data(Qt.ItemDataRole.UserRole)}"
             )
-            root_item.setIcon(QIcon("core/resources/img/folder.png"))
+            root_item.setIcon(QIcon("core/resources/img/folder_icon.png"))
             root_item.setEditable(False)
             self._tree_model.appendRow(root_item)
             self._load_subfolders(root_item, self._root_folder)
@@ -286,7 +286,7 @@ class FolderSystemModel(QObject):
                 )
                 folder_item = QStandardItem(folder_name)
                 folder_item.setData(f_path, Qt.ItemDataRole.UserRole)
-                folder_item.setIcon(QIcon("core/resources/img/folder.png"))
+                folder_item.setIcon(QIcon("core/resources/img/folder_icon.png"))
                 folder_item.setEditable(False)
                 if any(
                     os.path.isdir(os.path.join(f_path, sub)) and not sub.startswith(".")
