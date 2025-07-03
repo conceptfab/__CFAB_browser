@@ -1,0 +1,475 @@
+/* Style bazujące na CFAB NeuroSorter */
+
+/* --- Definicje kolorów z base_widgets.py --- */
+/*
+    COLOR_BACKGROUND_DARK = "#1E1E1E"
+    COLOR_BACKGROUND_MEDIUM = "#252526"
+    COLOR_BACKGROUND_LIGHT = "#2D2D30"
+    COLOR_BACKGROUND_LIGHTER = "#2A2D2E"
+    COLOR_BORDER_DARK = "#3F3F46"
+    COLOR_BORDER_MEDIUM = "#555555"
+    COLOR_TEXT_LIGHT = "#CCCCCC"
+    COLOR_TEXT_DISABLED = "#666666"
+    COLOR_ACCENT_BLUE = "#007ACC"
+    COLOR_ACCENT_BLUE_HOVER = "#1C97EA"
+    COLOR_ACCENT_BLUE_PRESSED = "#005A9E"
+    COLOR_SCROLLBAR_HANDLE = "#424242"
+    COLOR_SCROLLBAR_HANDLE_HOVER = "#535353"
+    COLOR_STAR_CHECKED = "#FFD700"
+    COLOR_STAR_HOVER = "#FFA500"
+    COLOR_BUTTON_HOVER = "#2A2D2E"
+    COLOR_BUTTON_PRESSED = "#3E3E40"
+    COLOR_CONTROL_BUTTON_BACKGROUND = "#3C3C3C"
+    COLOR_CONTROL_BUTTON_HOVER = "#4A4A4A"
+    COLOR_CONTROL_BUTTON_DISABLED_BACKGROUND = "#2A2A2A"
+    COLOR_WARNING_RED = "#DC2626"
+    COLOR_WARNING_RED_HOVER = "#EF4444"
+    COLOR_WARNING_RED_PRESSED = "#B91C1C"
+    COLOR_SUCCESS_GREEN = "#10B981"
+    COLOR_SUCCESS_GREEN_HOVER = "#059669"
+    COLOR_SUCCESS_GREEN_PRESSED = "#047857"
+*/
+
+/* --- Definicje kolorów z _apply_material_theme --- */
+/*
+    primary_color: #007ACC;
+    success_color: #10B981;
+    warning_color: #DC2626;
+    background_color: #1E1E1E;
+    surface_color: #252526;
+    border_color: #3F3F46;
+    text_color: #CCCCCC;
+    selection_color: #264F78;
+*/
+
+QMainWindow, QDialog {
+    background-color: #1E1E1E; /* background */
+    color: #CCCCCC; /* text_color */
+}
+
+QPushButton {
+    background-color: #252526; /* surface */
+    color: #CCCCCC; /* text_color */
+    border: 1px solid #3F3F46; /* border_color */
+    border-radius: 2px;
+    padding: 4px 12px;
+    min-height: 24px;
+    max-height: 24px;
+}
+
+QPushButton:hover {
+    background-color: #2A2D2E;
+}
+
+QPushButton:pressed {
+    background-color: #3E3E40;
+}
+
+/* --- Przyciski akcji z _apply_material_theme --- */
+/* Aby ich użyć w prostej aplikacji, musisz nadać przyciskom property, np: */
+/* w Pythonie: button.setProperty("action", "primary") */
+QPushButton[action="primary"] {
+    background-color: #007ACC; /* primary_color */
+    color: white;
+    border: none;
+}
+QPushButton[action="primary"]:hover {
+    background-color: #1C97EA;
+}
+QPushButton[action="primary"]:pressed {
+    background-color: #005A9E;
+}
+
+QPushButton[action="warning"] {
+    background-color: #DC2626; /* warning_color */
+    color: white;
+    border: none;
+}
+QPushButton[action="warning"]:hover {
+    background-color: #EF4444;
+}
+QPushButton[action="warning"]:pressed {
+    background-color: #B91C1C;
+}
+
+QPushButton[action="success"] {
+    background-color: #10B981; /* success_color */
+    color: white;
+    border: none;
+}
+QPushButton[action="success"]:hover {
+    background-color: #059669;
+}
+QPushButton[action="success"]:pressed {
+    background-color: #047857;
+}
+
+/* --- Zakładki (Tabs) z _apply_material_theme --- */
+QTabWidget {
+    border: none; /* NAPRAWKA: usuń zbędne obramowanie */
+}
+
+QTabWidget::pane {
+    border: 1px solid #3F3F46; /* border_color */
+    background-color: #252526; /* surface */
+    color: #CCCCCC; /* text_color - dziedziczone, ale można jawnie */
+    top: -1px; /* Zapobiega podwójnej granicy */
+    margin: 0px; /* NAPRAWKA: usuń nadmierne marginesy */
+    padding: 2px; /* NAPRAWKA: minimalny padding */
+}
+
+QTabBar::tab {
+    background-color: #1E1E1E; /* background */
+    color: #CCCCCC; /* text_color */
+    padding: 5px 10px;
+    margin-right: 2px;
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border: 1px solid #3F3F46; /* border_color */
+    min-width: 80px;
+    max-height: 25px;
+}
+
+QTabBar::tab:selected {
+    background-color: #252526; /* surface */
+    border-bottom-color: #252526; /* Łączy się z panelem */
+    font-weight: bold; /* Wyróżnienie aktywnej zakładki */
+}
+
+QTabBar::tab:hover {
+    background-color: #2A2D2E; /* Lekko jaśniejszy przy najechaniu */
+}
+
+QTabBar::tab:disabled {
+    color: #666666; /* Wygaszone zakładki */
+    background-color: #1A1A1A;
+}
+
+/* Zapobiega znikaniu zakładek */
+QTabWidget::tab-bar {
+    alignment: left;
+    background: #1E1E1E;
+}
+
+/* Poprawia widoczność aktywnej zakładki */
+QTabWidget::tab-bar::tab:selected {
+    margin-bottom: -1px;
+    border-bottom: 2px solid #007ACC; /* primary_color */
+}
+
+/* --- Grupy (GroupBox) z _apply_material_theme --- */
+QGroupBox {
+    background-color: #252526; /* surface */
+    color: #CCCCCC; /* text_color */
+    border: 1px solid #3F3F46; /* border_color */
+    border-radius: 2px;
+    margin-top: 14px;
+    padding-top: 14px;
+    font-weight: normal;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 8px; /* W Twoim kodzie było subcontrol-position, ale QSS preferuje left/right/top/bottom dla subcontrol-origin: margin */
+    padding: 0 5px;
+    color: #FFFFFF; /* text_color dla tytułu był #FFFFFF */
+}
+
+/* --- Pola edycji i tabele z _apply_material_theme --- */
+QLineEdit, QTextEdit, QTableWidget { /* Dodaj QSpinBox, QComboBox itp. jeśli też mają tak wyglądać */
+    background-color: #1C1C1C; /* Ciemniejsze tło */
+    color: #CCCCCC; /* text_color */
+    border: 1px solid #3F3F46; /* border_color */
+    border-radius: 2px;
+    padding: 2px; /* W Twoim kodzie było padding: 2px */
+    selection-background-color: #264F78; /* selection_color */
+}
+
+QTableWidget::item:selected {
+    background-color: #264F78; /* selection_color */
+    color: #FFFFFF; /* Biały tekst zaznaczenia */
+}
+
+QHeaderView::section {
+    background-color: #252526; /* surface */
+    color: #CCCCCC; /* text_color */
+    padding: 2px;
+    border: 1px solid #3F3F46; /* border_color */
+}
+
+/* --- Pasek postępu z _apply_material_theme --- */
+QProgressBar {
+    border: 1px solid #3F3F46; /* border_color */
+    background-color: #252526; /* surface */
+    text-align: center;
+    color: #CCCCCC; /* Dodaję, bo może być potrzebne */
+}
+
+QProgressBar::chunk {
+    background-color: #007ACC; /* primary_color */
+}
+
+/* --- Etykiety z _apply_material_theme --- */
+QLabel {
+    color: #CCCCCC; /* text_color */
+    background-color: transparent; /* Ogólne ustawienie */
+}
+
+/* --- Menu z _apply_material_theme --- */
+QMenu {
+    background-color: #252526; /* surface */
+    color: #CCCCCC; /* text_color */
+    border: 1px solid #3F3F46; /* border_color */
+}
+
+QMenu::item:selected {
+    background-color: #264F78; /* selection_color */
+    /* color: white; Można dodać jeśli chcemy biały tekst */
+}
+
+/* Style dla MenuBar (nie było w _apply_material_theme, dodaję podstawowe) */
+QMenuBar {
+    background-color: #1E1E1E;
+    color: #CCCCCC;
+}
+QMenuBar::item {
+    background: transparent;
+    padding: 4px 8px;
+}
+QMenuBar::item:selected {
+    background-color: #2A2D2E;
+}
+QMenuBar::item:pressed {
+    background-color: #252526;
+}
+
+
+/* --- Style z _create_console_panel --- */
+
+/* Dla nagłówków KONSOLA i POSTĘP AKTUALNEGO ZADANIA */
+/* Użyj objectName w Pythonie, np. console_header.setObjectName("ConsoleHeaderLabel") */
+#ConsoleHeaderLabel, #ProgressHeaderLabel {
+    font-weight: bold;
+    color: #CCCCCC;
+    font-size: 11px;
+    padding-bottom: 4px;
+}
+
+/* Dla QTextEdit konsoli */
+/* Użyj self.console_text.setObjectName("ConsoleOutput") */
+#ConsoleOutput {
+    background-color: #1C1C1C;
+    color: #CCCCCC;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 10px;
+}
+
+/* Dla etykiet informacyjnych w panelu postępu */
+/* Np. self.current_task_info.setObjectName("CurrentTaskInfoLabel") */
+/* self.task_progress_details.setObjectName("TaskProgressDetailsLabel") */
+#CurrentTaskInfoLabel {
+    color: #CCCCCC; /* Już pokryte przez ogólne QLabel, ale można bardziej specyficznie */
+}
+#TaskProgressDetailsLabel {
+    color: #CCCCCC;
+    font-style: italic;
+}
+
+/* Dla przycisku zatrzymania zadania */
+/* Np. self.stop_task_btn.setObjectName("StopTaskButton") */
+#StopTaskButton { /* Ważne: To ID musi być ustawione w Pythonie! */
+    min-width: 80px;
+    max-width: 80px;
+}
+
+/* Specjalny styl dla przycisku zamykania/otwierania panelu */
+#panelToggleButton {
+    background-color: transparent;
+    border: 1px solid #3F3F46;
+    border-radius: 4px;
+    padding: 0px; /* Reset paddingu */
+    min-width: 24px; /* Ignoruje globalne */
+    min-height: 24px; /* Ignoruje globalne */
+}
+
+#panelToggleButton:hover {
+    background-color: #3F3F46;
+    border-color: #007ACC;
+}
+
+#panelToggleButton:pressed {
+    background-color: #007ACC;
+}
+
+#collapseButton, #expandButton {
+    background-color: #2D2D30;
+    color: #CCCCCC;
+    border: 1px solid #3F3F46;
+    border-radius: 4px;
+    font-size: 10px;
+    padding: 1px 4px;
+    text-align: center;
+}
+
+#collapseButton:hover, #expandButton:hover {
+    background-color: #3F3F46;
+    border-color: #007ACC;
+}
+
+#collapseButton:pressed, #expandButton:pressed {
+    background-color: #007ACC;
+    color: #FFFFFF;
+}
+
+/* Dla separatora */
+QFrame[frameShape="HLine"] {
+    /* QSS nie ma bezpośredniego odpowiednika dla setStyleSheet("background-color: #3F3F46;") */
+    /* dla QFrame rysującego linię. Kolor linii jest zwykle dziedziczony lub kontrolowany */
+    /* przez właściwości palety. Można spróbować: */
+    border: none;
+    border-top: 1px solid #3F3F46; /* Rysuje górną krawędź jako linię */
+    /* Lub jeśli chcesz mieć grubszy separator jako tło: */
+    /* background-color: #3F3F46; */
+    /* min-height: 1px; */
+    /* max-height: 1px; */
+}
+
+/* Pasek statusu */
+QStatusBar {
+    background-color: #1E1E1E; /* Dopasowuję do tła głównego okna */
+    color: #A0A0A0; /* Standardowy kolor tekstu statusu */
+    border-top: 1px solid #3F3F46; /* Linia oddzielająca */
+}
+QStatusBar::item {
+    border: none;
+}
+
+QTreeView::item:selected, QTreeView::item[dropTarget="true"] {
+    background-color: #007ACC;
+    color: #FFFFFF;
+}
+QTreeView::item[dropTarget="true"] {
+    border: 2px solid #FFD700;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                 ScrollBars                                 */
+/* -------------------------------------------------------------------------- */
+QScrollBar:vertical {
+    border: none;
+    background: #1E1E1E;
+    width: 12px;
+    margin: 12px 0 12px 0;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical {
+    background: #3F3F46;
+    min-height: 20px;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #52525B;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+    height: 12px;
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            AMV Control Panel Buttons                       */
+/* -------------------------------------------------------------------------- */
+#controlPanel QPushButton { /* General style for all buttons in the control panel */
+    background-color: #3C3C3C;
+    color: #CCCCCC;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 4px 8px;
+    min-width: 120px;
+}
+#controlPanel QPushButton:hover {
+    background-color: #4A4A4A;
+    border-color: #007ACC;
+    color: #FFFFFF;
+}
+#controlPanel QPushButton:pressed {
+    background-color: #007ACC;
+    color: #FFFFFF;
+}
+#controlPanel QPushButton:disabled {
+    background-color: #2A2A2A;
+    color: #666666;
+    border-color: #3C3C3C;
+}
+
+/* Wymiary przycisków kontrolnych są teraz w klasach bazowych */
+
+QSlider::groove:horizontal {
+    border: 1px solid #3F3F46;
+    height: 4px;
+    background: #3F3F46;
+    margin: 2px 0;
+    border-radius: 2px;
+}
+
+QSlider::handle:horizontal {
+    background-color: #007ACC;
+    border: 1px solid #007ACC;
+    width: 14px;
+    height: 14px;
+    margin: -6px 0;
+    border-radius: 8px;
+}
+
+#AssetNameLabel:hover {
+    font-weight: bold;
+    color: #FFFFFF;
+}
+
+/* --- Folder TreeView styl CFAB --- */
+.cfab-folder-tree {
+}
+.cfab-folder-tree QTreeView {
+    background-color: #1E1E1E;
+    color: #CCCCCC;
+    border: none;
+    outline: none;
+    font-size: 11px;
+}
+.cfab-folder-tree QTreeView::item {
+    padding: 2px;
+    border: none;
+}
+.cfab-folder-tree QTreeView::item:hover {
+    background-color: #3F3F46;
+}
+.cfab-folder-tree QTreeView::item:selected {
+    background-color: #007ACC;
+    color: #FFFFFF;
+}
+.cfab-folder-tree QTreeView::branch {
+    background-color: #1E1E1E;
+}
+/* Ikony branch są domyślne, nie przenoszę base64 */
+.cfab-folder-tree QScrollBar:vertical {
+    background-color: #1E1E1E;
+    width: 12px;
+    border-radius: 6px;
+}
+.cfab-folder-tree QScrollBar::handle:vertical {
+    background-color: #3F3F46;
+    border-radius: 6px;
+    min-height: 20px;
+}
+.cfab-folder-tree QScrollBar::handle:vertical:hover {
+    background-color: #52525B;
+}
+.cfab-folder-tree QScrollBar::add-line:vertical,
+.cfab-folder-tree QScrollBar::sub-line:vertical {
+    height: 0px;
+}
