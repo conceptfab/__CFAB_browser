@@ -140,6 +140,12 @@ class AssetTileView(TileBase):
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
         self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.thumbnail_container.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )  # DODANE: Centrowanie zawartości
+        self.thumbnail_container.setContentsMargins(
+            0, 0, 0, 0
+        )  # DODANE: Usuwa wszelkie wewnętrzne marginesy
         # Najpierw utwórz ikonę tekstury!
         self.texture_icon = BaseLabel()
         self.texture_icon.setFixedSize(16, 16)
@@ -192,8 +198,12 @@ class AssetTileView(TileBase):
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
         self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.thumbnail_container.setAlignment(Qt.AlignmentFlag.AlignCenter) # Zapewnia centrowanie zawartości
-        self.thumbnail_container.setContentsMargins(0, 0, 0, 0) # Usuwa wszelkie wewnętrzne marginesy
+        self.thumbnail_container.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )  # Zapewnia centrowanie zawartości
+        self.thumbnail_container.setContentsMargins(
+            0, 0, 0, 0
+        )  # Usuwa wszelkie wewnętrzne marginesy
         # Najpierw utwórz ikonę tekstury!
         self.texture_icon = BaseLabel()
         self.texture_icon.setFixedSize(16, 16)
@@ -246,13 +256,21 @@ class AssetTileView(TileBase):
         layout.setSpacing(6)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # MINIATURKA - najważniejsza, 10px marginesów wokół
+        # MINIATURKA - najważniejsza, 12px marginesów wokół (ujednolicenie z resztą)
         thumb_container = QWidget()
         thumb_layout = QVBoxLayout(thumb_container)
-        thumb_layout.setContentsMargins(10, 10, 10, 10)
+        thumb_layout.setContentsMargins(
+            12, 10, 12, 10
+        )  # ZMIENIONE: z (10,10,10,10) na (12,10,12,10)
         thumb_layout.setSpacing(0)
+        thumb_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # DODANE: Wyśrodkowanie
         self.thumbnail_container.setContentsMargins(0, 0, 0, 0)
-        thumb_layout.addWidget(self.thumbnail_container)
+        self.thumbnail_container.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )  # DODANE: Wyśrodkowanie zawartości
+        thumb_layout.addWidget(
+            self.thumbnail_container, 0, Qt.AlignmentFlag.AlignCenter
+        )  # DODANE: Wyśrodkowanie widgetu
         layout.addWidget(thumb_container)
 
         # Pasek z nazwą pliku, ikonką tekstury i rozmiarem

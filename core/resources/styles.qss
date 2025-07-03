@@ -502,15 +502,24 @@ QCheckBox.star:hover {
     color: #FFA500;
 }
 
-/* Styl kafelków z assetami */
+/* Styl kafelków z assetami - dodanie symetrycznych marginesów */
 TileBase, .AssetTileView {
     background-color: #23232a;
     border: 1px solid #3F3F46;
     border-radius: 6px;
-    padding: 4px;
+    padding: 6px;  /* Zmniejszone z 4px na 6px dla lepszej symetrii */
     margin: 2px;
 }
+
 TileBase:hover, .AssetTileView:hover {
     border-color: #007ACC;
     background-color: #282838;
+}
+
+/* DODANE: Specjalny styl dla kontenerów miniatur */
+QLabel[class="thumbnail-container"] {
+    border: none;
+    background: transparent;
+    margin: 0px;
+    padding: 0px;
 }
