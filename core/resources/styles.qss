@@ -42,6 +42,8 @@
     selection_color: #264F78;
 */
 
+@statusBarColor: #161720;
+
 QMainWindow, QDialog {
     background-color: #1E1E1E; /* background */
     color: #CCCCCC; /* text_color */
@@ -336,9 +338,9 @@ QFrame[frameShape="HLine"] {
 
 /* Pasek statusu */
 QStatusBar {
-    background-color: #1E1E1E; /* Dopasowuję do tła głównego okna */
-    color: #A0A0A0; /* Standardowy kolor tekstu statusu */
-    border-top: 1px solid #3F3F46; /* Linia oddzielająca */
+    background-color: #161720;
+    color: #CCCCCC;
+    border-top: 1px solid #3F3F46;
 }
 QStatusBar::item {
     border: none;
@@ -432,10 +434,13 @@ QSlider::handle:horizontal {
 }
 
 /* --- Folder TreeView styl CFAB --- */
-.cfab-folder-tree {
+#cfabFolderTree {
+    background-color: #161720;
+    color: #CCCCCC;
+    border: none;
 }
 .cfab-folder-tree QTreeView {
-    background-color: #1E1E1E;
+    background-color: #161720;
     color: #CCCCCC;
     border: none;
     outline: none;
