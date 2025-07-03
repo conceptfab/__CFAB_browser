@@ -122,12 +122,7 @@ class ThumbnailGenerator:
 
     def _resize_to_square(self, img: Image.Image, size: int) -> Image.Image:
         """
-        Przeskalowuje obraz do kwadratu z zachowaniem proporcji
-
-        WAŻNE: NIE MODYFIKUJ TEJ FUNKCJI!
-        Logika przycinania:
-        - Wysokie obrazy: przycinane od GÓRY
-        - Szerokie obrazy: przycinane od LEWEJ STRONY
+        Przeskalowuje obraz do kwadratu z zachowaniem proporcji i centrowaniem.
         """
         width, height = img.size
 
@@ -139,13 +134,21 @@ class ThumbnailGenerator:
         # Przeskaluj
         img = img.resize((new_width, new_height), LANCZOS)
 
-        # Przyciąć do kwadratu
+        # Przyciąć do kwadratu, centrowanie
         if new_width > size:
-            # Szerokie obrazy - przycinaj od lewej strony
-            img = img.crop((0, 0, size, size))
+            # Szerokie obrazy - przycinaj od środka
+            left = (new_width - size) / 2
+            top = 0
+            right = (new_width + size) / 2
+            bottom = size
+            img = img.crop((left, top, right, bottom))
         elif new_height > size:
-            # Wysokie obrazy - przycinaj od góry
-            img = img.crop((0, 0, size, size))
+            # Wysokie obrazy - przycinaj od środka
+            left = 0
+            top = (new_height - size) / 2
+            right = size
+            bottom = (new_height + size) / 2
+            img = img.crop((left, top, right, bottom))
 
         return img
 

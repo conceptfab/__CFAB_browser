@@ -192,6 +192,8 @@ class AssetTileView(TileBase):
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
         self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.thumbnail_container.setAlignment(Qt.AlignmentFlag.AlignCenter) # Zapewnia centrowanie zawartości
+        self.thumbnail_container.setContentsMargins(0, 0, 0, 0) # Usuwa wszelkie wewnętrzne marginesy
         # Najpierw utwórz ikonę tekstury!
         self.texture_icon = BaseLabel()
         self.texture_icon.setFixedSize(16, 16)
@@ -356,9 +358,10 @@ class AssetTileView(TileBase):
 
     def _set_thumbnail_pixmap(self, pixmap: QPixmap):
         """Ustawia QPixmap na etykiecie miniaturki, skalując go."""
+        # Użyj rzeczywistego rozmiaru QLabel do skalowania
+        target_size = self.thumbnail_container.size()
         scaled_pixmap = pixmap.scaled(
-            self.thumbnail_size,
-            self.thumbnail_size,
+            target_size,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation,
         )
