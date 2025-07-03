@@ -1,5 +1,35 @@
 /* Style bazujące na CFAB NeuroSorter */
 
+/* --- Definicje kolorów z base_widgets.py --- */
+/*
+    COLOR_BACKGROUND_DARK = "#1E1E1E"
+    COLOR_BACKGROUND_MEDIUM = "#252526"
+    COLOR_BACKGROUND_LIGHT = "#2D2D30"
+    COLOR_BACKGROUND_LIGHTER = "#2A2D2E"
+    COLOR_BORDER_DARK = "#3F3F46"
+    COLOR_BORDER_MEDIUM = "#555555"
+    COLOR_TEXT_LIGHT = "#CCCCCC"
+    COLOR_TEXT_DISABLED = "#666666"
+    COLOR_ACCENT_BLUE = "#007ACC"
+    COLOR_ACCENT_BLUE_HOVER = "#1C97EA"
+    COLOR_ACCENT_BLUE_PRESSED = "#005A9E"
+    COLOR_SCROLLBAR_HANDLE = "#424242"
+    COLOR_SCROLLBAR_HANDLE_HOVER = "#535353"
+    COLOR_STAR_CHECKED = "#FFD700"
+    COLOR_STAR_HOVER = "#FFA500"
+    COLOR_BUTTON_HOVER = "#2A2D2E"
+    COLOR_BUTTON_PRESSED = "#3E3E40"
+    COLOR_CONTROL_BUTTON_BACKGROUND = "#3C3C3C"
+    COLOR_CONTROL_BUTTON_HOVER = "#4A4A4A"
+    COLOR_CONTROL_BUTTON_DISABLED_BACKGROUND = "#2A2A2A"
+    COLOR_WARNING_RED = "#DC2626"
+    COLOR_WARNING_RED_HOVER = "#EF4444"
+    COLOR_WARNING_RED_PRESSED = "#B91C1C"
+    COLOR_SUCCESS_GREEN = "#10B981"
+    COLOR_SUCCESS_GREEN_HOVER = "#059669"
+    COLOR_SUCCESS_GREEN_PRESSED = "#047857"
+*/
+
 /* --- Definicje kolorów z _apply_material_theme --- */
 /*
     primary_color: #007ACC;
@@ -248,19 +278,47 @@ QMenuBar::item:pressed {
 /* Dla przycisku zatrzymania zadania */
 /* Np. self.stop_task_btn.setObjectName("StopTaskButton") */
 #StopTaskButton { /* Ważne: To ID musi być ustawione w Pythonie! */
-    background-color: #DC2626; /* warning_color */
-    color: white;
-    border: none; /* Zgodnie z Twoim kodem */
-    border-radius: 4px; /* Zgodnie z Twoim kodem */
-    padding: 4px 8px; /* Zgodnie z Twoim kodem */
-    /* min-height i max-height dziedziczone z ogólnego QPushButton */
+    min-width: 80px;
+    max-width: 80px;
 }
-#StopTaskButton:hover {
-    background-color: #EF4444; /* Jaśniejszy czerwony */
+
+/* Specjalny styl dla przycisku zamykania/otwierania panelu */
+#panelToggleButton {
+    background-color: transparent;
+    border: 1px solid #3F3F46;
+    border-radius: 4px;
+    padding: 0px; /* Reset paddingu */
+    min-width: 24px; /* Ignoruje globalne */
+    min-height: 24px; /* Ignoruje globalne */
 }
-#StopTaskButton:disabled {
-    background-color: #4B5563; /* Ciemnoszary */
-    color: #9CA3AF; /* Jasnoszary tekst */
+
+#panelToggleButton:hover {
+    background-color: #3F3F46;
+    border-color: #007ACC;
+}
+
+#panelToggleButton:pressed {
+    background-color: #007ACC;
+}
+
+#collapseButton, #expandButton {
+    background-color: #2D2D30;
+    color: #CCCCCC;
+    border: 1px solid #3F3F46;
+    border-radius: 4px;
+    font-size: 10px;
+    padding: 1px 4px;
+    text-align: center;
+}
+
+#collapseButton:hover, #expandButton:hover {
+    background-color: #3F3F46;
+    border-color: #007ACC;
+}
+
+#collapseButton:pressed, #expandButton:pressed {
+    background-color: #007ACC;
+    color: #FFFFFF;
 }
 
 /* Dla separatora */
@@ -292,4 +350,126 @@ QTreeView::item:selected, QTreeView::item[dropTarget="true"] {
 }
 QTreeView::item[dropTarget="true"] {
     border: 2px solid #FFD700;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                 ScrollBars                                 */
+/* -------------------------------------------------------------------------- */
+QScrollBar:vertical {
+    border: none;
+    background: #1E1E1E;
+    width: 12px;
+    margin: 12px 0 12px 0;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical {
+    background: #3F3F46;
+    min-height: 20px;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #52525B;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+    height: 12px;
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                            AMV Control Panel Buttons                       */
+/* -------------------------------------------------------------------------- */
+#controlPanel QPushButton { /* General style for all buttons in the control panel */
+    background-color: #3C3C3C;
+    color: #CCCCCC;
+    border: 1px solid #555555;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 4px 8px;
+    min-width: 120px;
+}
+#controlPanel QPushButton:hover {
+    background-color: #4A4A4A;
+    border-color: #007ACC;
+    color: #FFFFFF;
+}
+#controlPanel QPushButton:pressed {
+    background-color: #007ACC;
+    color: #FFFFFF;
+}
+#controlPanel QPushButton:disabled {
+    background-color: #2A2A2A;
+    color: #666666;
+    border-color: #3C3C3C;
+}
+
+/* Wymiary przycisków kontrolnych są teraz w klasach bazowych */
+
+QSlider::groove:horizontal {
+    border: 1px solid #3F3F46;
+    height: 4px;
+    background: #3F3F46;
+    margin: 2px 0;
+    border-radius: 2px;
+}
+
+QSlider::handle:horizontal {
+    background-color: #007ACC;
+    border: 1px solid #007ACC;
+    width: 14px;
+    height: 14px;
+    margin: -6px 0;
+    border-radius: 8px;
+}
+
+#AssetNameLabel:hover {
+    font-weight: bold;
+    color: #FFFFFF;
+}
+
+/* --- Folder TreeView styl CFAB --- */
+.cfab-folder-tree {
+}
+.cfab-folder-tree QTreeView {
+    background-color: #1E1E1E;
+    color: #CCCCCC;
+    border: none;
+    outline: none;
+    font-size: 11px;
+}
+.cfab-folder-tree QTreeView::item {
+    padding: 2px;
+    border: none;
+}
+.cfab-folder-tree QTreeView::item:hover {
+    background-color: #3F3F46;
+}
+.cfab-folder-tree QTreeView::item:selected {
+    background-color: #007ACC;
+    color: #FFFFFF;
+}
+.cfab-folder-tree QTreeView::branch {
+    background-color: #1E1E1E;
+}
+/* Ikony branch są domyślne, nie przenoszę base64 */
+.cfab-folder-tree QScrollBar:vertical {
+    background-color: #1E1E1E;
+    width: 12px;
+    border-radius: 6px;
+}
+.cfab-folder-tree QScrollBar::handle:vertical {
+    background-color: #3F3F46;
+    border-radius: 6px;
+    min-height: 20px;
+}
+.cfab-folder-tree QScrollBar::handle:vertical:hover {
+    background-color: #52525B;
+}
+.cfab-folder-tree QScrollBar::add-line:vertical,
+.cfab-folder-tree QScrollBar::sub-line:vertical {
+    height: 0px;
 }

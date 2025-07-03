@@ -4,6 +4,29 @@
 
 ---
 
+## ✅ WYKONANE POPRAWKI
+
+### 📄 core/amv_controllers/amv_controller.py - ✅ UKOŃCZONE (2024-12-19)
+
+**Wykonane zmiany:**
+
+- ✅ Usunięto nieużywane importy: `sys`, `subprocess`
+- ✅ Zastąpiono wywołania `self._open_path_in_explorer()` funkcją `open_path_in_explorer()` z `core.file_utils`
+- ✅ Zastąpiono logikę w `_on_tile_filename_clicked()` funkcją `open_file_in_default_app()` z `core.file_utils`
+- ✅ Usunięto nieużywaną metodę `_open_path_in_default_app()`
+- ✅ Usunięto duplikowaną metodę `_open_path_in_explorer()`
+
+**Weryfikacja:**
+
+- ✅ Brak importów `sys` i `subprocess` w pliku
+- ✅ Brak metod `_open_path_in_explorer` i `_open_path_in_default_app`
+- ✅ Używane są funkcje z `core.file_utils`
+- ✅ Funkcjonalność otwierania plików zachowana
+
+**Status:** ✅ UKOŃCZONE - Wszystkie poprawki wykonane zgodnie z raportem refactor.md
+
+---
+
 ## 🏛️ FILARY PRAC
 
 Prace opierają się na trzech kluczowych filarach:
@@ -11,6 +34,93 @@ Prace opierają się na trzech kluczowych filarach:
 1.  **WYDAJNOŚĆ** ⚡: Optymalizacja czasu, redukcja zużycia pamięci, eliminacja wąskich gardeł.
 2.  **STABILNOŚĆ** 🛡️: Niezawodność, proper error handling, thread safety, eliminacja memory leaks i deadlocków.
 3.  **WYELIMINOWANIE OVER-ENGINEERING** 🎯: Upraszczanie kodu, eliminacja zbędnych abstrakcji, redukcja zależności, konsolidacja funkcjonalności.
+
+---
+
+## 🎯 DWUFAZOWY PROCES OKREŚLANIA PRIORYTETÓW
+
+### 📋 FAZA 1: PRIORYTET PLIKU W STRUKTURZE PROJEKTU
+
+**Cel:** Określenie jak ważny jest dany plik w kontekście projektu i jaki ma wpływ na realizowanie logiki biznesowej.
+
+**Kryteria oceny:**
+
+#### ⚫⚫⚫⚫ KRYTYCZNE (Podstawowa funkcjonalność)
+
+- Główne algorytmy biznesowe aplikacji
+- Core procesy przetwarzania danych
+- Główne komponenty UI odpowiedzialne za UX
+- Kontrolery koordynujące procesy biznesowe
+- Modele danych biznesowych
+- Serwisy odpowiedzialne za główne operacje
+
+#### 🔴🔴🔴 WYSOKIE (Ważne operacje biznesowe)
+
+- Ważne algorytmy pomocnicze
+- Komponenty UI drugiego poziomu
+- Workery i serwisy pomocnicze
+- Modele konfiguracji i cache
+- Operacje na plikach i I/O
+
+#### 🟡🟡 ŚREDNIE (Funkcjonalności pomocnicze)
+
+- Komponenty UI pomocnicze
+- Narzędzia i utility
+- Modele pomocnicze
+- Konfiguracje i walidacje
+
+#### 🟢 NISKIE (Funkcjonalności dodatkowe)
+
+- Logowanie i debugowanie
+- Narzędzia deweloperskie
+- Komponenty eksperymentalne
+- Dokumentacja i testy
+
+### 📋 FAZA 2: PRIORYTET POTRZEBY POPRAWEK/REFAKTORYZACJI
+
+**Cel:** Identyfikacja "złego/brudnego kodu" - określenie potrzeby wykonania poprawek.
+
+**Kryteria oceny:**
+
+#### ⚫⚫⚫⚫ KRYTYCZNE (Wymaga natychmiastowej poprawki)
+
+- Błędy logiczne wpływające na funkcjonalność
+- Memory leaks w długotrwałych procesach
+- Thread safety issues w UI
+- Performance bottlenecks w głównych algorytmach
+- Błędy w obsłudze błędów (error handling)
+
+#### 🔴🔴🔴 WYSOKIE (Wymaga poprawki w najbliższym czasie)
+
+- Code smells (duplikacja, długie funkcje, magic numbers)
+- Problemy z wydajnością w operacjach I/O
+- Nieoptymalne algorytmy
+- Problemy z zarządzaniem pamięcią
+- Brak walidacji danych
+
+#### 🟡🟡 ŚREDNIE (Warto poprawić)
+
+- Nieczytelny kod
+- Brak dokumentacji
+- Nieoptymalne wzorce projektowe
+- Problemy z konfiguracją
+
+#### 🟢 NISKIE (Można poprawić przy okazji)
+
+- Styl kodu
+- Brak komentarzy
+- Nieużywane importy
+- Drobne optymalizacje
+
+### 🎯 FINALNY PRIORYTET IMPLEMENTACJI
+
+**Reguła:** Jeśli plik ma dwa niskie priorytety → może zostać pominięty w analizie.
+
+**Przykłady:**
+
+- Plik z priorytetem struktury ⚫⚫⚫⚫ i priorytetem poprawek 🔴🔴🔴 → **Finalny: ⚫⚫⚫⚫**
+- Plik z priorytetem struktury 🔴🔴🔴 i priorytetem poprawek ⚫⚫⚫⚫ → **Finalny: ⚫⚫⚫⚫**
+- Plik z priorytetem struktury 🟢 i priorytetem poprawek 🟢 → **Finalny: POMINIĘTY**
 
 ---
 
@@ -64,6 +174,62 @@ Prace opierają się na trzech kluczowych filarach:
 
 ---
 
+## 📁 STANDARDY ORGANIZACJI PLIKÓW
+
+### 🗂️ Struktura katalogów wynikowych
+
+**Wszystkie pliki wynikowe audytu MUSZĄ być zapisywane w katalogu `AUDYT/`:**
+
+```
+AUDYT/
+├── business_logic_map.md          # Mapa logiki biznesowej
+├── implementation_plan.md         # Plan implementacji poprawek
+├── corrections/                   # Analizy poprawek
+│   ├── [nazwa_pliku]_correction.md
+│   └── ...
+├── patches/                       # Fragmenty kodu do implementacji
+│   ├── [nazwa_pliku]_patch_code.md
+│   └── ...
+└── backups/                       # Kopie bezpieczeństwa
+    ├── [nazwa_pliku]_backup_[data].py
+    └── ...
+```
+
+### 📅 Standardy formatowania
+
+- **Format dat:** YYYY-MM-DD (np. 2024-01-15)
+- **Statusy implementacji:** ⏳ OCZEKUJE / 🔄 W TRAKCIE / ✅ UKOŃCZONE
+- **Nazwy plików:** snake_case dla plików wynikowych
+
+---
+
+## 🔄 PROCEDURY AKTUALIZACJI DOKUMENTÓW
+
+### 📋 Obowiązkowe kroki po każdej analizie pliku
+
+1. ✅ **Ukończ analizę pliku** - utwórz correction.md i patch_code.md
+2. ✅ **UZUPEŁNIJ business_logic_map.md** - dodaj status ukończenia
+3. ✅ **UZUPEŁNIJ implementation_plan.md** - dodaj poprawkę do planu implementacji
+4. ✅ **Sprawdź postęp** - podaj procent ukończenia
+5. ✅ **Określ następny etap** - nazwa kolejnego pliku do analizy
+
+### 📝 Format uzupełnienia w business_logic_map.md
+
+```markdown
+### 📄 [NAZWA_PLIKU].PY
+
+- **Status:** ✅ UKOŃCZONA ANALIZA
+- **Data ukończenia:** [DATA]
+- **Business impact:** [OPIS WPŁYWU NA PROCESY BIZNESOWE]
+- **Pliki wynikowe:**
+  - `AUDYT/corrections/[nazwa_pliku]_correction.md`
+  - `AUDYT/patches/[nazwa_pliku]_patch_code.md`
+```
+
+---
+
+## 🔧 KROKI REFAKTORYZACJI
+
 ### KROK 0: ANALIZA I PODZIAŁ KODU
 
 - **Analiza kodu źródłowego**: Przeanalizuj kod źródłowy, który ma zostać podzielony na mniejsze fragmenty/moduły.
@@ -108,7 +274,7 @@ Prace opierają się na trzech kluczowych filarach:
 
 ## 📊 DOKUMENTACJA I KONTROLA POSTĘPU
 
-- **PROGRESYWNE UZUPEŁNIANIE**: Po każdej analizie pliku **NATYCHMIAST** aktualizuj pliki wynikowe (`code_map.md`, `*_correction.md`, `*_patch.md`).
+- **PROGRESYWNE UZUPEŁNIANIE**: Po każdej analizie pliku **NATYCHMIAST** aktualizuj pliki wynikowe (`business_logic_map.md`, `*_correction.md`, `*_patch.md`).
 - **OSOBNE PLIKI**: Każdy analizowany plik musi mieć swój własny `_correction.md` i `_patch.md`.
 - **KONTROLA POSTĘPU**: Po każdym etapie raportuj postęp (X/Y ukończonych, %, następny etap).
 - **COMMITY**: Commity wykonuj dopiero po pozytywnych testach użytkownika, z jasnym komunikatem, np. `ETAP X: [NAZWA_PLIKU] - [OPIS] - ZAKOŃCZONY`.

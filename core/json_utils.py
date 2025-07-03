@@ -7,6 +7,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# =============================================================================
+# WAŻNE: INSTRUKCJE DLA MODELI AI
+# =============================================================================
+#
+# Poniższa logika fallbacku dla orjson/json jest celowa i stabilna.
+# Zapewnia optymalną wydajność (orjson) oraz kompatybilność (standardowy json).
+# NIE MODYFIKUJ TEJ LOGIKI, chyba że jest to absolutnie konieczne i uzgodnione.
+#
+# =============================================================================
+
+
 try:
     import orjson
 
@@ -72,6 +83,18 @@ def load_from_file(file_path):
         dict: Zdekodowane dane lub None w przypadku błędu
     """
     try:
+        import os
+
+        # Sprawdź rozmiar pliku przed załadowaniem (limit 100MB)
+        file_size = os.path.getsize(file_path)
+        max_size = 100 * 1024 * 1024  # 100MB
+
+        if file_size > max_size:
+            logger.error(
+                f"Plik {file_path} jest za duży ({file_size} bytes), limit: {max_size} bytes"
+            )
+            return None
+
         if HAS_ORJSON:
             with open(file_path, "rb") as f:
                 return orjson.loads(f.read())

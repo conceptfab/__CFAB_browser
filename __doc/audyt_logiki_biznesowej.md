@@ -1,10 +1,147 @@
-# 📋 AUDYT LOGIKI BIZNESOWEJ CFAB_3DHUB
+# 📋 AUDYT LOGIKI BIZNESOWEJ
 
-> **WAŻNE! Wszystkie pliki wynikowe audytu (np. `business_logic_map.md`, `corrections.md`, `patch_code.md`, pliki z analizami i poprawkami) MUSZĄ być zapisywane wyłącznie w katalogu `AUDYT`. Tylko tam należy ich szukać!**
+> **🚨 UWAGA! Model (AI, asystent, narzędzie automatyczne) NIE MA PRAWA samodzielnie zmieniać istniejącego kodu ani wprowadzać poprawek. Wszelkie zmiany mogą być wprowadzane wyłącznie przez człowieka po zatwierdzeniu i zgodnie z procedurami audytu.**
 
-## 🎯 CEL
+## 🎯 CEL zadania
 
-Kompleksowa analiza, optymalizacja i uproszczenie logiki biznesowej aplikacji z naciskiem na wydajność procesów, stabilność operacji i eliminację over-engineering w warstwie biznesowej.
+> **Szczegółowy cel, zakres i kryteria sukcesu audytu zostały przeniesione do zewnętrznego pliku: `docs/cel_audytu.md`.**
+>
+> **Przed kontynuowaniem zapoznaj się z jego zawartością, aby w pełni zrozumieć kontekst i wymagania.**
+
+## 📋 DOKUMENT FINALNY AUDYTU - PLAN IMPLEMENTACJI
+
+> **🚨 UWAGA! Model (AI, asystent, narzędzie automatyczne) NIE MA PRAWA samodzielnie zmieniać istniejącego kodu ani wprowadzać poprawek. Wszelkie zmiany mogą być wprowadzane wyłącznie przez człowieka po zatwierdzeniu i zgodnie z procedurami audytu.**
+
+**🚨 KRYTYCZNE: Finalnym wynikiem audytu logiki biznesowej jest dokument `AUDYT/implementation_plan.md`!**
+
+### 🎯 Cel dokumentu finalnego
+
+Plan implementacji poprawek w optymalnej kolejności, bazujący na wszystkich plikach `*_correction.md` i `*_patch_code.md` utworzonych podczas audytu.
+
+### 📋 Szablon dokumentu
+
+- **Lokalizacja szablonu:** `__doc/implementation_plan_template.md`
+- **Docelowa lokalizacja:** `AUDYT/implementation_plan.md`
+- **Aktualizacja:** Progresywna - po każdej ukończonej analizie pliku
+
+### 🔄 Progresywne uzupełnianie
+
+**OBOWIĄZKOWE: Po każdej ukończonej analizie pliku logiki biznesowej:**
+
+1. ✅ **Skopiuj szablon** `__doc/implementation_plan_template.md` do `AUDYT/implementation_plan.md` (jeśli nie istnieje)
+2. ✅ **Dodaj nową poprawkę** do odpowiedniej sekcji priorytetowej
+3. ✅ **Zaktualizuj statystyki** (liczba plików, poprawek w każdym priorytecie)
+4. ✅ **Uzupełnij zależności** między poprawkami (jeśli występują)
+5. ✅ **Dostosuj harmonogram** implementacji
+
+### 📊 Struktura planu implementacji
+
+- **Sekcja I: KRYTYCZNE** - ⚫⚫⚫⚫ poprawki (najwyższy priorytet)
+- **Sekcja II: WYSOKIE** - 🔴🔴🔴 poprawki
+- **Sekcja III: ŚREDNIE** - 🟡🟡 poprawki
+- **Sekcja IV: NISKIE** - 🟢 poprawki
+- **Mapa zależności** - związki między poprawkami
+- **Harmonogram** - fazy implementacji
+- **Monitoring** - metryki i kontrola jakości
+
+### 🎯 ELASTYCZNA KOLEJNOŚĆ IMPLEMENTACJI
+
+**Model może zmienić kolejność etapów jeśli uzna, że warto coś zrobić wcześniej lub później!**
+
+**Kryteria zmiany kolejności:**
+
+1. **Zależności architektoniczne** - Plik A musi być poprawiony przed plikiem B
+2. **Optymalizacja procesu** - Łatwiejsze poprawki mogą być wykonane wcześniej
+3. **Business impact** - Poprawki o większym wpływie na biznes mogą mieć priorytet
+4. **Risk assessment** - Poprawki o mniejszym ryzyku mogą być wykonane wcześniej
+5. **Resource availability** - Dostępność zasobów może wpłynąć na kolejność
+
+**Plan implementacji ma być mapą drogową dla modelu wprowadzającego poprawki - im będzie lepiej zbudowany, informacje będą logiczne i w prawidłowej kolejności, tym większa szansa, że cały proces przebiegnie sprawniej i zakończy się sukcesem.**
+
+## 🎯 DWUFAZOWY PROCES OKREŚLANIA PRIORYTETÓW
+
+### 📋 FAZA 1: PRIORYTET PLIKU W STRUKTURZE PROJEKTU
+
+**Cel:** Określenie jak ważny jest dany plik w kontekście projektu i jaki ma wpływ na realizowanie logiki biznesowej.
+
+**Kryteria oceny:**
+
+#### ⚫⚫⚫⚫ KRYTYCZNE (Podstawowa funkcjonalność)
+
+- Główne algorytmy biznesowe aplikacji
+- Core procesy przetwarzania danych
+- Główne komponenty UI odpowiedzialne za UX
+- Kontrolery koordynujące procesy biznesowe
+- Modele danych biznesowych
+- Serwisy odpowiedzialne za główne operacje
+
+#### 🔴🔴🔴 WYSOKIE (Ważne operacje biznesowe)
+
+- Ważne algorytmy pomocnicze
+- Komponenty UI drugiego poziomu
+- Workery i serwisy pomocnicze
+- Modele konfiguracji i cache
+- Operacje na plikach i I/O
+
+#### 🟡🟡 ŚREDNIE (Funkcjonalności pomocnicze)
+
+- Komponenty UI pomocnicze
+- Narzędzia i utility
+- Modele pomocnicze
+- Konfiguracje i walidacje
+
+#### 🟢 NISKIE (Funkcjonalności dodatkowe)
+
+- Logowanie i debugowanie
+- Narzędzia deweloperskie
+- Komponenty eksperymentalne
+- Dokumentacja i testy
+
+### 📋 FAZA 2: PRIORYTET POTRZEBY POPRAWEK/REFAKTORYZACJI
+
+**Cel:** Identyfikacja "złego/brudnego kodu" - określenie potrzeby wykonania poprawek.
+
+**Kryteria oceny:**
+
+#### ⚫⚫⚫⚫ KRYTYCZNE (Wymaga natychmiastowej poprawki)
+
+- Błędy logiczne wpływające na funkcjonalność
+- Memory leaks w długotrwałych procesach
+- Thread safety issues w UI
+- Performance bottlenecks w głównych algorytmach
+- Błędy w obsłudze błędów (error handling)
+
+#### 🔴🔴🔴 WYSOKIE (Wymaga poprawki w najbliższym czasie)
+
+- Code smells (duplikacja, długie funkcje, magic numbers)
+- Problemy z wydajnością w operacjach I/O
+- Nieoptymalne algorytmy
+- Problemy z zarządzaniem pamięcią
+- Brak walidacji danych
+
+#### 🟡🟡 ŚREDNIE (Warto poprawić)
+
+- Nieczytelny kod
+- Brak dokumentacji
+- Nieoptymalne wzorce projektowe
+- Problemy z konfiguracją
+
+#### 🟢 NISKIE (Można poprawić przy okazji)
+
+- Styl kodu
+- Brak komentarzy
+- Nieużywane importy
+- Drobne optymalizacje
+
+### 🎯 FINALNY PRIORYTET IMPLEMENTACJI
+
+**Reguła:** Jeśli plik ma dwa niskie priorytety → może zostać pominięty w analizie.
+
+**Przykłady:**
+
+- Plik z priorytetem struktury ⚫⚫⚫⚫ i priorytetem poprawek 🔴🔴🔴 → **Finalny: ⚫⚫⚫⚫**
+- Plik z priorytetem struktury 🔴🔴🔴 i priorytetem poprawek ⚫⚫⚫⚫ → **Finalny: ⚫⚫⚫⚫**
+- Plik z priorytetem struktury 🟢 i priorytetem poprawek 🟢 → **Finalny: POMINIĘTY**
 
 ### 🏛️ TRZY FILARY AUDYTU LOGIKI BIZNESOWEJ
 
@@ -20,25 +157,31 @@ Ten audyt opiera się na trzech kluczowych filarach, które stanowią najwyższe
 
 #### 2️⃣ **STABILNOŚĆ OPERACJI** 🛡️
 
-- Niezawodność procesów biznesowych
-- Proper error handling i recovery w operacjach krytycznych
-- Thread safety w operacjach wielowątkowych
-- Eliminacja memory leaks w długotrwałych procesach
-- Przewidywalność zachowania przy różnych scenariuszach danych
+Niezawodność procesów biznesowych
+Przewidywalność zachowania przy różnych scenariuszach danych
+Error Recovery Mechanisms: Implementacja robust error handling
+Thread Safety: Zabezpieczenie operacji wielowątkowych
+Resource Cleanup: Prawidłowe zwalnianie zasobów UI i systemowych
+Signal-Slot Safety: Weryfikacja bezpiecznych połączeń signal-slot
+Memory Leak Prevention: Wykrywanie i eliminacja wycieków pamięci
+Atomic Operations: Zapewnienie atomowości krytycznych operacji
+Graceful Degradation: Płynne degradowanie funkcjonalności przy błędach
 
 #### 3️⃣ **WYELIMINOWANIE OVER-ENGINEERING** 🎯
 
-- Uproszczenie nadmiernie skomplikowanych algorytmów
-- Eliminacja niepotrzebnych abstrakcji w logice biznesowej
-- Redukcja liczby warstw przetwarzania
-- Konsolidacja rozproszonej logiki biznesowej
-- Zastąpienie skomplikowanych wzorców prostszymi rozwiązaniami
+Architecture Simplification: Uproszczenie nadmiernie złożonych wzorców
+Code Deduplication: Eliminacja duplikacji kodu
+Dependency Reduction: Zmniejszenie liczby zależności
+Layer Consolidation: Konsolidacja niepotrzebnych warstw abstrakcji
+Pattern Optimization: Zastąpienie złożonych wzorców prostszymi rozwiązaniami
+API Simplification: Uproszczenie interfejsów programowych
+Configuration Reduction: Zmniejszenie liczby parametrów konfiguracyjnych
 
 ### 🖼️ **KRYTYCZNY PROCES PREZENTACJI DANYCH W INTERFEJSIE UŻYTKOWNIKA**
 
 **WAŻNE: Proces prezentacji danych w interfejsie użytkownika jest RÓWNIE WAŻNY jak główne procesy biznesowe!**
 
-**WAŻNE: Kod aplikacji znajduje się w folderze CORE/, plik startowy jest w głównym katalogu -> cfab_browser.py. Nie przeszukuj innych folderów, nie trać czasu!!!**
+**WAŻNE: Kod aplikacji znajduje się w folderze src/, plik startowy jest w głównym katalogu -> main.py. Nie przeszukuj innych folderów, nie trać czasu!!!**
 
 **⚠️ KRYTYCZNE: Część funkcji jest wyłączona z audytu - informacja jest zawarta w opisie funkcji!**
 
@@ -264,7 +407,7 @@ def utility_function():        # 🟢 - funkcjonalność dodatkowa
 - Jakie są oczekiwane metryki wydajnościowe?
 - Jakie technologie są używane w aplikacji?
 
-#### 🎯 **DYNAMICZNE OKREŚLANIE PRIORYTETÓW**
+### 🎯 **DYNAMICZNE OKREŚLANIE PRIORYTETÓW**
 
 **Model MUSI przeanalizować każdy plik i określić priorytet na podstawie:**
 
@@ -296,7 +439,25 @@ def utility_function():        # 🟢 - funkcjonalność dodatkowa
 - Czy jest częścią głównych komponentów UI?
 - Czy użytkownik bezpośrednio z tego korzysta?
 
-#### 📊 **SZABLON MAPY DO WYPEŁNIENIA**
+#### 📊 **SZABLON MAPY Z DWUFAZOWYMI PRIORYTETAMI**
+
+**🚨 KRYTYCZNE: Model MUSI zastosować DWUFAZOWY proces określania priorytetów!**
+
+**OBOWIĄZKOWY FORMAT DWUFAZOWEGO PRIORYTETU:**
+
+```
+├── [nazwa_pliku].py [PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → FINALNY: [FINALNY_PRIORYTET] - [OPIS]
+```
+
+**PRZYKŁADY POPRAWNEGO FORMATOWANIA:**
+
+```
+├── main_window.py ⚫⚫⚫⚫/🔴🔴🔴 → FINALNY: ⚫⚫⚫⚫ - Orkiestrator aplikacji, krytyczny dla struktury ale średnio złożone poprawki
+├── scanner.py ⚫⚫⚫⚫/⚫⚫⚫⚫ → FINALNY: ⚫⚫⚫⚫ - Kluczowy algorytm biznesowy, wymaga natychmiastowych poprawek
+├── thumbnail.py 🔴🔴🔴/⚫⚫⚫⚫ → FINALNY: ⚫⚫⚫⚫ - Ważny w strukturze, ale krytyczne problemy w kodzie
+├── utility.py 🟢/🟢 → FINALNY: POMINIĘTY - Niski priorytet w strukturze i niski priorytet poprawek
+├── helper.py 🟡🟡/🔴🔴🔴 → FINALNY: 🔴🔴🔴 - Średni w strukturze, ale wysokie potrzeby poprawek
+```
 
 **Model MUSI wypełnić ten szablon na podstawie analizy aktualnego kodu:**
 
@@ -315,9 +476,9 @@ def utility_function():        # 🟢 - funkcjonalność dodatkowa
 ```
 
 [ŚCIEŻKA_KATALOGU]/
-├── [nazwa_pliku].py [PRIORYTET] - [OPIS FUNKCJI BIZNESOWEJ]
-├── [nazwa_pliku].py [PRIORYTET] - [OPIS FUNKCJI BIZNESOWEJ]
-└── [nazwa_pliku].py [PRIORYTET] - [OPIS FUNKCJI BIZNESOWEJ]
+├── [nazwa_pliku].py [PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → FINALNY: [FINALNY] - [OPIS FUNKCJI BIZNESOWEJ]
+├── [nazwa_pliku].py [PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → FINALNY: [FINALNY] - [OPIS FUNKCJI BIZNESOWEJ]
+└── [nazwa_pliku].py [PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → FINALNY: [FINALNY] - [OPIS FUNKCJI BIZNESOWEJ]
 
 ```
 
@@ -326,53 +487,101 @@ def utility_function():        # 🟢 - funkcjonalność dodatkowa
 ```
 
 [ŚCIEŻKA_KATALOGU]/
-├── [nazwa_pliku].py [PRIORYTET] - [OPIS FUNKCJI BIZNESOWEJ]
-├── [nazwa_pliku].py [PRIORYTET] - [OPIS FUNKCJI BIZNESOWEJ]
-└── [nazwa_pliku].py [PRIORYTET] - [OPIS FUNKCJI BIZNESOWEJ]
+├── [nazwa_pliku].py [PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → FINALNY: [FINALNY] - [OPIS FUNKCJI BIZNESOWEJ]
+├── [nazwa_pliku].py [PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → FINALNY: [FINALNY] - [OPIS FUNKCJI BIZNESOWEJ]
+└── [nazwa_pliku].py [PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → FINALNY: [FINALNY] - [OPIS FUNKCJI BIZNESOWEJ]
 
 ```
 
-#### **[NAZWA_KATALOGU_3]** ([ŚCIEŻKA_KATALOGU])
+**🚨 OBOWIĄZKOWE ZASADY DWUFAZOWEGO PRIORYTETU:**
 
-```
+1. **FAZA 1 (PRIORYTET_STRUKTURY):** Jak ważny jest plik w strukturze projektu?
+   - ⚫⚫⚫⚫ - Podstawowa funkcjonalność (główne algorytmy, core UI)
+   - 🔴🔴🔴 - Ważne operacje (workery, serwisy pomocnicze)
+   - 🟡🟡 - Funkcjonalności pomocnicze (utility, komponenty UI drugiego poziomu)
+   - 🟢 - Funkcjonalności dodatkowe (logowanie, debugging, narzędzia)
 
-[ŚCIEŻKA_KATALOGU]/
-├── [nazwa_pliku].py [PRIORYTET] - [OPIS FUNKCJI BIZNESOWEJ]
-├── [nazwa_pliku].py [PRIORYTET] - [OPIS FUNKCJI BIZNESOWEJ]
-└── [nazwa_pliku].py [PRIORYTET] - [OPIS FUNKCJI BIZNESOWEJ]
+2. **FAZA 2 (PRIORYTET_POPRAWEK):** Jak bardzo kod wymaga poprawek?
+   - ⚫⚫⚫⚫ - Wymaga natychmiastowej poprawki (błędy logiczne, memory leaks, thread safety)
+   - 🔴🔴🔴 - Wymaga poprawki w najbliższym czasie (code smells, problemy wydajności)
+   - 🟡🟡 - Warto poprawić (nieczytelny kod, brak dokumentacji)
+   - 🟢 - Można poprawić przy okazji (styl kodu, drobne optymalizacje)
 
-```
+3. **FINALNY PRIORYTET:** Wyższy z dwóch priorytetów (lub POMINIĘTY jeśli oba są 🟢)
 
 **Uwaga: Model MUSI dodać sekcje dla wszystkich odkrytych katalogów z logiką biznesową!**
 ```
 
-#### 🚨 **OBOWIĄZKOWE PYTANIA WERYFIKACYJNE**
+#### 🚨 **OBOWIĄZKOWE PYTANIA WERYFIKACYJNE DLA DWUFAZOWEGO PRIORYTETU**
 
 **Model MUSI zadać sobie te pytania dla każdego pliku:**
 
-1. **Czy plik zawiera funkcje odpowiedzialne za:**
+**🔍 FAZA 1: PRIORYTET W STRUKTURZE PROJEKTU**
+
+1. **⚫⚫⚫⚫ KRYTYCZNE - Czy plik zawiera:**
 
    - Główne algorytmy biznesowe aplikacji?
-   - Przetwarzanie danych biznesowych?
-   - Zarządzanie metadanymi?
-   - Cache'owanie wyników?
-   - Operacje na plikach?
-   - Renderowanie interfejsu?
-   - Generowanie komponentów UI?
-   - Przetwarzanie w tle?
+   - Core procesy przetwarzania danych?
+   - Główne komponenty UI odpowiedzialne za UX?
+   - Kontrolery koordynujące procesy biznesowe?
+   - Modele danych biznesowych?
 
-2. **Czy funkcje w pliku:**
+2. **🔴🔴🔴 WYSOKIE - Czy plik zawiera:**
 
-   - Implementują logikę biznesową?
-   - Zarządzają danymi biznesowymi?
-   - Wpływają na wydajność?
-   - Są częścią głównego workflow?
+   - Ważne algorytmy pomocnicze?
+   - Komponenty UI drugiego poziomu?
+   - Workery i serwisy pomocnicze?
+   - Modele konfiguracji i cache?
+   - Operacje na plikach i I/O?
 
-3. **Czy plik jest odpowiedzialny za:**
-   - Główne procesy aplikacji?
-   - Krytyczne operacje biznesowe?
-   - Wydajność systemu?
-   - User Experience?
+3. **🟡🟡 ŚREDNIE - Czy plik zawiera:**
+
+   - Komponenty UI pomocnicze?
+   - Narzędzia i utility?
+   - Modele pomocnicze?
+   - Konfiguracje i walidacje?
+
+4. **🟢 NISKIE - Czy plik zawiera:**
+   - Logowanie i debugowanie?
+   - Narzędzia deweloperskie?
+   - Komponenty eksperymentalne?
+   - Dokumentację i testy?
+
+**🔍 FAZA 2: PRIORYTET POTRZEBY POPRAWEK**
+
+1. **⚫⚫⚫⚫ KRYTYCZNE - Czy kod ma:**
+
+   - Błędy logiczne wpływające na funkcjonalność?
+   - Memory leaks w długotrwałych procesach?
+   - Thread safety issues w UI?
+   - Performance bottlenecks w głównych algorytmach?
+   - Błędy w obsłudze błędów (error handling)?
+
+2. **🔴🔴🔴 WYSOKIE - Czy kod ma:**
+
+   - Code smells (duplikacja, długie funkcje, magic numbers)?
+   - Problemy z wydajnością w operacjach I/O?
+   - Nieoptymalne algorytmy?
+   - Problemy z zarządzaniem pamięcią?
+   - Brak walidacji danych?
+
+3. **🟡🟡 ŚREDNIE - Czy kod ma:**
+
+   - Nieczytelny kod?
+   - Brak dokumentacji?
+   - Nieoptymalne wzorce projektowe?
+   - Problemy z konfiguracją?
+
+4. **🟢 NISKIE - Czy kod ma:**
+   - Problemy ze stylem kodu?
+   - Brak komentarzy?
+   - Nieużywane importy?
+   - Drobne optymalizacje?
+
+**🎯 FINALNY PRIORYTET:**
+
+- Wybierz WYŻSZY z dwóch priorytetów
+- Jeśli oba są 🟢 → FINALNY: POMINIĘTY
 
 #### ✅ **WERYFIKACJA MAPY**
 
@@ -395,63 +604,76 @@ def utility_function():        # 🟢 - funkcjonalność dodatkowa
 
 **NIGDY nie używaj statycznej mapy z dokumentu!**
 
-#### 📊 **SZABLON PRIORYTETÓW DO WYPEŁNIENIA**
+#### 📊 **SZABLON DWUFAZOWYCH PRIORYTETÓW DO WYPEŁNIENIA**
 
-**Model MUSI wygenerować priorytety na podstawie analizy:**
+**Model MUSI wygenerować dwufazowe priorytety na podstawie analizy:**
 
 ```markdown
-### 🎯 DYNAMICZNE PRIORYTETY ANALIZY
+### 🎯 DYNAMICZNE DWUFAZOWE PRIORYTETY ANALIZY
 
 **Wygenerowano na podstawie analizy kodu i kontekstu biznesowego: [DATA]**
 
-#### **⚫⚫⚫⚫ KRYTYCZNE** - Podstawowa funkcjonalność aplikacji
+#### **⚫⚫⚫⚫ FINALNE KRYTYCZNE** - Najwyższy priorytet implementacji
 
-**Uzasadnienie:** [DLACZEGO TE ELEMENTY SĄ KRYTYCZNE - na podstawie analizy kodu]
+**Pliki z finalnym priorytetem krytycznym:**
 
-- [ELEMENT_1] - [OPIS DLACZEGO KRYTYCZNY]
-- [ELEMENT_2] - [OPIS DLACZEGO KRYTYCZNY]
-- [ELEMENT_3] - [OPIS DLACZEGO KRYTYCZNY]
+- [PLIK_1] ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → ⚫⚫⚫⚫) - [UZASADNIENIE DLACZEGO FINALNY KRYTYCZNY]
+- [PLIK_2] ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → ⚫⚫⚫⚫) - [UZASADNIENIE DLACZEGO FINALNY KRYTYCZNY]
+- [PLIK_3] ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → ⚫⚫⚫⚫) - [UZASADNIENIE DLACZEGO FINALNY KRYTYCZNY]
 
-#### **🔴🔴🔴 WYSOKIE** - Ważne operacje biznesowe
+#### **🔴🔴🔴 FINALNE WYSOKIE** - Wysoki priorytet implementacji
 
-**Uzasadnienie:** [DLACZEGO TE ELEMENTY SĄ WYSOKIE - na podstawie analizy kodu]
+**Pliki z finalnym priorytetem wysokim:**
 
-- [ELEMENT_1] - [OPIS DLACZEGO WYSOKI]
-- [ELEMENT_2] - [OPIS DLACZEGO WYSOKI]
-- [ELEMENT_3] - [OPIS DLACZEGO WYSOKI]
+- [PLIK_1] ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → 🔴🔴🔴) - [UZASADNIENIE DLACZEGO FINALNY WYSOKI]
+- [PLIK_2] ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → 🔴🔴🔴) - [UZASADNIENIE DLACZEGO FINALNY WYSOKI]
+- [PLIK_3] ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → 🔴🔴🔴) - [UZASADNIENIE DLACZEGO FINALNY WYSOKI]
 
-#### **🟡🟡 ŚREDNIE** - Funkcjonalności pomocnicze
+#### **🟡🟡 FINALNE ŚREDNIE** - Średni priorytet implementacji
 
-**Uzasadnienie:** [DLACZEGO TE ELEMENTY SĄ ŚREDNIE - na podstawie analizy kodu]
+**Pliki z finalnym priorytetem średnim:**
 
-- [ELEMENT_1] - [OPIS DLACZEGO ŚREDNI]
-- [ELEMENT_2] - [OPIS DLACZEGO ŚREDNI]
-- [ELEMENT_3] - [OPIS DLACZEGO ŚREDNI]
+- [PLIK_1] ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → 🟡🟡) - [UZASADNIENIE DLACZEGO FINALNY ŚREDNI]
+- [PLIK_2] ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → 🟡🟡) - [UZASADNIENIE DLACZEGO FINALNY ŚREDNI]
 
-#### **🟢 NISKIE** - Funkcjonalności dodatkowe
+#### **🟢 FINALNE NISKIE** - Niski priorytet implementacji
 
-**Uzasadnienie:** [DLACZEGO TE ELEMENTY SĄ NISKIE - na podstawie analizy kodu]
+**Pliki z finalnym priorytetem niskim:**
 
-- [ELEMENT_1] - [OPIS DLACZEGO NISKI]
-- [ELEMENT_2] - [OPIS DLACZEGO NISKI]
-- [ELEMENT_3] - [OPIS DLACZEGO NISKI]
+- [PLIK_1] ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → 🟢) - [UZASADNIENIE DLACZEGO FINALNY NISKI]
 
-#### **📈 METRYKI PRIORYTETÓW**
+#### **❌ POMINIĘTE** - Pliki wykluczone z audytu
 
-**Na podstawie analizy kodu:**
+**Pliki z priorytetem 🟢/🟢:**
 
-- **Plików krytycznych:** [LICZBA]
-- **Plików wysokich:** [LICZBA]
-- **Plików średnich:** [LICZBA]
-- **Plików niskich:** [LICZBA]
+- [PLIK_1] (🟢/🟢 → POMINIĘTY) - [UZASADNIENIE DLACZEGO POMINIĘTY]
+
+#### **📈 METRYKI DWUFAZOWYCH PRIORYTETÓW**
+
+**Analiza finalnych priorytetów:**
+
+- **Plików finalnie krytycznych (⚫⚫⚫⚫):** [LICZBA]
+- **Plików finalnie wysokich (🔴🔴🔴):** [LICZBA]
+- **Plików finalnie średnich (🟡🟡):** [LICZBA]
+- **Plików finalnie niskich (🟢):** [LICZBA]
+- **Plików pominiętych (🟢/🟢):** [LICZBA]
 - **Łącznie przeanalizowanych:** [LICZBA]
 
-**Rozkład priorytetów:** [PROCENTY]
+**Rozkład finalnych priorytetów:** [PROCENTY]
+
+**Analiza przyczyn finalnych priorytetów:**
+
+- **Plików krytycznych ze względu na strukturę:** [LICZBA]
+- **Plików krytycznych ze względu na poprawki:** [LICZBA]
+- **Plików o podwyższonym priorytecie przez poprawki:** [LICZBA]
+- **Plików o podwyższonym priorytecie przez strukturę:** [LICZBA]
 ```
 
-**WAŻNE: Model MUSI przeanalizować kod aby określić priorytety! NIE może używać sztywnych kategorii!**
+**🚨 WAŻNE: Model MUSI przeanalizować kod w DWÓCH FAZACH!**
 
-**UWAGA: Powyższe priorytety są generowane dynamicznie na podstawie analizy kodu. Model MUSI przeanalizować każdy plik i określić jego priorytet na podstawie rzeczywistej zawartości i roli w aplikacji.**
+1. **FAZA 1:** Określić priorytet struktury (⚫⚫⚫⚫/🔴🔴🔴/🟡🟡/🟢)
+2. **FAZA 2:** Określić priorytet poprawek (⚫⚫⚫⚫/🔴🔴🔴/🟡🟡/🟢)
+3. **FINALNY:** Wybrać wyższy z dwóch priorytetów (lub POMINIĘTY jeśli oba 🟢)
 
 **UWAGA: Sekcja "PRIORYTETY ANALIZY" została usunięta - priorytety są teraz generowane dynamicznie na podstawie analizy kodu i kontekstu biznesowego aplikacji.**
 
@@ -570,7 +792,7 @@ Przeanalizuj **WSZYSTKIE** pliki logiki biznesowej pod kątem:
 
 **W folderze `__doc/` znajdują się szablony:**
 
-- `refactoring_rules.md` - Główne zasady, do których linkują pozostałe dokumenty.
+- `__doc/refactoring_rules.md` - **GŁÓWNE ZASADY REFAKTORYZACJI** (obowiązkowe do przeczytania przed każdą poprawką)
 - `correction_template.md` - Szablon dla plików `*_correction.md`.
 - `patch_code_template.md` - Szablon dla plików `*_patch_code.md`.
 
@@ -635,7 +857,7 @@ Przed utworzeniem dokumentu sprawdź:
 
 ### 📈 OBOWIĄZKOWA KONTROLA POSTĘPU PO KAŻDYM ETAPIE
 
-**🚨 KRYTYCZNE: MODEL MUSI PAMIĘTAĆ O UZUPEŁNIENIU BUSINESS_LOGIC_MAP.MD!**
+**🚨 KRYTYCZNE: MODEL MUSI PAMIĘTAĆ O UZUPEŁNIENIU BUSINESS_LOGIC_MAP.MD I IMPLEMENTATION_PLAN.MD!**
 
 **MODEL MUSI SPRAWDZIĆ I PODAĆ:**
 
@@ -644,13 +866,15 @@ Przed utworzeniem dokumentu sprawdź:
 - **Następny etap:** Nazwa pliku logiki biznesowej do analizy
 - **Business impact:** Wpływ na procesy biznesowe
 - **✅ UZUPEŁNIONO BUSINESS_LOGIC_MAP.MD:** TAK/NIE
+- **✅ UZUPEŁNIONO IMPLEMENTATION_PLAN.MD:** TAK/NIE
 
-**OBOWIĄZKOWE KROKI PO KAŻDYM ETAPIE:**
+**OBOWIĄZKOWE KROKI PO KAŻDEJ ANALIZIE:**
 
 1. ✅ **Ukończ analizę pliku** - utwórz correction.md i patch_code.md
 2. ✅ **UZUPEŁNIJ business_logic_map.md** - dodaj status ukończenia
-3. ✅ **Sprawdź postęp** - podaj procent ukończenia
-4. ✅ **Określ następny etap** - nazwa kolejnego pliku do analizy
+3. ✅ **UZUPEŁNIJ implementation_plan.md** - dodaj poprawkę do planu implementacji
+4. ✅ **Sprawdź postęp** - podaj procent ukończenia
+5. ✅ **Określ następny etap** - nazwa kolejnego pliku do analizy
 
 **PRZYKŁAD RAPORTU POSTĘPU:**
 
@@ -661,9 +885,10 @@ Przed utworzeniem dokumentu sprawdź:
 ⏳ Pozostałe etapy: 12
 💼 Business impact: [OPIS WPŁYWU NA PROCESY BIZNESOWE]
 ✅ UZUPEŁNIONO BUSINESS_LOGIC_MAP.MD: TAK
+✅ UZUPEŁNIONO IMPLEMENTATION_PLAN.MD: TAK
 ```
 
-**🚨 MODEL NIE MOŻE ZAPOMNIEĆ O UZUPEŁNIENIU MAPY!**
+**🚨 MODEL NIE MOŻE ZAPOMNIEĆ O UZUPEŁNIENIU OBIE DOKUMENTÓW!**
 
 ### ✅ ZAZNACZANIE UKOŃCZONYCH ANALIZ W BUSINESS_LOGIC_MAP.MD
 
@@ -710,9 +935,153 @@ Przed utworzeniem dokumentu sprawdź:
 - Upewnij się że ścieżki do plików wynikowych są prawidłowe
 - Zweryfikuj że business impact jest opisany konkretnie
 
-**🚨 KRYTYCZNE: MODEL MUSI PAMIĘTAĆ O UZUPEŁNIENIU BUSINESS_LOGIC_MAP.MD PO KAŻDEJ ANALIZIE!**
+**🚨 KRYTYCZNE: MODEL MUSI PAMIĘTAĆ O UZUPEŁNIENIU BUSINESS_LOGIC_MAP.MD I IMPLEMENTATION_PLAN.MD PO KAŻDEJ ANALIZIE!**
 
-**🚨 BEZ TEGO KROKU AUDYT NIE JEST UKOŃCZONY!**
+### 📋 UZUPEŁNIANIE PLANU IMPLEMENTACJI Z DWUFAZOWYMI PRIORYTETAMI
+
+**⚠️ UWAGA: Wszystkie poprawki muszą być zgodne z zasadami z `__doc/refactoring_rules.md`!**
+
+**🚨 OBOWIĄZKOWO: Plan implementacji MUSI zawierać dwufazowe priorytety!**
+
+**PO KAŻDEJ UKOŃCZONEJ ANALIZIE PLIKU LOGIKI BIZNESOWEJ:**
+
+1. **Skopiuj szablon** (jeśli `AUDYT/implementation_plan.md` nie istnieje):
+
+   ```bash
+   cp __doc/implementation_plan_template.md AUDYT/implementation_plan.md
+   ```
+
+2. **Otwórz plik** `AUDYT/implementation_plan.md`
+
+3. **Określ finalny priorytet** na podstawie dwufazowej analizy:
+
+   - Znajdź **PRIORYTET_STRUKTURY** z analizy roli pliku w projekcie
+   - Znajdź **PRIORYTET_POPRAWEK** z analizy potrzeby refaktoryzacji
+   - **FINALNY = wyższy z dwóch priorytetów** (lub POMINIĘTY jeśli oba 🟢)
+
+4. **Dodaj poprawkę do odpowiedniej sekcji** na podstawie **finalnego priorytetu**:
+
+   - ⚫⚫⚫⚫ → Sekcja I: KRYTYCZNE
+   - 🔴🔴🔴 → Sekcja II: WYSOKIE
+   - 🟡🟡 → Sekcja III: ŚREDNIE
+   - 🟢 → Sekcja IV: NISKIE
+
+5. **Uzupełnij format poprawki Z DWUFAZOWYMI PRIORYTETAMI:**
+
+   ```markdown
+   ### X. [NAZWA_POPRAWKI_NA_PODSTAWIE_ANALIZY]
+
+   **Powiązane pliki:** `[PLIK]` ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → FINALNY: [FINALNY_PRIORYTET])  
+   **Uzasadnienie finalnego priorytetu:** [DLACZEGO TAKI FINALNY PRIORYTET - PROCES MYŚLOWY]  
+   **Cel:** [CEL_Z_CORRECTION.MD]  
+   **Business Impact:** [IMPACT_Z_CORRECTION.MD]  
+   **Szacowany czas wdrożenia:** [CZAS_NA_PODSTAWIE_ZŁOŻONOŚCI]
+
+   **Instrukcje dla implementacji:**
+
+   1. Zapoznaj się z analizami w plikach:
+      - `AUDYT/corrections/[nazwa_pliku]_correction.md`
+   2. Wprowadź zmiany w plikach:
+      - **`[PLIK]`:** [OPIS_ZMIAN_Z_PATCH_CODE.MD]
+   3. Po każdej logicznej zmianie, upewnij się, że kod działa poprawnie i nie wprowadza regresji. Odwołaj się do zasad w `__doc/refactoring_rules.md`.
+   4. Zaktualizuj status w planie implementacji:
+      - Zmień status z "⏳ OCZEKUJE" na "✅ UKOŃCZONE" w `AUDYT/implementation_plan.md`
+
+   **Status implementacji:** ⏳ OCZEKUJE
+   ```
+
+6. **🚨 OBOWIĄZKOWO: Uzasadnij finalny priorytet** - wyjaśnij proces myślowy:
+
+   - Dlaczego taki priorytet struktury?
+   - Dlaczego taki priorytet poprawek?
+   - Który przeważył i dlaczego?
+
+7. **Zaktualizuj statystyki** w sekcji "PODSUMOWANIE AUDYTU"
+
+8. **Sprawdź zależności** - czy ta poprawka wymaga innych lub blokuje inne
+
+9. **Dostosuj harmonogram** - dodaj do odpowiedniej fazy
+
+**🚨 BEZ DWUFAZOWYCH PRIORYTETÓW AUDYT NIE JEST UKOŃCZONY!**
+
+### 📋 OBOWIĄZKOWY FORMAT PLANU IMPLEMENTACJI Z DWUFAZOWYMI PRIORYTETAMI
+
+**🚨 KRYTYCZNE: Plan implementacji MUSI zawierać dwufazowe priorytety!**
+
+#### 🎯 **PRAWIDŁOWY FORMAT WPISU W PLANIE IMPLEMENTACJI:**
+
+```markdown
+### X. [NAZWA_POPRAWKI_NA_PODSTAWIE_ANALIZY]
+
+**Powiązane pliki:** `[PLIK]` ([PRIORYTET_STRUKTURY]/[PRIORYTET_POPRAWEK] → FINALNY: [FINALNY_PRIORYTET])  
+**Uzasadnienie finalnego priorytetu:** [DLACZEGO TAKI FINALNY PRIORYTET - PROCES MYŚLOWY]  
+**Cel:** [CEL_Z_CORRECTION.MD]  
+**Business Impact:** [IMPACT_Z_CORRECTION.MD]  
+**Szacowany czas wdrożenia:** [CZAS_NA_PODSTAWIE_ZŁOŻONOŚCI]
+
+**Instrukcje dla implementacji:**
+
+1. Zapoznaj się z analizami w plikach:
+   - `AUDYT/corrections/[nazwa_pliku]_correction.md`
+2. Wprowadź zmiany w plikach:
+   - **`[PLIK]`:** [OPIS_ZMIAN_Z_PATCH_CODE.MD]
+3. Po każdej logicznej zmianie, upewnij się, że kod działa poprawnie i nie wprowadza regresji. Odwołaj się do zasad w `__doc/refactoring_rules.md`.
+4. Zaktualizuj status w planie implementacji:
+   - Zmień status z "⏳ OCZEKUJE" na "✅ UKOŃCZONE" w `AUDYT/implementation_plan.md`
+
+**Status implementacji:** ⏳ OCZEKUJE
+```
+
+#### 🔍 **PRZYKŁADY PRAWIDŁOWYCH WPISÓW:**
+
+**Przykład 1: Priorytet struktury przeważa**
+
+```markdown
+### 1. Refaktoryzacja głównego orkiestratora aplikacji
+
+**Powiązane pliki:** `core/main_window.py` (⚫⚫⚫⚫/🟡🟡 → FINALNY: ⚫⚫⚫⚫)  
+**Uzasadnienie finalnego priorytetu:** Plik krytyczny dla struktury aplikacji (⚫⚫⚫⚫) - główny orkiestrator, mimo średnich problemów w kodzie (🟡🟡), finalny priorytet wynika z kluczowej roli w architekturze.  
+**Cel:** Uproszczenie kodu, redukcja sprzężenia między komponentami  
+**Business Impact:** Zwiększenie stabilności aplikacji, ułatwienie przyszłego rozwoju
+```
+
+**Przykład 2: Priorytet poprawek przeważa**
+
+```markdown
+### 2. Naprawa krytycznych problemów wydajności cache
+
+**Powiązane pliki:** `core/cache_manager.py` (🟡🟡/⚫⚫⚫⚫ → FINALNY: ⚫⚫⚫⚫)  
+**Uzasadnienie finalnego priorytetu:** Plik pomocniczy w strukturze (🟡🟡), ale ma krytyczne problemy wydajnościowe i memory leaks (⚫⚫⚫⚫), finalny priorytet wynika z pilnej potrzeby naprawy bugów.  
+**Cel:** Eliminacja memory leaks, optymalizacja wydajności cache  
+**Business Impact:** Znaczące zwiększenie responsywności UI, eliminacja crashy aplikacji
+```
+
+**Przykład 3: Oba priorytety równe**
+
+```markdown
+### 3. Konsolidacja kluczowej logiki biznesowej
+
+**Powiązane pliki:** `core/scanner.py` (⚫⚫⚫⚫/⚫⚫⚫⚫ → FINALNY: ⚫⚫⚫⚫)  
+**Uzasadnienie finalnego priorytetu:** Plik kluczowy dla struktury (⚫⚫⚫⚫) - główne algorytmy biznesowe, oraz ma krytyczne problemy architektoniczne (⚫⚫⚫⚫), finalny priorytet wynika z podwójnej krytyczności.  
+**Cel:** Drastyczne uproszczenie architektury, usunięcie over-engineering  
+**Business Impact:** Znaczące ułatwienie utrzymania kluczowej logiki biznesowej
+```
+
+#### 🚨 **OBOWIĄZKOWE ELEMENTY W KAŻDYM WPISIE:**
+
+1. **✅ Dwufazowy priorytet** - `([STRUKTURY]/[POPRAWEK] → FINALNY: [PRIORYTET])`
+2. **✅ Uzasadnienie finalnego priorytetu** - DLACZEGO taki finalny priorytet, proces myślowy
+3. **✅ Nazwa pliku z priorytetami** - aby było jasne skąd wynika finalny priorytet
+4. **✅ Cel i Business Impact** - z plików correction.md
+5. **✅ Instrukcje implementacji** - odniesienia do correction.md i patch_code.md
+
+#### ❌ **NIEDOPUSZCZALNE FORMATY:**
+
+```markdown
+❌ **Powiązane pliki:** `core/main_window.py` - BRAK dwufazowych priorytetów
+❌ **Cel:** Refaktoryzacja - BRAK uzasadnienia finalnego priorytetu  
+❌ **Priorytet:** ⚫⚫⚫⚫ - BRAK procesu myślowego jak doszło do finalnego priorytetu
+```
 
 ### 🚨 WAŻNE: ZASADY DOKUMENTACJI I COMMITÓW
 
@@ -737,10 +1106,13 @@ git commit -m "BUSINESS LOGIC AUDIT [NUMER]: [NAZWA_PLIKU] - [OPIS] - ZAKOŃCZON
 1. **Zapoznaj się z README.md** - zawiera kluczowe informacje o architekturze, wymaganiach wydajnościowych i procesach biznesowych aplikacji
 2. **Przeanalizuj strukturę projektu** - dynamicznie odkryj katalogi i pliki
 3. **Wygeneruj mapę logiki biznesowej** - na podstawie analizy kodu i kontekstu z README.md
+4. **Skopiuj szablon planu implementacji** - `cp __doc/implementation_plan_template.md AUDYT/implementation_plan.md`
 
 **Czekam na Twój pierwszy wynik: zawartość pliku `business_logic_map.md` z mapą plików logiki biznesowej.**
 
 **UWAGA: Mapa musi być wygenerowana na podstawie analizy aktualnego kodu oraz kontekstu biznesowego z README.md!**
+
+**🚨 PAMIĘTAJ: Po każdej analizie pliku logiki biznesowej OBOWIĄZKOWO uzupełniaj `AUDYT/implementation_plan.md`!**
 
 #### **SZCZEGÓŁOWA ANALIZA FUNKCJI BIZNESOWYCH**
 
@@ -757,9 +1129,14 @@ git commit -m "BUSINESS LOGIC AUDIT [NUMER]: [NAZWA_PLIKU] - [OPIS] - ZAKOŃCZON
 
 ## 🚨 KRYTYCZNE ZASADY - MODEL MUSI PAMIĘTAĆ!
 
-### 📋 **OBOWIĄZKOWE UZUPEŁNIANIE BUSINESS_LOGIC_MAP.MD**
+> **🚨 UWAGA! Model (AI, asystent, narzędzie automatyczne) NIE MA PRAWA samodzielnie zmieniać istniejącego kodu ani wprowadzać poprawek. Wszelkie zmiany mogą być wprowadzane wyłącznie przez człowieka po zatwierdzeniu i zgodnie z procedurami audytu.**
 
-**🚨 MODEL MUSI PAMIĘTAĆ: Po każdej ukończonej analizie pliku logiki biznesowej OBAWIĄZKOWO uzupełnić plik `AUDYT/business_logic_map.md`!**
+### 📋 **OBOWIĄZKOWE UZUPEŁNIANIE DOKUMENTÓW AUDYTU**
+
+**🚨 MODEL MUSI PAMIĘTAĆ: Po każdej ukończonej analizie pliku logiki biznesowej OBAWIĄZKOWO uzupełnić pliki:**
+
+- `AUDYT/business_logic_map.md` - status ukończenia analizy
+- `AUDYT/implementation_plan.md` - dodanie poprawki do planu implementacji
 
 **OBOWIĄZKOWE KROKI PO KAŻDEJ ANALIZIE:**
 
@@ -769,6 +1146,8 @@ git commit -m "BUSINESS LOGIC AUDIT [NUMER]: [NAZWA_PLIKU] - [OPIS] - ZAKOŃCZON
 4. ✅ **DODAJ datę ukończenia** - aktualna data w formacie YYYY-MM-DD
 5. ✅ **DODAJ business impact** - opis wpływu na procesy biznesowe
 6. ✅ **DODAJ ścieżki do plików wynikowych** - correction.md i patch_code.md
+7. ✅ **OTWÓRZ implementation_plan.md** - dodaj poprawkę do odpowiedniej sekcji priorytetowej
+8. ✅ **ZAKTUALIZUJ statystyki** - liczba plików i poprawek w planie implementacji
 
 **FORMAT UZUPEŁNIENIA W BUSINESS_LOGIC_MAP.MD:**
 

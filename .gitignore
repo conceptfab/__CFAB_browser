@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 _CFAB_3DHUB-env/
-
+_dist/
+*.exe
 # C extensions
 *.so
 

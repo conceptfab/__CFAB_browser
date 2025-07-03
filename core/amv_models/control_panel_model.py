@@ -1,4 +1,5 @@
 import logging
+
 from PyQt6.QtCore import QObject, pyqtSignal
 
 logger = logging.getLogger(__name__)
@@ -34,12 +35,11 @@ class ControlPanelModel(QObject):
     def get_thumbnail_size(self):
         return self._thumbnail_size
 
-    def set_has_selection(self, has: bool):
-        logger.debug(f"ControlPanelModel: set_has_selection called with: {has}")
-        if self._has_selection != has:
-            self._has_selection = has
-            self.selection_state_changed.emit(has)
-            logger.debug(f"ControlPanelModel: selection_state_changed emitted: {has}")
+    def set_has_selection(self, has_selection: bool):
+        """Ustawia, czy jest zaznaczenie i emituje sygnał."""
+        self._has_selection = has_selection
+        self.selection_state_changed.emit(self._has_selection)
 
-    def has_selection(self):
-        return self._has_selection 
+    def get_has_selection(self) -> bool:
+        """Zwraca, czy jest zaznaczenie."""
+        return self._has_selection

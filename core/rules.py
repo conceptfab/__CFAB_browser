@@ -20,6 +20,7 @@ Data: 2025
 import logging
 import os
 import re
+import time
 from typing import Dict, Optional, Set
 
 logger = logging.getLogger(__name__)
@@ -49,8 +50,8 @@ class FolderClickRules:
 
     # Zbiory rozszerzeń plików dla efektywnego lookup
     ASSET_EXTENSIONS: Set[str] = {".asset"}
-    ARCHIVE_EXTENSIONS: Set[str] = {".rar", ".zip", ".sbsar"}
-    PREVIEW_EXTENSIONS: Set[str] = {".jpg", ".jpeg", ".png", ".gif"}
+    ARCHIVE_EXTENSIONS: Set[str] = {".rar", ".zip", ".sbsar", ".7z"}
+    PREVIEW_EXTENSIONS: Set[str] = {".jpg", ".jpeg", ".png",".webp", ".gif"}
 
     # Cache TTL (Time To Live) w sekundach
     CACHE_TTL = 300  # 5 minut
@@ -103,8 +104,6 @@ class FolderClickRules:
         Returns:
             bool: True jeśli cache jest aktualny
         """
-        import time
-
         if folder_path not in FolderClickRules._cache_timestamps:
             return False
 
@@ -142,8 +141,6 @@ class FolderClickRules:
             folder_path (str): Ścieżka do folderu
             analysis (Dict): Wynik analizy do zcache'owania
         """
-        import time
-
         FolderClickRules._folder_analysis_cache[folder_path] = analysis
         FolderClickRules._cache_timestamps[folder_path] = time.time()
         logger.debug(f"Zcache'owano analizę folderu: {folder_path}")
@@ -210,6 +207,27 @@ class FolderClickRules:
             return 0
 
     @staticmethod
+    def _create_error_result(error_message: str) -> dict:
+        """
+        Pomocnicza metoda do generowania słownika błędu dla analyze_folder_content
+
+        Args:
+            error_message (str): Treść komunikatu błędu
+
+        Returns:
+            dict: Słownik z informacjami o błędzie
+        """
+        return {
+            "error": error_message,
+            "asset_files": [],
+            "preview_archive_files": [],
+            "cache_exists": False,
+            "cache_thumb_count": 0,
+            "asset_count": 0,
+            "preview_archive_count": 0,
+        }
+
+    @staticmethod
     def analyze_folder_content(folder_path: str) -> dict:
         """
         Analizuje zawartość folderu i zwraca szczegółowe informacje o plikach
@@ -251,45 +269,22 @@ class FolderClickRules:
         # Walidacja input
         validation_error = FolderClickRules._validate_folder_path(folder_path)
         if validation_error:
-            error_result = {
-                "error": validation_error,
-                "asset_files": [],
-                "preview_archive_files": [],
-                "cache_exists": False,
-                "cache_thumb_count": 0,
-                "asset_count": 0,
-                "preview_archive_count": 0,
-            }
-            return error_result
+            return FolderClickRules._create_error_result(validation_error)
 
         try:
             # Sprawdź czy folder istnieje
             if not os.path.exists(folder_path):
-                error_result = {
-                    "error": f"Folder nie istnieje: {folder_path}",
-                    "asset_files": [],
-                    "preview_archive_files": [],
-                    "cache_exists": False,
-                    "cache_thumb_count": 0,
-                    "asset_count": 0,
-                    "preview_archive_count": 0,
-                }
-                return error_result
+                return FolderClickRules._create_error_result(
+                    f"Folder nie istnieje: {folder_path}"
+                )
 
             # Pobierz listę wszystkich elementów w folderze
             try:
                 items = os.listdir(folder_path)
             except (OSError, PermissionError) as e:
-                error_result = {
-                    "error": f"Brak uprawnień do odczytu folderu: {e}",
-                    "asset_files": [],
-                    "preview_archive_files": [],
-                    "cache_exists": False,
-                    "cache_thumb_count": 0,
-                    "asset_count": 0,
-                    "preview_archive_count": 0,
-                }
-                return error_result
+                return FolderClickRules._create_error_result(
+                    f"Brak uprawnień do odczytu folderu: {e}"
+                )
 
             # Kategoryzuj pliki według typów
             asset_files = []
@@ -332,16 +327,7 @@ class FolderClickRules:
 
         except Exception as e:
             logger.error(f"Błąd analizy zawartości folderu {folder_path}: {e}")
-            error_result = {
-                "error": f"Błąd analizy folderu: {e}",
-                "asset_files": [],
-                "preview_archive_files": [],
-                "cache_exists": False,
-                "cache_thumb_count": 0,
-                "asset_count": 0,
-                "preview_archive_count": 0,
-            }
-            return error_result
+            return FolderClickRules._create_error_result(f"Błąd analizy folderu: {e}")
 
     @staticmethod
     def _log_folder_analysis(folder_path: str, content: Dict) -> None:

@@ -1,7 +1,9 @@
 import logging
 import os
 import sys
+
 from PyQt6.QtCore import QObject, pyqtSignal
+
 from core.json_utils import load_from_file
 
 logger = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ class ConfigManagerMV(QObject):
         self._config_cache = None
         self._config_timestamp = None
         self._config_path = "config.json"
-        logger.info("ConfigManagerMV initialized")
+        logger.debug("ConfigManagerMV initialized")
 
     def load_config(self, force_reload=False):
         try:
@@ -34,7 +36,7 @@ class ConfigManagerMV(QObject):
                         else 0
                     )
                     self.config_loaded.emit(config)
-                    logger.info("Konfiguracja załadowana pomyślnie")
+                    logger.debug("Konfiguracja załadowana pomyślnie")
                 else:
                     self._config_cache = self._get_default_config()
                     self._config_timestamp = 0
@@ -79,4 +81,4 @@ class ConfigManagerMV(QObject):
             "work_folder7": "",
             "work_folder8": "",
             "work_folder9": "",
-        } 
+        }

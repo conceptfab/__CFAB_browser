@@ -162,6 +162,21 @@ class RenamerApp(QMainWindow):
         main_layout.addWidget(self.start_button)
 
         self.progress_bar = QProgressBar()
+        self.progress_bar.setFixedHeight(12)  # Chudszy progress bar
+        self.progress_bar.setStyleSheet(
+            """
+            QProgressBar {
+                border: 1px solid #555555; background-color: #2D2D30;
+                text-align: center; color: #FFFFFF; border-radius: 6px;
+                font-size: 10px; font-weight: bold;
+            }
+            QProgressBar::chunk {
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #007ACC, stop:1 #1C97EA);
+                border-radius: 5px;
+            }
+        """
+        )
         self.progress_bar.setVisible(False)
         main_layout.addWidget(self.progress_bar)
 

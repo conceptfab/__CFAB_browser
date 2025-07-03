@@ -4,7 +4,8 @@ import os
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from core.rules import FolderClickRules
-from core.scanner import find_and_create_assets
+
+# from core.scanner import find_and_create_assets  # USUNIĘTO: Skanowanie assetów będzie delegowane
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +49,6 @@ class FolderStructureScanner(QThread):
                 self.finished_scanning.emit()
                 return
 
-            # NIE sprawdzaj głównego folderu automatycznie - tylko po kliknięciu użytkownika
-            # self.handle_folder_click(self.folder_path)  # USUNIĘTE!
-
             # Najpierw policz wszystkie foldery dla postępu
             self._count_total_folders()
 
@@ -70,43 +68,6 @@ class FolderStructureScanner(QThread):
             self.error_occurred.emit(error_msg)
         finally:
             self.finished_scanning.emit()
-
-    def _run_scanner(self, folder_path: str):
-        """
-        Uruchamia scanner w określonym folderze
-
-        Args:
-            folder_path (str): Ścieżka do folderu do przeskanowania
-        """
-        try:
-            logger.info(f"Uruchamianie scannera w folderze: {folder_path}")
-            self.scanner_started.emit(folder_path)
-
-            # Uruchom scanner z callbackiem postępu
-            def progress_callback(current, total, message):
-                if total > 0:
-                    progress = int((current / total) * 100)
-                    self.progress_updated.emit(min(progress, 100))
-                logger.debug(f"Scanner progress: {message}")
-
-            # Uruchom scanner
-            created_assets = find_and_create_assets(folder_path, progress_callback)
-
-            if created_assets:
-                logger.info(
-                    f"Scanner zakończony, utworzono {len(created_assets)} "
-                    f"plików asset w: {folder_path}"
-                )
-                # Po zakończeniu scannera wyślij sygnał do galerii
-                self.scanner_finished.emit(folder_path)
-                self.assets_folder_found.emit(folder_path)
-            else:
-                logger.warning(f"Scanner nie utworzył plików asset w: {folder_path}")
-
-        except Exception as e:
-            error_msg = f"Błąd podczas uruchamiania scannera w {folder_path}: {e}"
-            logger.error(error_msg)
-            self.error_occurred.emit(error_msg)
 
     def _count_total_folders(self):
         """Liczy wszystkie foldery dla obliczenia postępu"""
@@ -153,9 +114,6 @@ class FolderStructureScanner(QThread):
                 for subfolder_path in subfolders:
                     self._scan_folder_structure(subfolder_path, level + 1)
 
-                # NIE sprawdzaj zawartości folderu automatycznie - tylko po kliknięciu użytkownika
-                # self.handle_folder_click(current_path)  # USUNIĘTE!
-
             except PermissionError:
                 logger.warning(f"Brak uprawnień do folderu: {current_path}")
             except Exception as e:
@@ -187,7 +145,9 @@ class FolderStructureScanner(QThread):
 
             # Wykonaj akcję na podstawie decyzji z rules.py
             if action == "run_scanner":
-                self._run_scanner(folder_path)
+                # Zamiast _run_scanner, wywołaj metodę z AssetScannerModelMV
+                # self.asset_scanner_model_mv.scan_folder(folder_path)
+                pass
             elif action == "show_gallery":
                 self.assets_folder_found.emit(folder_path)
             elif action == "error":
