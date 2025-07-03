@@ -283,7 +283,7 @@ class AmvView(BaseWidget):
     def _create_control_panel(self):
         self.control_panel = QFrame()
         self.control_panel.setFixedHeight(32)
-        self.control_panel.setFixedWidth(950)  # Stała szerokość panelu
+        self.control_panel.setFixedWidth(990)  # Stała szerokość panelu
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(0, 0, 0, 0)
         control_layout.setSpacing(8)
