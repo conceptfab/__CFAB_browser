@@ -132,7 +132,20 @@ class AssetTileView(TileBase):
         logger.debug("AssetTileView reset for pool reuse")
 
     def _setup_ui(self):
-        # Usunięto podwójne tworzenie thumbnail_container - przeniesione do _setup_ui_without_styles()
+        # Najpierw utwórz miniaturkę!
+        self.thumbnail_container = BaseLabel()
+        thumb_size = self.thumbnail_size
+        self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
+        self.thumbnail_container.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
+        self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.thumbnail_container.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )  # DODANE: Centrowanie zawartości
+        self.thumbnail_container.setContentsMargins(
+            0, 0, 0, 0
+        )  # DODANE: Usuwa wszelkie wewnętrzne marginesy
         # Najpierw utwórz ikonę tekstury!
         self.texture_icon = BaseLabel()
         self.texture_icon.setFixedSize(16, 16)
@@ -191,27 +204,69 @@ class AssetTileView(TileBase):
         self.thumbnail_container.setContentsMargins(
             0, 0, 0, 0
         )  # Usuwa wszelkie wewnętrzne marginesy
+        # Najpierw utwórz ikonę tekstury!
+        self.texture_icon = BaseLabel()
+        self.texture_icon.setFixedSize(16, 16)
+        self.texture_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.texture_icon.setVisible(False)
+        self._load_texture_icon()
+        # Najpierw utwórz label na nazwę pliku!
+        self.name_label = QLabel()
+        self.name_label.setObjectName("AssetNameLabel")
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_label.setWordWrap(True)
+        self.name_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
+        )
+        self.name_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Dodaj label na rozmiar pliku
+        self.size_label = QLabel()
+        self.size_label.setObjectName("AssetSizeLabel")
+        self.size_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.size_label.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
+        )
+        # Dodaj label na numer kafelka
+        self.tile_number_label = QLabel()
+        self.tile_number_label.setObjectName("AssetTileNumberLabel")
+        self.tile_number_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.tile_number_label.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
+        )
+        # Dodaj checkbox
+        self.checkbox = BaseCheckBox()
+        self.checkbox.setObjectName("AssetTileCheckBox")
+        # Dodaj gwiazdki (5)
+        self.star_checkboxes = [StarCheckBoxBase() for _ in range(5)]
+        for i, star_cb in enumerate(self.star_checkboxes):
+            star_cb.setObjectName(f"AssetTileStar_{i+1}")
+            star_cb.setProperty("class", "star")
+            star_cb.setText("★")
+            star_cb.clicked.connect(
+                lambda checked, rating=i + 1: self._on_star_clicked(rating)
+            )
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
-        # Bardziej precyzyjne obliczanie rozmiaru
-        tile_padding = 6  # z CSS
-        tile_border = 1  # z CSS
-        tile_width = self.thumbnail_size + (2 * tile_padding) + (2 * tile_border)
-        tile_height = self.thumbnail_size + 70 + (2 * tile_padding) + (2 * tile_border)
+        # Ustaw sztywny rozmiar kafelka na podstawie miniatury
+        tile_width = self.thumbnail_size + (2 * self.margins_size)
+        tile_height = self.thumbnail_size + 70
         self.setFixedSize(tile_width, tile_height)
 
         layout = QVBoxLayout(self)
-        layout.setSpacing(8)
-        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(6)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        # MINIATURKA - bezpośrednio w layoucie głównym
-        self.thumbnail_container.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.thumbnail_container, 0, Qt.AlignmentFlag.AlignCenter)
-        layout.addSpacing(8)  # Odstęp przed nazwą pliku
+        # MINIATURKA - bezpośrednio w głównym layoucie
+        miniature_wrapper = QWidget()
+        miniature_layout = QHBoxLayout(miniature_wrapper)
+        miniature_layout.setContentsMargins(8, 8, 8, 8)  # Symetryczne marginesy 8px
+        miniature_layout.setSpacing(0)
+        miniature_layout.addWidget(self.thumbnail_container, 0, Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(miniature_wrapper)
 
         # Pasek z nazwą pliku, ikonką tekstury i rozmiarem
         filename_container = QHBoxLayout()
-        filename_container.setContentsMargins(0, 0, 0, 0)
+        filename_container.setContentsMargins(12, 6, 12, 6)
         filename_container.setSpacing(8)
         filename_container.addWidget(self.texture_icon, 0, Qt.AlignmentFlag.AlignLeft)
         filename_container.addWidget(self.name_label, 1)
@@ -223,7 +278,7 @@ class AssetTileView(TileBase):
         # Pasek z gwiazdkami, numerem i checkboxem
         bottom_row_bg = QWidget()
         bottom_row_layout = QHBoxLayout(bottom_row_bg)
-        bottom_row_layout.setContentsMargins(0, 0, 0, 0)
+        bottom_row_layout.setContentsMargins(12, 6, 12, 12)
         bottom_row_layout.setSpacing(10)
         bottom_row_layout.addWidget(self.tile_number_label)
         bottom_row_layout.addStretch()

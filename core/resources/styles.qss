@@ -508,7 +508,7 @@ TileBase, .AssetTileView {
     border: 1px solid #3F3F46;
     border-radius: 6px;
     padding: 6px;  /* Zmniejszone z 4px na 6px dla lepszej symetrii */
-    margin: 2px;
+    margin: 0px;
 }
 
 TileBase:hover, .AssetTileView:hover {

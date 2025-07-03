@@ -6,6 +6,25 @@
 
 ## ✅ WYKONANE POPRAWKI
 
+### 📄 core/amv_views/asset_tile_view.py - ✅ UKOŃCZONE (2024-12-19)
+
+**Wykonane zmiany:**
+
+- ✅ Usunięto podwójne tworzenie `thumbnail_container` w metodzie `_setup_ui()` (linie 134-142)
+- ✅ Uproszczono strukturę w metodzie `_setup_ui_without_styles()` - usunięto `miniature_wrapper`
+- ✅ Dostosowano obliczanie rozmiaru kafelka z uwzględnieniem padding i border z CSS
+- ✅ Dodano debugowanie w metodzie `update_ui()` do monitorowania rozmiarów i pozycji
+
+**Weryfikacja:**
+
+- ✅ Aplikacja uruchamia się poprawnie
+- ✅ Brak podwójnego tworzenia `thumbnail_container`
+- ✅ Uproszczona struktura layoutu
+- ✅ Precyzyjne obliczanie rozmiarów kafelków
+- ✅ Debugowanie aktywne w logach
+
+**Status:** ✅ UKOŃCZONE - Wszystkie poprawki wykonane zgodnie z raportem refactor.md
+
 ### 📄 core/amv_controllers/amv_controller.py - ✅ UKOŃCZONE (2024-12-19)
 
 **Wykonane zmiany:**

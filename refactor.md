@@ -1,30 +1,36 @@
-Poprawka asymetrycznego rozmieszczenia miniaturki
-Plik: core/amv_views/asset_tile_view.py
-Zmiana w funkcji _setup_ui() - linie 334-342:
+Rozwiązanie
+Zmiana 1: W pliku core/amv_views/asset_tile_view.py
+Usuń podwójne tworzenie thumbnail_container. W metodzie _setup_ui() zakomentuj lub usuń linie 134-142:
 pythondef _setup_ui(self):
-    # Najpierw utwórz miniaturkę!
-    self.thumbnail_container = BaseLabel()
-    thumb_size = self.thumbnail_size
-    self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
-    self.thumbnail_container.setSizePolicy(
-        QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
-    )
-    self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
-    self.thumbnail_container.setAlignment(Qt.AlignmentFlag.AlignCenter)  # DODANE
-    self.thumbnail_container.setContentsMargins(0, 0, 0, 0)  # DODANE
-Zmiana w funkcji _setup_ui_without_styles() - marginesy kontenera miniaturki (linia ~403):
-python# MINIATURKA - najważniejsza, 12px marginesów wokół (ujednolicenie z resztą)
-thumb_container = QWidget()
-thumb_layout = QVBoxLayout(thumb_container)
-thumb_layout.setContentsMargins(12, 10, 12, 10)  # ZMIENIONE: z (10,10,10,10) na (12,10,12,10)
-thumb_layout.setSpacing(0)
-thumb_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # DODANE
+    # Usuń to:
+    # self.thumbnail_container = BaseLabel()
+    # thumb_size = self.thumbnail_size
+    # self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
+    # self.thumbnail_container.setSizePolicy(
+    #     QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+    # )
+    # self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
+    # self.thumbnail_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    # self.thumbnail_container.setContentsMargins(0, 0, 0, 0)
+Zmiana 2: W metodzie _setup_ui_without_styles(), uproszczenie struktury:
+python# Zamiast linii 283-295, użyj:
+# MINIATURKA - bezpośrednio w layoucie głównym
 self.thumbnail_container.setContentsMargins(0, 0, 0, 0)
-self.thumbnail_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
-thumb_layout.addWidget(self.thumbnail_container, 0, Qt.AlignmentFlag.AlignCenter)  # DODANE parametr wyrównania
-layout.addWidget(thumb_container)
-Te zmiany:
-
-Wyśrodkowują miniaturkę w kontenerze
-Ujednolicają marginesy (12px lewo/prawo jak w pozostałych sekcjach)
-Dodają jawne wyrównanie na poziomie layoutu
+layout.addWidget(self.thumbnail_container, 0, Qt.AlignmentFlag.AlignCenter)
+layout.addSpacing(4)  # Mały odstęp przed nazwą pliku
+Zmiana 3: Dostosuj obliczanie rozmiaru kafelka (linia 271-273):
+python# Bardziej precyzyjne obliczanie rozmiaru
+tile_padding = 6  # z CSS
+tile_border = 1   # z CSS
+tile_width = self.thumbnail_size + (2 * tile_padding) + (2 * tile_border)
+tile_height = self.thumbnail_size + 70 + (2 * tile_padding) + (2 * tile_border)
+self.setFixedSize(tile_width, tile_height)
+To powinno rozwiązać problem. Jeśli nadal nie działa, to możemy sprawdzić przez debugging - dodaj to tymczasowo do metody update_ui():
+pythondef update_ui(self):
+    # Debug info
+    logger.info(f"Kafelek rozmiar: {self.size()}")
+    logger.info(f"Miniaturka rozmiar: {self.thumbnail_container.size()}")
+    logger.info(f"Miniaturka pozycja: {self.thumbnail_container.pos()}")
+    
+    # Reszta kodu...
+To pokaże nam dokładne rozmiary i pozycje w logach.
