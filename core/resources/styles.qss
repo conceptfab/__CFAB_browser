@@ -270,7 +270,7 @@ QLabel[class="thumbnail-container"] {
     color: #a9b7c6;
     font-weight: bold;
     font-size: 12px;
-    padding: 2px 8px;
+    padding: 0px;
     border-bottom: 1px solid #202230;
 }
 #AssetTileNameLabel:hover {
@@ -293,7 +293,7 @@ QLabel[class="thumbnail-container"] {
     background: transparent;
     color: #888888;
     font-size: 11px;
-    padding: 0 8px;
+    padding: 0px;
     text-align: right;
 }
 

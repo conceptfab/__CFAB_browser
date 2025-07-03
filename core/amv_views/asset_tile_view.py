@@ -138,8 +138,10 @@ class AssetTileView(TileBase):
         self.texture_icon.setObjectName(
             "AssetTileTextureIcon"
         )  # Ikona tekstury (16x16px)
-        self.texture_icon.setFixedSize(16, 16)
-        self.texture_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.texture_icon.setFixedSize(60, 16)
+        self.texture_icon.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
         self.texture_icon.setVisible(False)
         self._load_texture_icon()
         # Najpierw utwórz label na nazwę pliku!
@@ -206,19 +208,15 @@ class AssetTileView(TileBase):
         tile_border = 1  # z CSS
 
         # Oblicz szerokość na podstawie kolumn
-        # ikona(60) + nazwa(136) + rozmiar(60) + odstępy(16)
-        filename_width = 60 + 136 + 60 + 16  # 272px
-        tile_width = (
-            max(self.thumbnail_size, filename_width)
-            + (2 * tile_padding)
-            + (2 * tile_border)
-        )
+        # ikona(60) + nazwa(136) + rozmiar(60)
+        filename_width = 60 + 136 + 60  # 256px
+        tile_width = max(self.thumbnail_size, filename_width)
         tile_height = self.thumbnail_size + 70 + (2 * tile_padding) + (2 * tile_border)
         self.setFixedSize(tile_width, tile_height)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(8)
-        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         # MINIATURKA - bezpośrednio w layoucie głównym
         self.thumbnail_container.setContentsMargins(0, 0, 0, 0)
@@ -236,11 +234,7 @@ class AssetTileView(TileBase):
         self.size_label.setFixedWidth(60)
 
         filename_container.addWidget(self.texture_icon, 0, Qt.AlignmentFlag.AlignLeft)
-        filename_container.addStretch()  # Rozciągacz między ikoną a nazwą
-        filename_container.addWidget(
-            self.name_label, 0
-        )  # Zmieniono z 1 na 0 (nie rozciągaj)
-        filename_container.addStretch()  # Rozciągacz między nazwą a MB
+        filename_container.addWidget(self.name_label, 0)
         filename_container.addWidget(self.size_label, 0, Qt.AlignmentFlag.AlignRight)
         filename_bg = QWidget()
         filename_bg.setObjectName("AssetTileFilenameContainer")  # Kontener nazwy pliku
