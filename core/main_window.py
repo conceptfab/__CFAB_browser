@@ -346,12 +346,6 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"Error showing operation status: {e}")
 
-    def _show_info_message_box(self, title: str, message: str):
-        QMessageBox.information(self, title, message)
-
-    def _show_error_message_box(self, title: str, message: str):
-        QMessageBox.critical(self, title, message)
-
     def setup_log_interceptor(self):
         """
         Konfiguruje przechwytywanie logów do wyświetlania w pasku statusu
@@ -454,8 +448,6 @@ class MainWindow(QMainWindow):
     def _connect_tools_signals(self):
         try:
             if self.tools_tab:
-                self.tools_tab.show_info_message.connect(self._show_info_message_box)
-                self.tools_tab.show_error_message.connect(self._show_error_message_box)
                 self.logger.info("Successfully connected ToolsTab signals.")
         except Exception as e:
             self.logger.error(f"Error connecting tools signals: {e}")

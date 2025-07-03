@@ -112,6 +112,10 @@ class PreviewWindow(QDialog):
         layout.addWidget(self.image_label)
         self.setLayout(layout)
         self.load_image_and_resize()
+        # USUNIĘTO AUTOMATYCZNE POKAZANIE OKNA - wywołane świadomie z controllera
+
+    def show_window(self):
+        """Pokazuje okno podglądu."""
         self.show()
         self.raise_()
         self.activateWindow()

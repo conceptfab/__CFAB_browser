@@ -253,8 +253,12 @@ class PairingTab(QWidget):
 
     def _on_preview_clicked(self, file_path: str):
         print(f"Opening preview: {file_path}")
+        # Zabezpieczenie przed wieloma oknami
+        if hasattr(self, "preview_window") and self.preview_window:
+            self.preview_window.close()
+
         self.preview_window = PreviewWindow(file_path)
-        self.preview_window.show()
+        self.preview_window.show_window()
 
     def _remove_paired_items_from_ui(self, archive_name: str, preview_full_path: str):
         """Usuwa sparowane elementy z UI bez przeładowywania całej listy"""

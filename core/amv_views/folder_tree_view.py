@@ -239,122 +239,143 @@ class CustomFolderTreeView(QTreeView):
         try:
             logger.debug(f"DropEvent triggered - mimeData: {event.mimeData().text()}")
 
-            if event.mimeData().hasText() and event.mimeData().text().startswith(
-                "application/x-cfab-asset"
+            # REFAKTORYZUJ: wynieś walidację do osobnych metod
+            if not self._validate_drop_event(event):
+                return
+
+            target_info = self._get_drop_target_info(event)
+            if not target_info:
+                return
+
+            target_folder_path, asset_ids, current_folder_path = target_info
+
+            # Pobierz pełne dane assetów z asset_grid_model
+            assets_to_move = self._get_assets_to_move(asset_ids)
+
+            if self._can_perform_drop(
+                assets_to_move, asset_ids, current_folder_path, target_folder_path
             ):
-                index = self.indexAt(event.position().toPoint())
-                if index.isValid():
-                    item = self.model().itemFromIndex(index)
-                    if item and item.data(Qt.ItemDataRole.UserRole):
-                        target_folder_path = item.data(Qt.ItemDataRole.UserRole)
-                        logger.debug(f"Target folder path: {target_folder_path}")
-
-                        # Sprawdź, czy nie próbujemy przenieść do tego samego folderu roboczego
-                        current_folder_path = None
-                        if self.current_folder_path_getter:
-                            current_folder_path = self.current_folder_path_getter()
-                            logger.debug(
-                                f"Current folder path: '{current_folder_path}'"
-                            )
-                            logger.debug(f"Target folder path: '{target_folder_path}'")
-
-                        if self.drag_drop_model and self.drag_drop_model.validate_drop(
-                            target_folder_path,
-                            (
-                                self.current_folder_path_getter()
-                                if self.current_folder_path_getter
-                                else None
-                            ),
-                        ):
-                            asset_ids_str = (
-                                event.mimeData()
-                                .text()
-                                .replace("application/x-cfab-asset,", "")
-                            )
-                            asset_ids = asset_ids_str.split(",")
-                            logger.debug(f"Asset IDs to move: {asset_ids}")
-
-                            # Pobierz pełne dane assetów z asset_grid_model
-                            assets_to_move = []
-                            if self.asset_grid_model:
-                                all_assets = self.asset_grid_model.get_assets()
-                                logger.debug(f"All assets count: {len(all_assets)}")
-                                assets_to_move = [
-                                    asset
-                                    for asset in all_assets
-                                    if asset.get("name") in asset_ids
-                                ]
-                                logger.debug(
-                                    f"Assets to move count: {len(assets_to_move)}"
-                                )
-                            else:
-                                logger.error("asset_grid_model is None!")
-
-                            logger.debug(f"[DROP DEBUG] asset_ids: {asset_ids}")
-                            logger.debug(f"[DROP DEBUG] source_folder_path: {current_folder_path}")
-                            logger.debug(f"[DROP DEBUG] target_folder_path: {target_folder_path}")
-
-                            if not asset_ids or not all(asset_ids):
-                                logger.error(f"[DROP ERROR] asset_ids is empty or contains empty values: {asset_ids}")
-                            if not current_folder_path:
-                                logger.error(f"[DROP ERROR] current_folder_path is empty or None!")
-                            if not target_folder_path:
-                                logger.error(f"[DROP ERROR] target_folder_path is empty or None!")
-
-                            if (
-                                assets_to_move
-                                and self.file_operations_model
-                                and self.current_folder_path_getter
-                                and asset_ids
-                                and all(asset_ids)
-                                and current_folder_path
-                                and target_folder_path
-                            ):
-                                source_folder_path = current_folder_path
-                                logger.debug(
-                                    f"Source folder path: {source_folder_path}"
-                                )
-
-                                if source_folder_path:
-                                    # Wykonaj operację przenoszenia w osobnym wątku
-                                    self.file_operations_model.move_assets(
-                                        assets_to_move,
-                                        source_folder_path,
-                                        target_folder_path,
-                                    )
-                                    self.drag_drop_model.complete_drop(
-                                        target_folder_path, asset_ids
-                                    )
-                                    event.acceptProposedAction()
-                                    logger.info(f"Drop completed successfully")
-                                else:
-                                    logger.error("Source folder path is empty!")
-                                    event.ignore()
-                            else:
-                                logger.error(
-                                    f"[DROP ERROR] Missing required models: assets_to_move={len(assets_to_move)}, file_operations_model={self.file_operations_model is not None}, current_folder_path_getter={self.current_folder_path_getter is not None}, asset_ids={asset_ids}, current_folder_path={current_folder_path}, target_folder_path={target_folder_path}"
-                                )
-                                event.ignore()
-                        else:
-                            logger.error(
-                                f"Drag drop validation failed for: {target_folder_path}"
-                            )
-                            event.ignore()
-                    else:
-                        logger.error("Invalid item or no UserRole data")
-                        event.ignore()
-                else:
-                    logger.error("Invalid index")
-                    event.ignore()
-                self._clear_folder_highlight()
+                self._perform_drop_operation(
+                    assets_to_move, current_folder_path, target_folder_path, asset_ids
+                )
+                event.acceptProposedAction()
+                logger.info(f"Drop completed successfully")
             else:
-                logger.error("Invalid mime data")
                 event.ignore()
-                self._clear_folder_highlight()
+
+            self._clear_folder_highlight()
+
         except Exception as e:
             logger.error(f"Error in dropEvent: {e}")
             event.ignore()
             self._clear_folder_highlight()
+
+    def _validate_drop_event(self, event):
+        """Sprawdza czy zdarzenie drop jest prawidłowe."""
+        if not event.mimeData().hasText() or not event.mimeData().text().startswith(
+            "application/x-cfab-asset"
+        ):
+            logger.error("Invalid mime data")
+            event.ignore()
+            return False
+        return True
+
+    def _get_drop_target_info(self, event):
+        """Pobiera informacje o celu drop."""
+        index = self.indexAt(event.position().toPoint())
+        if not index.isValid():
+            logger.error("Invalid index")
+            event.ignore()
+            return None
+
+        item = self.model().itemFromIndex(index)
+        if not item or not item.data(Qt.ItemDataRole.UserRole):
+            logger.error("Invalid item or no UserRole data")
+            event.ignore()
+            return None
+
+        target_folder_path = item.data(Qt.ItemDataRole.UserRole)
+        logger.debug(f"Target folder path: {target_folder_path}")
+
+        current_folder_path = None
+        if self.current_folder_path_getter:
+            current_folder_path = self.current_folder_path_getter()
+            logger.debug(f"Current folder path: '{current_folder_path}'")
+            logger.debug(f"Target folder path: '{target_folder_path}'")
+
+        if not self.drag_drop_model or not self.drag_drop_model.validate_drop(
+            target_folder_path,
+            (
+                self.current_folder_path_getter()
+                if self.current_folder_path_getter
+                else None
+            ),
+        ):
+            logger.error(f"Drag drop validation failed for: {target_folder_path}")
+            event.ignore()
+            return None
+
+        asset_ids_str = event.mimeData().text().replace("application/x-cfab-asset,", "")
+        asset_ids = asset_ids_str.split(",")
+        logger.debug(f"Asset IDs to move: {asset_ids}")
+
+        return target_folder_path, asset_ids, current_folder_path
+
+    def _get_assets_to_move(self, asset_ids):
+        """Pobiera pełne dane assetów do przeniesienia."""
+        assets_to_move = []
+        if self.asset_grid_model:
+            all_assets = self.asset_grid_model.get_assets()
+            logger.debug(f"All assets count: {len(all_assets)}")
+            assets_to_move = [
+                asset for asset in all_assets if asset.get("name") in asset_ids
+            ]
+            logger.debug(f"Assets to move count: {len(assets_to_move)}")
+        else:
+            logger.error("asset_grid_model is None!")
+        return assets_to_move
+
+    def _can_perform_drop(
+        self, assets_to_move, asset_ids, current_folder_path, target_folder_path
+    ):
+        """Sprawdza czy można wykonać operację drop."""
+        if not asset_ids or not all(asset_ids):
+            logger.error(
+                f"[DROP ERROR] asset_ids is empty or contains empty values: {asset_ids}"
+            )
+            return False
+        if not current_folder_path:
+            logger.error(f"[DROP ERROR] current_folder_path is empty or None!")
+            return False
+        if not target_folder_path:
+            logger.error(f"[DROP ERROR] target_folder_path is empty or None!")
+            return False
+        if (
+            not assets_to_move
+            or not self.file_operations_model
+            or not self.current_folder_path_getter
+        ):
+            logger.error(
+                f"[DROP ERROR] Missing required models: assets_to_move={len(assets_to_move)}, file_operations_model={self.file_operations_model is not None}, current_folder_path_getter={self.current_folder_path_getter is not None}"
+            )
+            return False
+        return True
+
+    def _perform_drop_operation(
+        self, assets_to_move, current_folder_path, target_folder_path, asset_ids
+    ):
+        """Wykonuje operację drop."""
+        logger.debug(f"Source folder path: {current_folder_path}")
+        if current_folder_path:
+            # Wykonaj operację przenoszenia w osobnym wątku
+            self.file_operations_model.move_assets(
+                assets_to_move,
+                current_folder_path,
+                target_folder_path,
+            )
+            self.drag_drop_model.complete_drop(target_folder_path, asset_ids)
+        else:
+            logger.error("Source folder path is empty!")
 
     def _highlight_folder_at_position(self, pos):
         """Podświetla folder pod podaną pozycją."""

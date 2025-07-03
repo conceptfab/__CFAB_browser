@@ -109,128 +109,89 @@ class ControlPanelController(QObject):
         """Aktualizuje stan przycisków na podstawie zaznaczenia."""
         self.update_button_states()
 
-    def _update_star_checkboxes_consistently(self, active_stars: int):
-        """Jednolita aktualizacja checkboxów gwiazdek"""
-        if not hasattr(self.view, "star_checkboxes") or not self.view.star_checkboxes:
-            logger.warning("star_checkboxes nie istnieje w view")
-            return
-
-        # Blokuj sygnały raz
-        for cb in self.view.star_checkboxes:
-            cb.blockSignals(True)
-        try:
-            for i, cb in enumerate(self.view.star_checkboxes):
-                cb.setChecked(i < active_stars)
-        finally:
-            for cb in self.view.star_checkboxes:
-                cb.blockSignals(False)
-
-        logger.debug(f"Zaktualizowano checkboxy gwiazdek: {active_stars}")
-
     def on_star_filter_clicked(self, star_rating: int):
         """Obsługuje kliknięcie w gwiazdkę filtrowania w panelu kontrolnym"""
         logger.info(f"=== FILTROWANIE GWIAZDEK: Kliknięto gwiazdkę {star_rating} ===")
         if not hasattr(self.view, "star_checkboxes") or not self.view.star_checkboxes:
             logger.error("BŁĄD: self.view.star_checkboxes nie istnieje!")
             return
-        clicked_checkbox = self.view.star_checkboxes[star_rating - 1]
-        was_checked_before = not clicked_checkbox.isChecked()
-        if was_checked_before:
-            self._update_star_checkboxes_consistently(0)
+
+        is_clearing_filter = (
+            self.controller.asset_grid_controller.active_star_filter == star_rating
+        )
+
+        if is_clearing_filter:
+            for cb in self.view.star_checkboxes:
+                cb.blockSignals(True)
+            try:
+                for i, cb in enumerate(self.view.star_checkboxes):
+                    cb.setChecked(i < 0)
+            finally:
+                for cb in self.view.star_checkboxes:
+                    cb.blockSignals(False)
             self.controller.asset_grid_controller.clear_star_filter()
             self.filter_assets_by_stars(0)
             logger.info("Odznaczono wszystkie gwiazdki - pokazano wszystkie assety")
         else:
-            self._update_star_checkboxes_consistently(star_rating)
+            for cb in self.view.star_checkboxes:
+                cb.blockSignals(True)
+            try:
+                for i, cb in enumerate(self.view.star_checkboxes):
+                    cb.setChecked(i < star_rating)
+            finally:
+                for cb in self.view.star_checkboxes:
+                    cb.blockSignals(False)
             self.controller.asset_grid_controller.set_star_filter(star_rating)
             self.filter_assets_by_stars(star_rating)
             logger.info(f"Zaznaczono {star_rating} gwiazdek - filtrowanie")
         logger.info("=== KONIEC FILTROWANIA GWIAZDEK ===")
 
     def filter_assets_by_stars(self, min_stars: int):
-        """Uproszczona metoda filtrowania assetów"""
+        """Filtruje assety, przebudowując siatkę z odfiltrowanymi assetami."""
         try:
-            original_assets = self._get_original_assets()
-            logger.debug(
-                f"Filtrowanie {len(original_assets)} assetów dla min_stars={min_stars}"
+            if hasattr(self.view, "star_checkboxes") and self.view.star_checkboxes:
+                for cb in self.view.star_checkboxes:
+                    cb.blockSignals(True)
+                try:
+                    for i, cb in enumerate(self.view.star_checkboxes):
+                        cb.setChecked(i < min_stars)
+                finally:
+                    for cb in self.view.star_checkboxes:
+                        cb.blockSignals(False)
+            self.controller.asset_grid_controller.set_star_filter(min_stars)
+
+            # Pobierz oryginalną, niezmodyfikowaną listę assetów
+            original_assets = (
+                self.controller.asset_grid_controller.get_original_assets()
             )
+            if not original_assets:
+                logger.debug("Brak oryginalnych assetów do filtrowania.")
+                # Wyczyść siatkę, jeśli nie ma assetów
+                self.controller.asset_grid_controller.rebuild_asset_grid([])
+                return
 
-            self._update_star_checkboxes_consistently(min_stars)
-
-            if min_stars == 0:
-                filtered_assets = self._get_all_assets_with_full_data(original_assets)
-            else:
-                filtered_assets = self._filter_by_star_rating(
-                    original_assets, min_stars
+            if min_stars > 0:
+                # Filtruj listę, zamiast pokazywać/ukrywać kafelki
+                filtered_assets = [
+                    asset
+                    for asset in original_assets
+                    if (asset.get("stars") or 0) >= min_stars
+                    or asset.get("type") == "special_folder"
+                ]
+                logger.debug(
+                    f"Przefiltrowano {len(filtered_assets)} z {len(original_assets)} assetów dla {min_stars}+ gwiazdek."
                 )
+            else:
+                # Jeśli filtr jest wyłączony, użyj oryginalnej listy
+                filtered_assets = original_assets
+                logger.debug("Filtr gwiazdek wyłączony, pokazuję wszystkie assety.")
 
+            # Przebuduj siatkę z odfiltrowaną listą
             self.controller.asset_grid_controller.rebuild_asset_grid(
                 filtered_assets, preserve_filter=False
             )
 
         except Exception as e:
             logger.error(f"Błąd podczas filtrowania assetów: {e}")
-            self.filter_assets_by_stars(0)
         finally:
             self.update_button_states()
-
-    def _get_original_assets(self):
-        """Pomocnicza metoda do pobrania oryginalnych assetów"""
-        original_assets = self.controller.asset_grid_controller.get_original_assets()
-        return (
-            original_assets
-            if original_assets
-            else self.model.asset_grid_model.get_all_assets()
-        )
-
-    def _get_all_assets_with_full_data(self, assets: list) -> list:
-        """Pobiera wszystkie assety z pełnymi danymi"""
-        filtered_assets = []
-        for asset_data in assets:
-            if asset_data.get("is_stub"):
-                full_data = self.model.asset_grid_model.get_asset_data_lazy(
-                    asset_data.get("name")
-                )
-                if full_data:
-                    filtered_assets.append(full_data)
-                else:
-                    filtered_assets.append(asset_data)
-            else:
-                filtered_assets.append(asset_data)
-        logger.debug("Pokazano wszystkie assety (brak filtrowania)")
-        return filtered_assets
-
-    def _filter_by_star_rating(self, assets: list, min_stars: int) -> list:
-        """Filtruje assety według oceny gwiazdkowej"""
-        filtered_assets = []
-        for asset_data in assets:
-            # Pobierz pełne dane jeśli stub
-            if asset_data.get("is_stub"):
-                asset_data_full = self.model.asset_grid_model.get_asset_data_lazy(
-                    asset_data.get("name")
-                )
-                if asset_data_full:
-                    asset_data = asset_data_full
-
-            # Dodaj specjalne foldery bez filtrowania
-            if asset_data.get("type") == "special_folder":
-                filtered_assets.append(asset_data)
-                continue
-
-            # Filtruj według gwiazdek
-            try:
-                asset_stars_int = (
-                    int(asset_data.get("stars", 0))
-                    if asset_data.get("stars") is not None
-                    else 0
-                )
-            except (ValueError, TypeError):
-                asset_stars_int = 0
-
-            if asset_stars_int >= min_stars:
-                filtered_assets.append(asset_data)
-
-        logger.debug(
-            f"Przefiltrowano {len(filtered_assets)} assetów z {min_stars}+ gwiazdkami"
-        )
-        return filtered_assets

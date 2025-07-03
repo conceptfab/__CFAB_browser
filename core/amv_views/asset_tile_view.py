@@ -6,11 +6,13 @@ Prezentuje miniaturkę, nazwę pliku, gwiazdki i checkbox dla assetu.
 import logging
 import os
 
-from PyQt6.QtCore import QMimeData, QPoint, Qt, pyqtSignal
+from PyQt6.QtCore import QMimeData, QPoint, QSize, Qt, QThreadPool, pyqtSignal
 from PyQt6.QtGui import QColor, QDrag, QPixmap
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout
 
 from core.base_widgets import BaseCheckBox, BaseLabel, StarCheckBoxBase, TileBase
+from core.thumbnail_cache import thumbnail_cache
+from core.workers.thumbnail_loader_worker import ThumbnailLoaderWorker
 
 from ..amv_models.asset_tile_model import AssetTileModel
 from ..amv_models.selection_model import SelectionModel
@@ -21,10 +23,13 @@ logger = logging.getLogger(__name__)
 class AssetTileView(TileBase):
     """Widok dla pojedynczego kafelka assetu - ETAP 15 + Object Pooling"""
 
-    thumbnail_clicked = pyqtSignal(str)  # Ścieżka do pliku podglądu
-    filename_clicked = pyqtSignal(str)  # Ścieżka do pliku archiwum
+    thumbnail_clicked = pyqtSignal(str, str, object)  # asset_id, asset_path, tile
+    filename_clicked = pyqtSignal(str, str, object)  # asset_id, asset_path, tile
     checkbox_state_changed = pyqtSignal(bool)  # Czy kafelek jest zaznaczony
     drag_started = pyqtSignal(object)  # Dane assetu
+
+    # Globalny QThreadPool do zarządzania workerami
+    thread_pool = QThreadPool()
 
     def __init__(
         self,
@@ -44,11 +49,15 @@ class AssetTileView(TileBase):
         self._drag_start_position = (
             QPoint()
         )  # Dodaj atrybut do przechowywania pozycji startowej przeciągania
+        self.is_loading_thumbnail = False
 
         self.margins_size = 8
         self.setObjectName("AssetTileViewFrame")  # Added object name
         self._setup_ui()
         self.model.data_changed.connect(self.update_ui)
+
+        asset_name = self.asset_id
+        logger.debug(f"AssetTileView data updated for asset: {asset_name}")
 
     def update_asset_data(
         self, tile_model: AssetTileModel, tile_number: int, total_tiles: int
@@ -83,46 +92,37 @@ class AssetTileView(TileBase):
         """
         Resetuje kafelek do stanu gotowego do ponownego użycia w puli.
         """
-        try:
-            # Odłącz połączenia sygnałów
-            if hasattr(self, "model") and self.model:
-                try:
-                    self.model.data_changed.disconnect(self.update_ui)
-                except (TypeError, RuntimeError):
-                    pass  # Połączenie już odłączone lub obiekt usunięty
-
-            # Wyczyść dane
-            self.model = None
-            self.asset_id = ""
-            self.tile_number = 0
-            self.total_tiles = 0
-
-            # Wyczyść UI - z zabezpieczeniami
+        if hasattr(self, "model") and self.model is not None:
             try:
-                if hasattr(self, "thumbnail_container"):
-                    self.thumbnail_container.clear()
-                if hasattr(self, "name_label"):
-                    self.name_label.clear()
-                if hasattr(self, "tile_number_label"):
-                    self.tile_number_label.clear()
-                if hasattr(self, "checkbox"):
-                    self.checkbox.setChecked(False)
+                self.model.data_changed.disconnect(self.update_ui)
+            except (TypeError, RuntimeError):
+                pass  # Połączenie już odłączone lub obiekt usunięty
 
-                # Wyczyść gwiazdki
-                if hasattr(self, "star_checkboxes"):
-                    for star_cb in self.star_checkboxes:
-                        try:
-                            star_cb.setChecked(False)
-                        except RuntimeError:
-                            pass  # Widget już usunięty
+        # Wyczyść dane
+        self.model = None
+        self.asset_id = ""
+        self.tile_number = 0
+        self.total_tiles = 0
 
-            except RuntimeError:
-                pass  # Widget już usunięty
+        # Wyczyść UI - z zabezpieczeniami
+        if hasattr(self, "thumbnail_container"):
+            self.thumbnail_container.clear()
+        if hasattr(self, "name_label"):
+            self.name_label.clear()
+        if hasattr(self, "tile_number_label"):
+            self.tile_number_label.clear()
+        if hasattr(self, "checkbox"):
+            self.checkbox.setChecked(False)
 
-            logger.debug("AssetTileView reset for pool reuse")
+        # Wyczyść gwiazdki
+        if hasattr(self, "star_checkboxes"):
+            for star_cb in self.star_checkboxes:
+                try:
+                    star_cb.setChecked(False)
+                except RuntimeError:
+                    pass  # Widget już usunięty
 
-        except RuntimeError as e:
-            logger.debug(f"Error in reset_for_pool: {e} - object already deleted")
+        logger.debug("AssetTileView reset for pool reuse")
 
     def _setup_ui(self):
         self.setStyleSheet(
@@ -139,15 +139,13 @@ class AssetTileView(TileBase):
         """
         )
 
-        # ZMIANA: Szerokość kafelka ZAWSZE = rozmiar miniatury + stałe marginesy
+        # Kafelki mają sztywny rozmiar zależny od miniatury
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        
-        # Ustaw STAŁĄ szerokość i wysokość kafelka
+
+        # Ustaw sztywny rozmiar kafelka na podstawie miniatury
         tile_width = self.thumbnail_size + (2 * self.margins_size)
-        tile_height = self.thumbnail_size + 120
-        
-        self.setFixedWidth(tile_width)  # STAŁA szerokość!
-        self.setFixedHeight(tile_height)  # STAŁA wysokość!
+        tile_height = self.thumbnail_size + 70
+        self.setFixedSize(tile_width, tile_height)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
@@ -158,8 +156,12 @@ class AssetTileView(TileBase):
         self.thumbnail_container = BaseLabel()
         thumb_size = self.thumbnail_size
         self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
+        self.thumbnail_container.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
         self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.thumbnail_container.mousePressEvent = self._on_thumbnail_clicked
+        # NAPRAWIONO: Użyj właściwego mechanizmu kliknięć zamiast bezpośredniego przypisania
+        # self.thumbnail_container.mousePressEvent = self._on_thumbnail_clicked
 
         # RZĄD 2: Dolna sekcja (tekst, gwiazdki, etc.)
         # Nazwa pliku
@@ -171,7 +173,8 @@ class AssetTileView(TileBase):
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         self.name_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.name_label.mousePressEvent = self._on_filename_clicked
+        # NAPRAWIONO: Użyj właściwego mechanizmu kliknięć
+        # self.name_label.mousePressEvent = self._on_filename_clicked
 
         # Ikona texture (ukryta domyślnie)
         self.texture_icon = BaseLabel()
@@ -216,12 +219,21 @@ class AssetTileView(TileBase):
         # Dodanie elementów do głównego layoutu
         layout.addWidget(self.thumbnail_container)
 
-        # Dodajemy nazwę pliku w osobnym layoutcie poziomym
+        # Dodajemy nazwę pliku, ikonkę tekstury i rozmiar MB w jednym poziomym układzie
         filename_container = QHBoxLayout()
-        filename_container.addStretch()
-        filename_container.addWidget(self.name_label)
-        filename_container.addWidget(self.texture_icon)
-        filename_container.addStretch()
+        filename_container.setContentsMargins(0, 0, 0, 0)
+        filename_container.setSpacing(6)
+        # Ikonka tekstury po lewej
+        filename_container.addWidget(self.texture_icon, 0, Qt.AlignmentFlag.AlignLeft)
+        # Nazwa pliku na środku
+        filename_container.addWidget(self.name_label, 1)
+        # Label na rozmiar MB po prawej
+        self.size_label = QLabel()
+        self.size_label.setObjectName("AssetSizeLabel")
+        self.size_label.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        filename_container.addWidget(self.size_label, 0, Qt.AlignmentFlag.AlignRight)
         layout.addLayout(filename_container)
 
         # Dodajemy mały stretch, ale nie rozciągamy na całą wysokość
@@ -246,56 +258,87 @@ class AssetTileView(TileBase):
     def _setup_asset_tile_ui(self):
         # Wyświetlanie nazwy i rozmiaru pliku
         file_name = self.model.get_name()
-        file_size_mb = self.model.get_size_mb()
-        if file_size_mb > 0:
-            self.name_label.setText(f"{file_name} ({file_size_mb:.1f} MB)")
+        # Ogranicz długość nazwy do 16 znaków
+        if len(file_name) > 16:
+            display_name = file_name[:13] + "..."
         else:
-            self.name_label.setText(file_name)
+            display_name = file_name
+
+        file_size_mb = self.model.get_size_mb()
+        self.name_label.setText(display_name)
+        if file_size_mb > 0:
+            self.size_label.setText(f"{file_size_mb:.1f} MB")
+        else:
+            self.size_label.setText("")
 
         self.tile_number_label.setText(f"{self.tile_number} / {self.total_tiles}")
 
-        # Pokaż gwiazdki dla assetów
+        # Sprawdź czy gwiazdki mieszczą się na kafelku
+        stars_visible = self._check_stars_fit()
         for star_cb in self.star_checkboxes:
-            star_cb.setVisible(True)
+            star_cb.setVisible(stars_visible)
 
         self.set_star_rating(self.model.get_stars())
         self.texture_icon.setVisible(self.model.has_textures_in_archive())
         self.checkbox.setVisible(True)
 
-        # Załaduj miniaturkę
+        # Krok 1: Spróbuj załadować z cache
         thumbnail_path = self.model.get_thumbnail_path()
-        logger.debug(
-            f"AssetTileView: Loading thumbnail for {self.model.get_name()}, path: {thumbnail_path}"
-        )
-        if thumbnail_path and os.path.exists(thumbnail_path):
-            logger.debug(f"AssetTileView: Thumbnail exists: {thumbnail_path}")
-            pixmap = QPixmap(thumbnail_path)
-            if not pixmap.isNull():
-                logger.debug(
-                    f"AssetTileView: Thumbnail loaded successfully: {thumbnail_path}"
-                )
-                scaled_pixmap = pixmap.scaled(
-                    self.thumbnail_size,
-                    self.thumbnail_size,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                self.thumbnail_container.setPixmap(scaled_pixmap)
-            else:
-                logger.warning(
-                    f"AssetTileView: Failed to load thumbnail: {thumbnail_path}"
-                )
-                self._create_placeholder_thumbnail()
-        else:
-            logger.warning(
-                f"AssetTileView: Thumbnail path not found or doesn't exist: {thumbnail_path}"
-            )
+        cached_pixmap = thumbnail_cache.get(thumbnail_path)
+
+        if cached_pixmap:
+            self._set_thumbnail_pixmap(cached_pixmap)
+        elif thumbnail_path and os.path.exists(thumbnail_path):
+            # Krok 2: Jeśli nie ma w cache, załaduj asynchronicznie
             self._create_placeholder_thumbnail()
+            self._load_thumbnail_async(thumbnail_path)
+        else:
+            # Krok 3: Jeśli plik nie istnieje, pokaż placeholder
+            self._create_placeholder_thumbnail()
+
+    def _load_thumbnail_async(self, path: str):
+        if self.is_loading_thumbnail:
+            return
+        self.is_loading_thumbnail = True
+
+        worker = ThumbnailLoaderWorker(path)
+        worker.signals.finished.connect(self._on_thumbnail_loaded)
+        worker.signals.error.connect(self._on_thumbnail_error)
+        self.thread_pool.start(worker)
+
+    def _on_thumbnail_loaded(self, path: str, pixmap: QPixmap):
+        # Upewnij się, że ten kafelek wciąż oczekuje na tę konkretną miniaturę
+        if self.model and path == self.model.get_thumbnail_path():
+            thumbnail_cache.put(path, pixmap)
+            self._set_thumbnail_pixmap(pixmap)
+            self.is_loading_thumbnail = False
+
+    def _on_thumbnail_error(self, path: str, error_message: str):
+        if self.model and path == self.model.get_thumbnail_path():
+            logger.warning(error_message)
+            self._create_placeholder_thumbnail()
+            self.is_loading_thumbnail = False
+
+    def _set_thumbnail_pixmap(self, pixmap: QPixmap):
+        """Ustawia QPixmap na etykiecie miniaturki, skalując go."""
+        scaled_pixmap = pixmap.scaled(
+            self.thumbnail_size,
+            self.thumbnail_size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        self.thumbnail_container.setPixmap(scaled_pixmap)
 
     def _setup_folder_tile_ui(self):
         # Wyświetlanie nazwy folderu
         folder_name = self.model.get_name()
-        self.name_label.setText(folder_name)
+        # Ogranicz długość nazwy do 16 znaków
+        if len(folder_name) > 16:
+            display_name = folder_name[:13] + "..."
+        else:
+            display_name = folder_name
+
+        self.name_label.setText(display_name)
         self.tile_number_label.setText(f"{self.tile_number} / {self.total_tiles}")
 
         # Ukryj gwiazdki dla folderów
@@ -340,17 +383,37 @@ class AssetTileView(TileBase):
         return fallback
 
     def _load_folder_icon(self):
-        self.thumbnail_container.setPixmap(self._load_icon_with_fallback(
-            "folder.png", (self.thumbnail_size, self.thumbnail_size)
-        ))
+        self.thumbnail_container.setPixmap(
+            self._load_icon_with_fallback(
+                "folder.png", (self.thumbnail_size, self.thumbnail_size)
+            )
+        )
 
     def _load_texture_icon(self):
-        self.texture_icon.setPixmap(self._load_icon_with_fallback("texture.png", (16, 16)))
+        self.texture_icon.setPixmap(
+            self._load_icon_with_fallback("texture.png", (16, 16))
+        )
 
     def mousePressEvent(self, event):
-        """Obsługuje naciśnięcie myszy - zapisuje pozycję startową dla drag & drop."""
+        """Obsługuje naciśnięcie myszy - kliknięcia i drag & drop."""
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = event.position().toPoint()
+
+            # Sprawdź, który widget został kliknięty
+            clicked_widget = self.childAt(event.position().toPoint())
+
+            # Obsługa kliknięć na miniaturkę
+            if clicked_widget == self.thumbnail_container or (
+                clicked_widget and clicked_widget.parent() == self.thumbnail_container
+            ):
+                self._on_thumbnail_clicked(event)
+                return
+
+            # Obsługa kliknięć na nazwę pliku
+            if clicked_widget == self.name_label:
+                self._on_filename_clicked(event)
+                return
+
             logger.debug(
                 f"Mouse press detected, saved drag start position: {self._drag_start_position}"
             )
@@ -372,6 +435,10 @@ class AssetTileView(TileBase):
         super().mouseMoveEvent(event)
 
     def _start_drag(self, event):
+        # Blokada D&D gdy trwa ładowanie galerii
+        if hasattr(self, "_drag_and_drop_enabled") and not self._drag_and_drop_enabled:
+            logger.info("Drag and drop zablokowane podczas ładowania galerii.")
+            return
         logger.debug(f"Starting drag for asset: {self.asset_id}")
 
         # Sprawdź czy selection_model istnieje
@@ -412,29 +479,38 @@ class AssetTileView(TileBase):
     def _on_thumbnail_clicked(self, ev):
         logger.debug(f"AssetTileView: Thumbnail clicked for asset {self.asset_id}")
         if self.model.is_special_folder:
-            # Dla specjalnych folderów emituj ścieżkę do folderu
             folder_path = self.model.get_special_folder_path()
-            self.thumbnail_clicked.emit(folder_path)
+            self.thumbnail_clicked.emit(self.asset_id, folder_path, self)
         else:
-            # Dla zwykłych assetów emituj ścieżkę do podglądu
-            self.thumbnail_clicked.emit(self.model.get_preview_path())
+            self.thumbnail_clicked.emit(
+                self.asset_id, self.model.get_preview_path(), self
+            )
 
     def _on_filename_clicked(self, ev):
         logger.debug(f"AssetTileView: Filename clicked for asset {self.asset_id}")
         if self.model.is_special_folder:
-            # Dla specjalnych folderów emituj ścieżkę do folderu
             folder_path = self.model.get_special_folder_path()
-            self.filename_clicked.emit(folder_path)
+            self.filename_clicked.emit(self.asset_id, folder_path, self)
         else:
-            # Dla zwykłych assetów emituj ścieżkę do archiwum
-            self.filename_clicked.emit(self.model.get_archive_path())
+            self.filename_clicked.emit(
+                self.asset_id, self.model.get_archive_path(), self
+            )
 
     def update_thumbnail_size(self, new_size: int):
-        """Aktualizuje rozmiar miniaturki."""
+        """Aktualizuje rozmiar miniatury i przelicza layout."""
         self.thumbnail_size = new_size
-        self.setFixedWidth(new_size + (2 * self.margins_size))
-        self.thumbnail_container.setFixedSize(self.thumbnail_size, self.thumbnail_size)
+        # Przelicz szerokość kafelka
+        tile_width = new_size + (2 * self.margins_size)
+        tile_height = new_size + 70
+        self.setFixedSize(tile_width, tile_height)
         self.update_ui()  # Przeładuj UI, aby zastosować nowy rozmiar
+
+    def _update_stars_visibility(self):
+        """Aktualizuje widoczność gwiazdek na podstawie dostępnej przestrzeni."""
+        if hasattr(self, "model") and self.model and not self.model.is_special_folder:
+            stars_visible = self._check_stars_fit()
+            for star_cb in self.star_checkboxes:
+                star_cb.setVisible(stars_visible)
 
     def release_resources(self):
         """
@@ -491,3 +567,41 @@ class AssetTileView(TileBase):
     def clear_stars(self):
         for cb in self.star_checkboxes:
             cb.setChecked(False)
+
+    def set_drag_and_drop_enabled(self, enabled: bool):
+        """Ustawia możliwość drag and drop dla kafelka."""
+        self._drag_and_drop_enabled = enabled
+
+    def _check_stars_fit(self) -> bool:
+        """Sprawdza czy gwiazdki mieszczą się na kafelku."""
+        # Oblicz dostępną szerokość dla gwiazdek
+        # Szerokość kafelka - marginesy - numer - checkbox - odstępy
+        available_width = self.width() - (2 * self.margins_size) - 30 - 16 - 12
+
+        # Szacowana szerokość 5 gwiazdek (każda ~12px) + odstępy
+        stars_width = 5 * 12 + 4 * 6  # 5 gwiazdek po 12px + 4 odstępy po 6px
+
+        return stars_width <= available_width
+
+    def resizeEvent(self, event):
+        """Obsługuje zmianę rozmiaru kafelka."""
+        super().resizeEvent(event)
+        # Aktualizuj widoczność gwiazdek po zmianie rozmiaru
+        self._update_stars_visibility()
+        # Aktualizuj rozmiar miniatury, aby wypełnić dostępną przestrzeń
+        self._update_thumbnail_size()
+
+    def _update_thumbnail_size(self):
+        """Aktualizuje rozmiar miniatury na podstawie dostępnej przestrzeni."""
+        if hasattr(self, "thumbnail_container"):
+            # Oblicz dostępną przestrzeń dla miniatury
+            available_width = self.width() - (2 * self.margins_size)
+            available_height = (
+                self.height() - 70
+            )  # Odejmij miejsce na tekst i kontrolki
+
+            # Użyj mniejszego wymiaru, aby zachować proporcje kwadratu
+            new_size = min(available_width, available_height, self.thumbnail_size)
+            new_size = max(new_size, 64)  # Minimalny rozmiar 64px
+
+            self.thumbnail_container.setFixedSize(new_size, new_size)

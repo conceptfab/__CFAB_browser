@@ -88,14 +88,8 @@ class SignalConnector:
         self.model.asset_grid_model.recalculate_columns_requested.connect(
             asset_grid_controller.on_recalculate_columns_requested
         )
-        self.model.asset_grid_model.grid_layout_changed.connect(
-            asset_grid_controller.on_grid_layout_changed
-        )
 
         # --- Sygnały przebudowy assetów ---
-        # self.model.asset_grid_model.rebuild_requested.connect(
-        #     self.controller.asset_rebuild_controller.rebuild_assets_in_folder
-        # )
         # Sygnały z workera przebudowy assetów
         # (progress, finished, error) są podpinane w AssetRebuildController
 

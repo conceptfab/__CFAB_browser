@@ -46,7 +46,6 @@ class AssetGridModel(QObject):
     def set_columns(self, columns: int):
         if self._columns != columns:
             self._columns = max(1, columns)
-            self.grid_layout_changed.emit(self._columns)
             logger.debug(f"Grid columns updated to: {self._columns}")
 
     def get_columns(self):
@@ -146,30 +145,30 @@ class AssetGridModel(QObject):
         """Oblicza optymalną liczbę kolumn dla STAŁYCH rozmiarów kafelków."""
         # ZMIANA: STAŁA szerokość kafelka = miniatura + marginesy
         tile_width = thumbnail_size + 16  # STAŁA szerokość kafelka!
-        
+
         # Marginesy layoutu
         layout_margins = 16
-        
+
         # Spacing między kafelkami (8px)
         spacing = 8
-        
+
         # Dostępna szerokość po odjęciu marginesów
         effective_width = available_width - layout_margins
-        
+
         # Oblicz liczbę kolumn - kafelki mają STAŁĄ szerokość
         if (tile_width + spacing) > 0:
             columns_calc = (effective_width + spacing) // (tile_width + spacing)
         else:
             columns_calc = 1
-        
+
         calculated_columns = max(1, columns_calc)
-        
+
         # DODAJ: Logowanie dla debugowania
         logger.debug(
             f"Kalkulacja kolumn: width={available_width}, tile_width={tile_width}, "
             f"columns={calculated_columns}"
         )
-        
+
         return calculated_columns
 
 

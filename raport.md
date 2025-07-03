@@ -1,65 +1,137 @@
-CFAB Browser - Raport Analizy Kodu
-📝 Wykryte Problemy i Zadania do Poprawek
-1. core/amv_controllers/amv_controller.py
-Duplikaty i redundancja:
+Raport analizy kodu CFAB Browser
+1. Duplikaty i nieużywane funkcje
+core/amv_controllers/amv_controller.py
 
-Linia 181-184: Usunięty kod AssetRebuilderThread z komentarzem, ale wciąż obecny w pliku
-Linia 1100-1200: Funkcja _update_button_states() wywoływana w nadmiarze (12 miejsc) - optymalizacja potrzebna
-Linia 800-900: Podobna logika w _on_file_operation_completed i _on_drag_drop_completed
+Usunąć duplikat metody _on_tile_thumbnail_clicked i _on_tile_filename_clicked - logika jest identyczna z _handle_file_action
+Scali logikę obsługi kliknięć w kafelki do jednej metody
 
-Nieużywane zmienne:
+python# USUŃ te duplikaty:
+def _on_tile_thumbnail_clicked(self, asset_id: str, asset_path: str, tile: QObject):
+def _on_tile_filename_clicked(self, asset_id: str, asset_path: str, tile: QObject):
 
-Linia 179: self.asset_rebuilder = None - inicjalizacja nigdy nie używana bezpośrednio
-Linia 180: self.original_assets = [] - używana ale można zastąpić wywołaniem modelu
+# ZOSTAW tylko:
+def _handle_file_action(self, path: str, action_type: str):
+core/amv_controllers/handlers/control_panel_controller.py
 
-2. core/amv_models/asset_grid_model.py
-Duplikaty funkcjonalności:
+Usunąć duplikat metody _update_star_checkboxes_consistently - używana tylko w jednym miejscu
+Scali filtrowanie gwiazdek - metoda filter_assets_by_stars ma zbędną duplicację logiki
 
-Linia 85-95 vs 120-130: _scan_for_special_folders powtarza logikę w _analyze_cache_folder
-Linia 200-250: get_asset_data_lazy może być zoptymalizowana - podobna logika w set_assets
+python# USUŃ duplikowaną logikę w filter_assets_by_stars:
+def filter_assets_by_stars(self, min_stars: int):
+    # Usuń powtarzające się wywołania self._update_star_checkboxes_consistently
+2. Nieużywane importy i zmienne
+core/amv_views/amv_view.py
 
-3. core/amv_models/pairing_model.py
-Błędy w kodzie:
+Usunąć nieużywane zmienne z __init__:
 
-Linia 42-50: load_unpair_files() - nieświadoma niespójność nazw kluczy (unpaired_images vs unpaired_previews)
-Linia 120-130: save_unpair_files() - duplikacja kodu w zapisie meta danych
+python# USUŃ te nieużywane zmienne:
+self.asset_rebuilder = None  # Worker dla przebudowy assetów
+core/main_window.py
 
-4. core/scanner.py
-Nieużywane funkcje:
+Usunąć nieużywane metody helper:
 
-Linia 350-450: Globalne funkcje wrapper (_create_single_asset, create_thumbnail_for_asset) - duplikują metody klasy
-Linia 200-250: _check_texture_folders_presence może być statyczna
+python# Te metody są nieużywane:
+def _show_info_message_box(self, title: str, message: str):
+def _show_error_message_box(self, title: str, message: str):
+3. Błędy logiczne i potencjalne problemy
+core/amv_controllers/handlers/asset_grid_controller.py
 
-5. core/thumbnail.py
-Nieużywane importy i funkcje:
+Naprawić potencjalny błąd NoneType w on_assets_changed:
 
-Linia 1-10: Importy Path z pathlib używane tylko raz, można zastąpić os.path
-Linia 250-300: process_thumbnails_batch - nieużywana funkcja legacy
+pythondef on_assets_changed(self, assets):
+    if not assets:  # DODAJ sprawdzenie None
+        self.set_original_assets([])
+        return
+    self.set_original_assets(assets)
 
-6. core/tools_tab.py
-Duplikaty kodu:
+Naprawić niekonsystentne używanie active_star_filter:
 
-Linia 200-300: Podobne wzorce w worker'ach - można wyciągnąć klasę bazową
-Linia 850-950: Powtarzające się wzorce w _on_*_progress, _on_*_finished, _on_*_error
+pythondef on_assets_changed(self, assets):
+    # BŁĄD: używa controller.asset_grid_controller.active_star_filter
+    # POWINNO BYĆ: self.active_star_filter
+    current_star_filter = self.active_star_filter  # Nie self.controller.asset_grid_controller.active_star_filter
+core/amv_views/asset_tile_view.py
 
-7. core/amv_views/amv_view.py
-Nieużywane metody:
+Naprawić błąd w reset_for_pool - za dużo try/except blokuje prawdziwe błędy:
 
-Linia 450-470: clear_stars() i clear_star_filter() - duplikują funkcjonalność
-Linia 500-520: get_current_star_filter() - metoda zdefiniowana ale nigdy nie używana
+pythondef reset_for_pool(self):
+    # ZAMIEŃ na bardziej precyzyjne sprawdzenia zamiast try/except dla wszystkiego
+    if hasattr(self, "model") and self.model is not None:
+        try:
+            self.model.data_changed.disconnect(self.update_ui)
+        except (TypeError, RuntimeError):
+            pass
+core/amv_controllers/handlers/file_operation_controller.py
 
-8. core/base_widgets.py
-Optymalizacja stylów:
+Usunąć nadmiarowe debugowanie w on_drag_drop_completed:
 
-Linia 50-200: Podobne style CSS można wyciągnąć do zmiennych lub mixinów
+python# USUŃ te nadmiarowe logi debug:
+logger.debug(f"assets_to_move: {[a.get('name') for a in assets_to_move]}")
+logger.debug(f"[DROP DEBUG] asset_ids: {asset_ids}")
+# Pozostaw tylko istotne błędy
+4. Problemy z architekturą
+core/amv_controllers/handlers/signal_connector.py
 
-9. core/json_utils.py
-Nieużywane funkcje:
+Usunąć komentowane/nieużywane połączenia sygnałów:
 
-Linia 80-120: Skomplikowana logika fallback'u orjson/json może być uproszczona
+python# USUŃ te zakomentowane linie:
+# self.model.asset_grid_model.rebuild_requested.connect(
+#     self.controller.asset_rebuild_controller.rebuild_assets_in_folder
+# )
 
-10. core/performance_monitor.py
-Nieużywane funkcjonalności:
+Naprawić komentarz o błędnym połączeniu:
 
-Linia 150-200: get_statistics() - zdefiniowana ale nie używana w aplikacji
-Linia 300-350: clear_history() - metoda nigdy nie wywoływana
+python# USUŃ ten komentarz i sprawdź czy rzeczywiście nie jest potrzebne:
+# USUNIĘTO BŁĘDNE POŁĄCZENIE, KTÓRE POWODOWAŁO RESETOWANIE FILTRÓW
+5. Nieoptymalne rozwiązania
+core/tools_tab.py
+
+Uprości mapowanie operacji w _start_operation_with_confirmation:
+
+python# ZAMIEŃ ten słownik na enum lub stałe klasy:
+button_mapping = {
+    "konwersji na webp": ("webp_button", "webp_converter"),
+    "konwersji na WebP": ("webp_button", "webp_converter"), # DUPLIKAT!
+}
+core/amv_views/folder_tree_view.py
+
+Uprości obsługę przeciągania - za dużo zagnieżdżonych sprawdzeń w dropEvent:
+
+pythondef dropEvent(self, event):
+    # REFAKTORYZUJ: wynieś walidację do osobnych metod
+    if not self._validate_drop_event(event):
+        return
+    
+    target_info = self._get_drop_target_info(event)
+    if not target_info:
+        return
+6. Inconsistent error handling
+core/scanner.py
+
+Zunifikuj obsługę błędów w AssetRepository:
+
+python# DODAJ bazową metodę dla obsługi błędów:
+def _handle_error(self, operation: str, error: Exception, file_path: str = None):
+    error_msg = f"Błąd podczas {operation}"
+    if file_path:
+        error_msg += f" dla {file_path}"
+    error_msg += f": {error}"
+    logger.error(error_msg)
+    return None
+7. Podsumowanie zmian do wprowadzenia
+Najwyższy priorytet:
+
+Punkty 1, 2: Usunięcie duplikatów w AmvController
+Punkty 7, 8: Naprawienie błędów NoneType w AssetGridController
+Punkt 13: Naprawienie duplikatu mapowania w ToolsTab
+
+Średni priorytet:
+
+Punkty 5, 6: Usunięcie nieużywanych zmiennych i metod
+Punkty 10, 11: Wyczyszczenie nadmiarowego debugowania
+
+Niski priorytet:
+
+Punkty 14, 15: Refaktoryzacja dla lepszej czytelności
+
+Łącznie 15 konkretnych punktów do poprawy w 8 plikach.

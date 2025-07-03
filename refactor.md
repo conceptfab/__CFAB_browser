@@ -1,262 +1,109 @@
-1. Problemy z wydajnością
-   Problem: Zbyt częste przeładowanie całej galerii
-   W asset_grid_controller.py funkcja rebuild_asset_grid() jest wywoływana przy każdej zmianie:
-   python# core/amv_controllers/handlers/asset_grid_controller.py
+# Plan Refaktoryzacji i Optymalizacji Galerii Assetów
 
-# ZMIANA: Optymalizacja przebudowy galerii
+Celem jest poprawa wydajności wyświetlania i interakcji z dużą liczbą assetów w galerii, przy zachowaniu 100% istniejącej funkcjonalności.
 
-def rebuild_asset_grid(self, assets: list, preserve_filter: bool = True):
-"""Optymalizowana przebudowa galerii""" # Dodaj cache dla ostatnio wyświetlanych assetów
-if hasattr(self, '\_last_assets_hash'):
-current_hash = hash(str([a.get('name') for a in assets]))
-if current_hash == self.\_last_assets_hash and preserve_filter:
-logger.debug("Pomijam przebudowę - te same assety")
-return
-self.\_last_assets_hash = current_hash
+---
 
-    # Reszta kodu bez zmian...
+## Etap 1: Wprowadzenie Asynchronicznego Ładowania i Buforowania Miniatur (Thumbnail Caching)
 
-Problem: Brak debouncing dla zmiany rozmiaru
-python# core/amv_views/amv_view.py
+**Cel:** Wyeliminowanie blokowania interfejsu użytkownika przez operacje I/O podczas ładowania miniatur.
 
-# ZMIANA: Dodaj debouncing dla resize
+**Kroki:**
 
-def **init**(self): # ... istniejący kod ...
-self.\_resize_timer = QTimer()
-self.\_resize_timer.setSingleShot(True)
-self.\_resize_timer.timeout.connect(self.\_handle_delayed_resize)
+1.  **Stworzenie `ThumbnailCache`:**
+    *   Utworzenie nowej klasy `core.thumbnail_cache.ThumbnailCache`, która będzie działać jako singleton lub globalnie dostępna instancja.
+    *   Cache będzie przechowywał załadowane `QPixmap` w pamięci, używając ścieżki do pliku miniatury jako klucza.
+    *   Implementacja metody `get(path)` zwracającej `QPixmap` z cache lub `None`, jeśli go tam nie ma.
+    *   Implementacja metody `put(path, pixmap)` dodającej miniaturę do cache.
+    *   Dodanie logiki ograniczającej rozmiar cache (np. do 200-300 MB), aby uniknąć nadmiernego zużycia pamięci.
 
-def \_on_gallery_resized(self, width: int):
-"""Debounced resize handling"""
-self.\_pending_width = width
-self.\_resize_timer.stop()
-self.\_resize_timer.start(150) # 150ms delay
+2.  **Stworzenie `ThumbnailLoader` (Worker):**
+    *   Utworzenie klasy `core.workers.thumbnail_loader_worker.ThumbnailLoaderWorker` dziedziczącej po `QThread`.
+    *   Worker będzie przyjmował w konstruktorze ścieżkę do miniatury.
+    *   W metodzie `run()` będzie ładował obraz z dysku do `QPixmap`.
+    *   Po załadowaniu, worker wyemituje sygnał `finished(path, pixmap)`.
 
-def \_handle_delayed_resize(self):
-"""Wykonuje resize po debounce"""
-if hasattr(self, '\_pending_width'):
-self.gallery_viewport_resized.emit(self.\_pending_width) 2. Problemy z zarządzaniem pamięcią
-Problem: Brak zwalniania zasobów QPixmap
-python# core/amv_views/asset_tile_view.py
+3.  **Modyfikacja `AssetTileView`:**
+    *   Zmiana logiki ładowania miniatury w `_setup_asset_tile_ui`.
+    *   Najpierw kafelek spróbuje pobrać `QPixmap` z `ThumbnailCache`.
+    *   Jeśli miniatura jest w cache, zostanie natychmiast wyświetlona.
+    *   Jeśli nie, kafelek wyświetli tymczasowy placeholder (szary prostokąt) i uruchomi `ThumbnailLoaderWorker` dla danej miniatury.
+    *   `AssetTileView` będzie miał slot połączony z sygnałem `finished` workera. Po otrzymaniu sygnału, zaktualizuje swoją ikonę i umieści `QPixmap` w `ThumbnailCache`.
 
-# ZMIANA: Lepsze zarządzanie pamięcią
+**Testowanie po Etapie 1:**
+*   **Sprawdzenie:** Aplikacja powinna uruchamiać się szybciej po wejściu do folderu z dużą liczbą assetów.
+*   **Obserwacja:** Miniatury powinny pojawiać się stopniowo, bez "zamrażania" interfejsu. Przewijanie powinno być możliwe, gdy miniatury się ładują.
+*   **Weryfikacja:** Wszystkie pozostałe funkcje (klikanie, zaznaczanie, D&D) muszą działać bez zmian.
 
-class AssetTileView(TileBase):
-def **init**(self, ...): # ... istniejący kod ...
-self.\_pixmap_cache = None
+---
 
-    def _load_thumbnail(self, path: str):
-        """Ładuje miniaturę z cache'owaniem"""
-        if self._pixmap_cache and not self._pixmap_cache.isNull():
-            return self._pixmap_cache
+## Etap 2: Optymalizacja Filtrowania i Aktualizacji Siatki
 
-        pixmap = QPixmap(path)
-        if not pixmap.isNull():
-            # Ogranicz rozmiar cache'a
-            if pixmap.width() > 512 or pixmap.height() > 512:
-                pixmap = pixmap.scaled(512, 512, Qt.AspectRatioMode.KeepAspectRatio)
-            self._pixmap_cache = pixmap
-        return pixmap
+**Cel:** Zastąpienie pełnej przebudowy siatki dynamicznym pokazywaniem/ukrywaniem kafelków.
 
-    def release_resources(self):
-        """Zwolnij zasoby przed usunięciem"""
-        if self._pixmap_cache:
-            self._pixmap_cache = None
-        # ... reszta kodu ...
+**Kroki:**
 
-3. Problemy z obsługą błędów
-   Problem: Słaba obsługa błędów w modelu
-   python# core/amv_models/asset_grid_model.py
+1.  **Modyfikacja `ControlPanelController`:**
+    *   Zmiana metody `filter_assets_by_stars`.
+    *   Zamiast wywoływać `rebuild_asset_grid`, metoda będzie pobierać listę *wszystkich* kafelków z `AssetGridController`.
+    *   Następnie przeiteruje po tej liście. Dla każdego kafelka sprawdzi, czy jego model (`AssetTileModel`) spełnia kryteria filtra (np. ma odpowiednią liczbę gwiazdek).
+    *   W zależności od wyniku, wywoła `tile.show()` lub `tile.hide()`.
 
-# ZMIANA: Lepsze error handling
+2.  **Modyfikacja `AssetGridController`:**
+    *   Metoda `rebuild_asset_grid` będzie nadal używana przy pierwszym ładowaniu folderu, ale nie przy filtrowaniu.
+    *   Należy zapewnić, że `asset_tiles` w kontrolerze zawsze zawiera wszystkie kafelki dla danego folderu, a nie tylko te widoczne.
 
-def scan_folder(self, folder_path: str):
-"""Skanuje folder z lepszą obsługą błędów"""
-try:
-self.scan_started.emit(folder_path)
+**Testowanie po Etapie 2:**
+*   **Sprawdzenie:** Filtrowanie po gwiazdkach powinno być natychmiastowe, bez widocznego opóźnienia i migotania.
+*   **Weryfikacja:** Zaznaczanie, odznaczanie, przenoszenie i usuwanie przefiltrowanych assetów musi działać poprawnie.
+*   **Weryfikacja:** Po zmianie filtra i powrocie do widoku wszystkich assetów, stan zaznaczenia poszczególnych kafelków musi być zachowany.
 
-        # Walidacja wejścia
-        if not self._validate_folder_path(folder_path):
-            return
+---
 
-        # ... istniejący kod skanowania ...
+## Etap 3: Wprowadzenie "Object Pooling" dla `AssetTileView`
 
-    except PermissionError as e:
-        error_msg = f"Brak uprawnień do folderu: {folder_path}"
-        logger.error(error_msg)
-        self.scan_error.emit(error_msg)
-    except FileNotFoundError as e:
-        error_msg = f"Folder nie został znaleziony: {folder_path}"
-        logger.error(error_msg)
-        self.scan_error.emit(error_msg)
-    except Exception as e:
-        error_msg = f"Nieoczekiwany błąd podczas skanowania: {str(e)}"
-        logger.error(error_msg)
-        self.scan_error.emit(error_msg)
+**Cel:** Drastyczne zmniejszenie kosztu tworzenia i niszczenia widgetów przy zmianie folderu lub dużej liczbie assetów.
 
-def \_validate_folder_path(self, folder_path: str) -> bool:
-"""Waliduje ścieżkę folderu"""
-if not folder_path or not isinstance(folder_path, str):
-logger.error("Nieprawidłowa ścieżka folderu")
-self.scan_error.emit("Nieprawidłowa ścieżka folderu")
-return False
+**Kroki:**
 
-    if not os.path.exists(folder_path):
-        logger.error(f"Folder nie istnieje: {folder_path}")
-        self.scan_error.emit(f"Folder nie istnieje: {folder_path}")
-        return False
+1.  **Stworzenie `AssetTilePool`:**
+    *   Utworzenie nowej klasy `core.amv_views.asset_tile_pool.AssetTilePool`.
+    *   Pula będzie przechowywać nieużywane instancje `AssetTileView`.
+    *   Implementacja metody `acquire()` zwracającej istniejący kafelek z puli lub tworzącej nowy, jeśli pula jest pusta.
+    *   Implementacja metody `release(tile)` przyjmującej niepotrzebny kafelek, ukrywającej go i dodającej do puli.
 
-    return True
+2.  **Modyfikacja `AssetGridController`:**
+    *   Kontroler będzie posiadał instancję `AssetTilePool`.
+    *   Metoda `rebuild_asset_grid` zostanie fundamentalnie zmieniona:
+        *   Na początku, wszystkie istniejące, widoczne kafelki zostaną "uwolnione" do puli za pomocą `pool.release(tile)`.
+        *   Następnie, dla każdego assetu do wyświetlenia, kontroler "pozyska" kafelek z puli (`pool.acquire()`).
+        *   Pozyskany kafelek zostanie zaktualizowany nowymi danymi (`tile.update_asset_data(...)`), dodany do layoutu i wyświetlony.
+    *   Metoda `clear_asset_tiles` zostanie zmodyfikowana, aby uwalniała kafelki do puli zamiast je niszczyć.
 
-4. Problemy z architekturą
-   Problem: Zbyt mocne sprzężenie między komponentami
-   python# core/amv_controllers/amv_controller.py
+3.  **Modyfikacja `AssetTileView`:**
+    *   Dodanie metody `update_asset_data(model, ...)` do szybkiej aktualizacji danych kafelka bez potrzeby jego ponownego tworzenia. Metoda ta zaktualizuje etykiety, gwiazdki i załaduje nową miniaturę (korzystając z mechanizmu z Etapu 1).
 
-# ZMIANA: Dodaj interfejsy dla lepszego oddzielenia
+**Testowanie po Etapie 3:**
+*   **Sprawdzenie:** Przełączanie się między folderami (nawet tymi z dużą liczbą assetów) powinno być znacznie szybsze i płynniejsze.
+*   **Obserwacja:** Analiza użycia pamięci i zasobów systemowych powinna wykazać mniejsze skoki podczas zmiany folderów.
+*   **Weryfikacja:** Wszystkie funkcjonalności (filtrowanie, D&D, operacje na plikach) muszą działać bezbłędnie z nowym systemem zarządzania kafelkami.
 
-from abc import ABC, abstractmethod
+---
 
-class IAssetGridController(ABC):
-@abstractmethod
-def rebuild_asset_grid(self, assets: list) -> None: pass
+## Etap 4: Weryfikacja końcowa i czyszczenie kodu
 
-    @abstractmethod
-    def clear_asset_tiles(self) -> None: pass
+**Cel:** Upewnienie się, że wszystkie zmiany działają harmonijnie i usunięcie ewentualnego martwego kodu.
 
-class AmvController(QObject):
-def **init**(self, model, view):
-super().**init**()
-self.model = model
-self.view = view
+**Kroki:**
 
-        # Używaj interfejsów zamiast konkretnych klas
-        self._asset_grid_controller: IAssetGridController = None
-        self._initialize_controllers()
-
-5. Problemy z wydajnością I/O
-   Problem: Synchroniczne operacje na plikach w głównym wątku
-   python# core/scanner.py
-
-# ZMIANA: Asynchroniczne ładowanie metadanych
-
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-class AssetRepository:
-def **init**(self):
-self.\_executor = ThreadPoolExecutor(max_workers=4)
-
-    async def load_existing_assets_async(self, folder_path: str) -> list:
-        """Asynchroniczne ładowanie assetów"""
-        if not os.path.exists(folder_path):
-            return []
-
-        asset_files = [f for f in os.listdir(folder_path) if f.endswith('.asset')]
-
-        # Ładuj pliki równolegle
-        tasks = []
-        for asset_file in asset_files:
-            asset_path = os.path.join(folder_path, asset_file)
-            task = asyncio.create_task(self._load_single_asset_async(asset_path))
-            tasks.append(task)
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        return [r for r in results if isinstance(r, dict)]
-
-    async def _load_single_asset_async(self, asset_path: str) -> dict:
-        """Ładuje pojedynczy asset asynchronicznie"""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(self._executor, load_from_file, asset_path)
-
-6. Problemy z konfiguracją
-   Problem: Brak walidacji konfiguracji
-   python# core/amv_models/config_manager_model.py
-
-# ZMIANA: Dodaj walidację konfiguracji
-
-from pydantic import BaseModel, ValidationError
-from typing import Optional
-
-class WorkFolderConfig(BaseModel):
-path: str = ""
-name: str = ""
-icon: str = ""
-color: str = "#007ACC"
-
-class AppConfig(BaseModel):
-thumbnail: int = 256
-logger_level: str = "INFO"
-use_styles: bool = True
-work_folder1: WorkFolderConfig = WorkFolderConfig()
-work_folder2: WorkFolderConfig = WorkFolderConfig() # ... więcej folderów ...
-
-class ConfigManagerMV(QObject):
-def load_config(self, force_reload=False):
-try:
-raw_config = load_from_file(self.\_config_path)
-if raw_config: # Waliduj konfigurację
-validated_config = AppConfig(\*\*raw_config)
-self.\_config_cache = validated_config.dict()
-else:
-self.\_config_cache = AppConfig().dict()
-
-        except ValidationError as e:
-            logger.error(f"Błąd walidacji konfiguracji: {e}")
-            self._config_cache = AppConfig().dict()
-        except Exception as e:
-            logger.error(f"Błąd ładowania konfiguracji: {e}")
-            self._config_cache = AppConfig().dict()
-
-7. Zalecenia dodatkowe
-   Optymalizacja logowania
-   python# core/performance_monitor.py
-
-# ZMIANA: Dodaj context manager dla operacji
-
-@contextmanager
-def log_operation(operation_name: str, level: int = logging.INFO):
-"""Context manager do logowania operacji"""
-start_time = time.perf_counter()
-logger.log(level, f"START: {operation_name}")
-
-    try:
-        yield
-        duration = time.perf_counter() - start_time
-        logger.log(level, f"SUCCESS: {operation_name} ({duration:.3f}s)")
-    except Exception as e:
-        duration = time.perf_counter() - start_time
-        logger.error(f"ERROR: {operation_name} ({duration:.3f}s): {e}")
-        raise
-
-Dodanie testów jednostkowych
-python# tests/test_asset_grid_model.py
-import unittest
-from unittest.mock import Mock, patch
-from core.amv_models.asset_grid_model import AssetGridModel
-
-class TestAssetGridModel(unittest.TestCase):
-def setUp(self):
-self.model = AssetGridModel()
-
-    def test_set_assets_emits_signal(self):
-        """Test czy ustawienie assetów emituje sygnał"""
-        mock_signal = Mock()
-        self.model.assets_changed.connect(mock_signal)
-
-        test_assets = [{"name": "test", "type": "asset"}]
-        self.model.set_assets(test_assets)
-
-        mock_signal.assert_called_once_with(test_assets)
-
-    @patch('os.path.exists')
-    def test_scan_folder_invalid_path(self, mock_exists):
-        """Test skanowania nieistniejącego folderu"""
-        mock_exists.return_value = False
-        mock_error = Mock()
-        self.model.scan_error.connect(mock_error)
-
-        self.model.scan_folder("/invalid/path")
-
-        mock_error.assert_called_once()
-
-Te zmiany znacznie poprawią wydajność, stabilność i łatwość utrzymania Twojego kodu. Najważniejsze to zaimplementowanie debouncing, lepszego zarządzania pamięcią oraz asynchronicznych operacji I/O.
+1.  **Pełne testy regresji:** Ponowne przetestowanie wszystkich funkcjonalności aplikacji:
+    *   Ładowanie folderów.
+    *   Przewijanie galerii.
+    *   Filtrowanie.
+    *   Zmiana rozmiaru okna i miniaturek.
+    *   Zaznaczanie/odznaczanie (pojedyncze, wszystkie).
+    *   Drag & Drop do folderów.
+    *   Przenoszenie i usuwanie zaznaczonych assetów.
+    *   Operacje z zakładki "Narzędzia".
+2.  **Przegląd kodu:** Sprawdzenie, czy nie pozostały stare, nieużywane metody związane z poprzednim sposobem budowania siatki.
+3.  **Monitoring wydajności:** Ostateczne pomiary wydajności w scenariuszach z dużą liczbą assetów, aby potwierdzić skuteczność optymalizacji.

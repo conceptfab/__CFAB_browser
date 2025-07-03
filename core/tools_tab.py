@@ -912,7 +912,6 @@ class ToolsTab(QWidget):
             # Mapowanie nazw operacji na nazwy przycisków i pól klasy
             button_mapping = {
                 "konwersji na webp": ("webp_button", "webp_converter"),
-                "konwersji na WebP": ("webp_button", "webp_converter"),
                 "przebudowy assetów": ("rebuild_button", "asset_rebuilder"),
                 "zmniejszania obrazów": ("image_resizer_button", "image_resizer"),
                 "skracania nazw plików": ("file_renamer_button", "file_renamer"),
@@ -1266,8 +1265,12 @@ class ToolsTab(QWidget):
                 # Otwórz podgląd w oknie podglądu
                 from core.preview_window import PreviewWindow
 
+                # Zabezpieczenie przed wieloma oknami
+                if hasattr(self, "preview_window") and self.preview_window:
+                    self.preview_window.close()
+
                 self.preview_window = PreviewWindow(full_path, self)
-                self.preview_window.show()
+                self.preview_window.show_window()
                 logger.info(f"Otworzono podgląd: {full_path}")
             except Exception as e:
                 logger.error(f"Błąd podczas otwierania podglądu {full_path}: {e}")

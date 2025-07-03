@@ -240,17 +240,14 @@ class FileOperationController(QObject):
             asset_ids,
         )
         assets_to_move = self.get_assets_by_ids(asset_ids)
-        logger.debug(f"assets_to_move: {[a.get('name') for a in assets_to_move]}")
 
         if assets_to_move:
             current_folder = self.model.asset_grid_model.get_current_folder()
-            logger.debug(f"Moving assets from '{current_folder}' to '{target_path}'")
             self.model.file_operations_model.move_assets(
                 assets_to_move,
                 current_folder,
                 target_path,
             )
-            logger.debug("move_assets called successfully")
             # Usunięto placeholder aby wyeliminować migotanie galerii podczas drag & drop
         else:
             logger.warning(

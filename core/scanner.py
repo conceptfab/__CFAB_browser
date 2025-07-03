@@ -28,6 +28,15 @@ class AssetRepository:
         """Inicjalizuje repozytorium assetów."""
         pass
 
+    def _handle_error(self, operation: str, error: Exception, file_path: str = None):
+        """DODAJ bazową metodę dla obsługi błędów"""
+        error_msg = f"Błąd podczas {operation}"
+        if file_path:
+            error_msg += f" dla {file_path}"
+        error_msg += f": {error}"
+        logger.error(error_msg)
+        return None
+
     def _get_files_by_extensions(self, folder_path: str, extensions: list) -> list:
         """
         Pomocnicza funkcja do wyszukiwania plików o określonych rozszerzeniach
@@ -305,8 +314,7 @@ class AssetRepository:
                 return None
 
         except Exception as e:
-            logger.error(f"Błąd podczas tworzenia miniatury dla {asset_path}: {e}")
-            return None
+            return self._handle_error("tworzenia miniatury", e, asset_path)
 
     def _create_unpair_files_json(
         self,
@@ -356,7 +364,7 @@ class AssetRepository:
             )
 
         except Exception as e:
-            logger.error(f"Błąd podczas tworzenia pliku unpair_files.json: {e}")
+            self._handle_error("tworzenia pliku unpair_files.json", e)
 
     def find_and_create_assets(
         self, folder_path: str, progress_callback=None, use_async_thumbnails=False

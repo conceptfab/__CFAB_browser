@@ -126,33 +126,8 @@ class AmvController(QObject):
             self.model.control_panel_model.set_progress(100)
             self.view.update_gallery_placeholder("")
 
-            # Zawsze przebuduj siatkę po zakończeniu skanowania
-            self.model.asset_grid_model.set_assets(assets)
-            # Zapisz oryginalną listę assetów (bez filtrowania)
-            self.asset_grid_controller.set_original_assets(assets)
-            logger.debug(f"Assets updated and grid rebuilt: {len(assets)} items")
-            logger.debug(
-                f"AmvController: _on_scan_completed - Original assets set: {len(assets)} items"
-            )
-
             # Zamiast resetować filtry, zastosuj aktualny filtr do nowych danych
-            current_star_filter = self.asset_grid_controller.active_star_filter
-            if current_star_filter > 0:
-                # Zastosuj aktualny filtr gwiazdek do nowych assetów
-                logger.debug(
-                    f"Stosowanie istniejącego filtra gwiazdek: {current_star_filter}"
-                )
-                self.control_panel_controller.filter_assets_by_stars(
-                    current_star_filter
-                )
-            else:
-                # Jeśli brak filtra, wyświetl wszystkie assety
-                self.asset_grid_controller.rebuild_asset_grid(
-                    assets, preserve_filter=False
-                )
-
-            # Aktualizuj stan przycisków po załadowaniu assetów
-            self.control_panel_controller.update_button_states()
+            self.model.asset_grid_model.set_assets(assets)
 
     def _on_scan_error(self, error_msg: str):
         logger.error(f"Controller: Scan error: {error_msg}")
@@ -177,7 +152,15 @@ class AmvController(QObject):
                     if action_type == "thumbnail":
                         from core.preview_window import PreviewWindow
 
-                        PreviewWindow(path, self.view)
+                        # Zabezpieczenie przed otwieraniem wielu okien naraz
+                        if (
+                            hasattr(self, "current_preview_window")
+                            and self.current_preview_window
+                        ):
+                            self.current_preview_window.close()
+
+                        self.current_preview_window = PreviewWindow(path, self.view)
+                        self.current_preview_window.show_window()
                         logger.info(f"Otworzono podgląd w dedykowanym oknie: {path}")
                     elif action_type == "filename":
                         open_file_in_default_app(path, self.view)
@@ -188,9 +171,3 @@ class AmvController(QObject):
         else:
             logger.warning(f"Ścieżka nie istnieje: {path}")
             QMessageBox.warning(self.view, "Błąd", f"Ścieżka nie istnieje: {path}")
-
-    def _on_tile_thumbnail_clicked(self, path: str):
-        self._handle_file_action(path, "thumbnail")
-
-    def _on_tile_filename_clicked(self, path: str):
-        self._handle_file_action(path, "filename")
