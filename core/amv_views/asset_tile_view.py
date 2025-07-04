@@ -138,7 +138,7 @@ class AssetTileView(TileBase):
         self.texture_icon.setObjectName(
             "AssetTileTextureIcon"
         )  # Ikona tekstury (16x16px)
-        self.texture_icon.setFixedSize(60, 16)
+        self.texture_icon.setFixedSize(16, 16)
         self.texture_icon.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
@@ -214,14 +214,24 @@ class AssetTileView(TileBase):
         tile_height = self.thumbnail_size + 70 + (2 * tile_padding) + (2 * tile_border)
         self.setFixedSize(tile_width, tile_height)
 
+        # GŁÓWNY LAYOUT
         layout = QVBoxLayout(self)
-        layout.setSpacing(8)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.setContentsMargins(10, 10, 10, 0)
 
-        # MINIATURKA - bezpośrednio w layoucie głównym
+        # GŁÓWNY KONTENER dla wszystkich elementów kafelka
+        self.main_content_container = QWidget()
+        self.main_content_container.setObjectName("AssetTileMainContent")
+        
+        # Layout dla głównego kontenera
+        main_content_layout = QVBoxLayout(self.main_content_container)
+        main_content_layout.setSpacing(0)
+        main_content_layout.setContentsMargins(0, 0, 0, 0)
+
+        # MINIATURKA - w głównym kontenerze
         self.thumbnail_container.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.thumbnail_container, 0, Qt.AlignmentFlag.AlignCenter)
-        layout.addSpacing(8)  # Odstęp przed nazwą pliku
+        main_content_layout.addWidget(self.thumbnail_container, 0, Qt.AlignmentFlag.AlignCenter)
+        main_content_layout.addSpacing(0)  # Odstęp przed nazwą pliku
 
         # Pasek z nazwą pliku, ikonką tekstury i rozmiarem
         filename_container = QHBoxLayout()
@@ -233,13 +243,13 @@ class AssetTileView(TileBase):
         self.name_label.setFixedWidth(136)
         self.size_label.setFixedWidth(60)
 
-        filename_container.addWidget(self.texture_icon, 0, Qt.AlignmentFlag.AlignLeft)
-        filename_container.addWidget(self.name_label, 0)
-        filename_container.addWidget(self.size_label, 0, Qt.AlignmentFlag.AlignRight)
+        filename_container.addWidget(self.texture_icon, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        filename_container.addWidget(self.name_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        filename_container.addWidget(self.size_label, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         filename_bg = QWidget()
         filename_bg.setObjectName("AssetTileFilenameContainer")  # Kontener nazwy pliku
         filename_bg.setLayout(filename_container)
-        layout.addWidget(filename_bg)
+        main_content_layout.addWidget(filename_bg)
 
         # Pasek z numerem, gwiazdkami i checkboxem w jednej linii
         bottom_row_bg = QWidget()
@@ -248,19 +258,22 @@ class AssetTileView(TileBase):
         )  # Dolny pasek (numer+gwiazdki+checkbox)
         bottom_row_layout = QHBoxLayout(bottom_row_bg)
         bottom_row_layout.setContentsMargins(0, 0, 0, 0)  # Margines dolny 6px
-        bottom_row_layout.setSpacing(4)
+        bottom_row_layout.setSpacing(0)
         # NR do lewej
-        bottom_row_layout.addWidget(self.tile_number_label)
+        bottom_row_layout.addWidget(self.tile_number_label, 0, Qt.AlignmentFlag.AlignVCenter)
         # Rozciągnij do środka
         bottom_row_layout.addStretch()
         # Gwiazdki do środka
         for star_cb in self.star_checkboxes:
-            bottom_row_layout.addWidget(star_cb)
+            bottom_row_layout.addWidget(star_cb, 0, Qt.AlignmentFlag.AlignVCenter)
         # Rozciągnij do prawej
         bottom_row_layout.addStretch()
         # Checkbox do prawej
-        bottom_row_layout.addWidget(self.checkbox)
-        layout.addWidget(bottom_row_bg)
+        bottom_row_layout.addWidget(self.checkbox, 0, Qt.AlignmentFlag.AlignVCenter)
+        main_content_layout.addWidget(bottom_row_bg)
+
+        # Dodaj główny kontener do głównego layoutu
+        layout.addWidget(self.main_content_container)
 
         self.setAcceptDrops(False)  # D&D będzie obsługiwane przez Controller
         self.setMouseTracking(True)

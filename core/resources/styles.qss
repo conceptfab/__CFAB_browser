@@ -3,15 +3,21 @@
    ============================================================================= */
 
 /* ===================== GŁÓWNE TŁA I TEKST ===================== */
+*:hover {
+    color: #717bbc !important;
+}
+
+* {
+    color: #a9b7c6 !important;
+}
+
 QMainWindow, QDialog, QWidget {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
+    background-color: #282935;
     font-family: 'Segoe UI', 'Arial', sans-serif;
     font-size: 10px;
 }
 
 QLabel {
-    color: #a9b7c6;
     background-color: transparent;
     font-size: 10px;
 }
@@ -19,7 +25,6 @@ QLabel {
 /* ===================== PRZYCISKI ===================== */
 QPushButton {
     background-color: #313335;
-    color: #a9b7c6;
     border: 1px solid #3a3a3a;
     border-radius: 2px;
     padding: 4px 12px;
@@ -30,11 +35,12 @@ QPushButton {
 }
 QPushButton:hover {
     background-color: #3a3a3a;
-    border-color: #287bde;
+    border-color: #717bbc;
+    color: #717bbc;
 }
 QPushButton:pressed {
     background-color: #214383;
-    border-color: #287bde;
+    border-color: #717bbc;
 }
 QPushButton:disabled {
     background-color: #2b2b2b;
@@ -43,25 +49,23 @@ QPushButton:disabled {
 }
 QPushButton[action="primary"] {
     background-color: #287bde;
-    color: #ffffff;
     border: none;
     font-weight: bold;
 }
 QPushButton[action="primary"]:hover {
     background-color: #214383;
+    color: #717bbc;
 }
 QPushButton[action="primary"]:pressed {
     background-color: #214383;
 }
 QPushButton[action="success"] {
     background-color: #a5c261;
-    color: #2b2b2b;
     border: none;
     font-weight: bold;
 }
 QPushButton[action="warning"] {
     background-color: #cc7832;
-    color: #2b2b2b;
     border: none;
     font-weight: bold;
 }
@@ -69,7 +73,6 @@ QPushButton[action="warning"] {
 /* ===================== POLA EDYCJI, LISTY, TABELKI ===================== */
 QLineEdit, QTextEdit, QTableWidget, QListWidget, QComboBox, QSpinBox {
     background-color: #313335;
-    color: #a9b7c6;
     border: 1px solid #3a3a3a;
     border-radius: 2px;
     padding: 2px;
@@ -77,7 +80,7 @@ QLineEdit, QTextEdit, QTableWidget, QListWidget, QComboBox, QSpinBox {
     font-size: 10px;
 }
 QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QSpinBox:focus {
-    border-color: #287bde;
+    border-color: #717bbc;
 }
 QLineEdit:disabled, QTextEdit:disabled, QComboBox:disabled, QSpinBox:disabled {
     background-color: #2b2b2b;
@@ -93,6 +96,7 @@ QListWidget::item:selected {
 }
 QListWidget::item:hover {
     background-color: #3a3a3a;
+    color: #717bbc;
 }
 QTableWidget::item:selected {
     background-color: #214383;
@@ -100,7 +104,6 @@ QTableWidget::item:selected {
 }
 QHeaderView::section {
     background-color: #313335;
-    color: #a9b7c6;
     padding: 2px;
     border: 1px solid #3a3a3a;
     font-weight: bold;
@@ -113,14 +116,12 @@ QTabWidget {
 QTabWidget::pane {
     border: 1px solid #3a3a3a;
     background-color: #313335;
-    color: #a9b7c6;
     top: -1px;
     margin: 0px;
     padding: 2px;
 }
 QTabBar::tab {
     background-color: #2b2b2b;
-    color: #a9b7c6;
     padding: 5px 10px;
     margin-right: 2px;
     /* border-top-left-radius: 2px; */
@@ -137,6 +138,7 @@ QTabBar::tab:selected {
 }
 QTabBar::tab:hover {
     background-color: #3a3a3a;
+    color: #717bbc;
 }
 QTabBar::tab:disabled {
     color: #888888;
@@ -148,11 +150,10 @@ QTabWidget::tab-bar {
 }
 QTabWidget::tab-bar::tab:selected {
     margin-bottom: -1px;
-    border-bottom: 2px solid #287bde;
+    border-bottom: 2px solid #717bbc;
 }
 QGroupBox {
     background-color: #313335;
-    color: #a9b7c6;
     border: 1px solid #3a3a3a;
     border-radius: 2px;
     margin-top: 14px;
@@ -170,8 +171,7 @@ QGroupBox::title {
 
 /* ===================== DRZEWO FOLDERÓW ===================== */
 QTreeView, #cfabFolderTree, .cfab-folder-tree QTreeView {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
+    background-color: #282935;;
     border: none;
     outline: none;
     font-size: 11px;
@@ -181,29 +181,32 @@ QTreeView::item {
     border: none;
 }
 QTreeView::item:hover {
-    background-color: #1C1E2A;
+    background-color: #282935;;
+    color: #717bbc;
 }
 QTreeView::item:selected, QTreeView::item[dropTarget="true"] {
-    background-color: #214383;
-    color: #ffffff;
+    background-color: #717bbc;
+    color: #717bbc;
+    border: 2px solid #717bbc;
 }
 QTreeView::item[dropTarget="true"] {
-    border: 2px solid #287bde;
+    border: 2px solid #717bbc;
 }
 QTreeView::branch {
-    background-color: #1C1E2A;
+    background-color: #282935
 }
 
 /* ===================== KAFELKI ASSETÓW ===================== */
 TileBase, .AssetTileView {
-    background-color: rgba(40, 120, 222, 0.10);
-    border: 1px solid #202230;
+    background-color: #2f313e;
+    border: 1px solid #616161;
     border-radius: 6px;
-    margin: 0px;
+    margin: 0px;;
 }
 TileBase:hover, .AssetTileView:hover {
     background-color: rgba(40, 120, 222, 0.10);
-    border-color: #287bde;
+    border-color: #717bbc;
+    color: #717bbc;
 }
 
 /* ===================== KAFELKI ASSETÓW - MINIATURKA ===================== */
@@ -230,7 +233,7 @@ TileBase:hover, .AssetTileView:hover {
     background: transparent;
     margin: 0px;
     padding: 0px;
-    border: 1px solid #7882cd;
+    /* border: 1px solid #7882cd; */
 }
 
 /* ===================== KAFELKI ASSETÓW - DOLNY PAS ===================== */
@@ -243,17 +246,24 @@ TileBase:hover, .AssetTileView:hover {
 }
 
 /* ===================== KAFELKI ASSETÓW - GWIAZDKI ===================== */
-/* Styluje gwiazdki oceny (1-5) w kafelku */
+/* Styluje gwiazdki oceny (1-5) w kafelku - identyczne z panelem kontrolnym */
 #AssetTileStar_1, #AssetTileStar_2, #AssetTileStar_3, #AssetTileStar_4, #AssetTileStar_5 {
+    spacing: 0px;
+    color: #717bbc;
+    font-size: 10.8px;
+    min-width: 12px;
+    min-height: 12px;
     background: transparent;
-    color: #cc7832;
-    font-size: 14px;
     margin: 0px;
     padding: 0px;
     border: none;
 }
 #AssetTileStar_1:hover, #AssetTileStar_2:hover, #AssetTileStar_3:hover, #AssetTileStar_4:hover, #AssetTileStar_5:hover {
-    color: #ffcc66;
+    color: #717bbc;
+}
+#AssetTileStar_1:checked, #AssetTileStar_2:checked, #AssetTileStar_3:checked, #AssetTileStar_4:checked, #AssetTileStar_5:checked {
+    color: #717bbc;
+    font-weight: bold;
 }
 
 QLabel[class="thumbnail-container"] {
@@ -268,21 +278,22 @@ QLabel[class="thumbnail-container"] {
 #AssetTileNameLabel {
     background: transparent;
     color: #a9b7c6;
-    font-weight: bold;
+    font-weight: normal;
     font-size: 12px;
     padding: 0px;
-    border-bottom: 1px solid #202230;
+    /* border-bottom: 1px solid #202230; */
 }
 #AssetTileNameLabel:hover {
     font-weight: bold;
-    color: #ffffff;
+    color: #717bbc;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z GWIAZDKAMI ===================== */
 /* Styluje linię z gwiazdkami (oceną) w kafelku assetu */
 #AssetTileStarsRow {
     background: transparent;
-    padding: 2px 8px;
+    padding: 0px;
+    margin: 0px;
     min-height: 24px;
     border-top: 1px solid #202230;
 }
@@ -291,7 +302,7 @@ QLabel[class="thumbnail-container"] {
 /* Styluje linię z rozmiarem pliku (np. 15.4 MB) */
 #AssetTileSizeLabel {
     background: transparent;
-    color: #888888;
+    color: #a9b7c6;
     font-size: 11px;
     padding: 0px;
     text-align: right;
@@ -301,9 +312,10 @@ QLabel[class="thumbnail-container"] {
 /* Styluje numer kafelka (np. 2/2) */
 #AssetTileNumberLabel {
     background: transparent;
-    color: #888888;
+    color: #a9b7c6;
     font-size: 11px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z CHECKBOXEM ===================== */
@@ -312,13 +324,15 @@ QLabel[class="thumbnail-container"] {
     margin: 0px;
     padding: 0px;
     border: none;
+    spacing: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z IKONĄ ===================== */
 /* Styluje ikonę typu pliku (np. ikona szachownicy) */
 #AssetTileIconLabel {
     background: transparent;
-    padding: 0 4px;
+    padding: 0px;
+    margin: 0px;
     min-width: 18px;
     min-height: 18px;
 }
@@ -327,18 +341,20 @@ QLabel[class="thumbnail-container"] {
 /* Styluje liczbę obrazów (np. 2/2) */
 #AssetTileImageCountLabel {
     background: transparent;
-    color: #888888;
+    color: #a9b7c6;
     font-size: 11px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z DATĄ ===================== */
 /* Styluje datę dodania/edycji pliku */
 #AssetTileDateLabel {
     background: transparent;
-    color: #888888;
+    color: #a9b7c6;
     font-size: 10px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z AUTOREM ===================== */
@@ -347,37 +363,52 @@ QLabel[class="thumbnail-container"] {
     background: transparent;
     color: #a5c261;
     font-size: 10px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z FORMATEM ===================== */
 /* Styluje informację o formacie pliku (np. .zip, .jpg) */
 #AssetTileFormatLabel {
     background: transparent;
-    color: #9876aa;
+    color: #a9b7c6;
     font-size: 10px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z TAGAMI ===================== */
 /* Styluje tagi assetu (np. kategorie, słowa kluczowe) */
 #AssetTileTagsLabel {
     background: transparent;
-    color: #287bde;
+    color: #717bbc;
     font-size: 10px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
+
+/* ===================== KAFELKI ASSETÓW - GŁÓWNY KONTENER ===================== */
+/* Styluje główny kontener zawierający wszystkie elementy kafelka */
+#AssetTileMainContent {
+    background: transparent;
+    /* border: 1px solid #3a3a3a;
+    border-radius: 4px; */
+    padding: 0px;
+    margin: 0px;
+}
+/* #AssetTileMainContent:hover {
+    background: rgba(40, 120, 222, 0.15);
+    border-color: #287bde;
+} */
 
 /* ===================== KONSOLA I POSTĘP ===================== */
 #ConsoleHeaderLabel, #ProgressHeaderLabel {
     font-weight: bold;
-    color: #a9b7c6;
     font-size: 11px;
     padding-bottom: 4px;
 }
 #ConsoleOutput {
     background-color: #313335;
-    color: #a9b7c6;
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 10px;
 }
@@ -389,17 +420,17 @@ QLabel[class="thumbnail-container"] {
     font-style: italic;
 }
 QProgressBar {
-    border: 1px solid #3a3a3a;
     background-color: #313335;
+    border: 1px solid #717bbc;
+    color: #717bbc;
     text-align: center;
-    color: #a9b7c6;
     border-radius: 6px;
     /* margin: 4px;    */
      min-width: 200px;
     max-width: 200px;
 }
 QProgressBar::chunk {
-    background-color: #287bde;
+    background-color: #717bbc;
     border-radius: 1px;
 }
 
@@ -412,12 +443,13 @@ QScrollBar:vertical {
     border-radius: 6px;
 }
 QScrollBar::handle:vertical {
-    background: #3a3a3a;
+    background: #717bbc;
+    border: 1px solid #717bbc;
     min-height: 20px;
     border-radius: 6px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #287bde;
+    background: #717bbc;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     border: none;
@@ -435,15 +467,16 @@ QScrollBar:horizontal {
     border-radius: 6px;
 }
 QScrollBar::handle:horizontal {
-    background-color: #287bde;
-    border: 1px solid #287bde;
-    width: 12px;
-    height: 12px;
+    background-color: #717bbc;
+    border: 1px solid #717bbc;
+    width: 11px;
+    height: 11px;
     margin: -5px 0;
-    border-radius: 6px;
+    border-radius: 50%;
 }
 QScrollBar::handle:horizontal:hover {
-    background-color: #214383;
+    background-color: #a9b7c6;
+    border: 2px solid #717bbc;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     border: none;
@@ -456,8 +489,7 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
 
 /* ===================== MENU, STATUSBAR, SEPARATORY ===================== */
 QMenu {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
+    background-color: #282935;
     border: 1px solid #3a3a3a;
     padding: 2px;
 }
@@ -470,8 +502,7 @@ QMenu::separator {
     margin: 2px 0px;
 }
 QMenuBar {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
+    background-color: #282935;
     border-bottom: 1px solid #3a3a3a;
 }
 QMenuBar::item {
@@ -485,8 +516,7 @@ QMenuBar::item:pressed {
     background-color: #214383;
 }
 QStatusBar {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
+    background-color: #282935;
     border-top: 1px solid #3a3a3a;
 }
 QStatusBar::item {
@@ -497,23 +527,67 @@ QFrame[frameShape="HLine"] {
     border-top: 1px solid #3a3a3a;
 }
 QSlider::groove:horizontal {
-    border: 1px solid #3a3a3a;
-    height: 4px;
-    background: #3a3a3a;
+    border: 1px solid #717bbc;
+    height: 1px;
+    background: #313335;
     margin: 2px 0;
-    border-radius: 2px;
+    border-radius: 3px;
 }
+
+QSlider::groove:horizontal {
+    border: 1px solid #717bbc;
+    height: 1px;
+    background: #313335;
+    margin: 2px 0;
+    border-radius: 3px;
+}
+
 QSlider::handle:horizontal {
-    background-color: #287bde;
-    border: 1px solid #287bde;
+    background-color: #717bbc;
+    border: none;
     width: 12px;
     height: 12px;
     margin: -5px 0;
     border-radius: 6px;
+    image: url(data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><circle cx='6' cy='6' r='6' fill='%23717bbc'/></svg>);
 }
+
 QSlider::handle:horizontal:hover {
-    background-color: #214383;
+    background-color: #a9b7c6;
+    border: none;
+    width: 12px;
+    height: 12px;
+    margin: -5px 0;
+    border-radius: 6px;
+    image: url(data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><circle cx='6' cy='6' r='6' fill='%23a9b7c6'/></svg>);
 }
+
+QSlider::sub-page:horizontal {
+    background: #717bbc;
+    border-radius: 3px;
+}
+
+QSlider::add-page:horizontal {
+    background: #313335;
+    border-radius: 3px;
+}
+
+QSlider:disabled {
+    background: #22232a;
+}
+
+QSlider::handle:horizontal:disabled {
+    background: #444555;
+    border: none;
+    width: 12px;
+    height: 12px;
+    margin: -5px 0;
+    border-radius: 6px;
+    image: url(data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><circle cx='6' cy='6' r='6' fill='%23444555'/></svg>);
+}
+
+
+
 
 /* ===================== CHECKBOXY, RADIO ===================== */
 QCheckBox {
@@ -529,11 +603,11 @@ QCheckBox::indicator {
     background-color: #313335;
 }
 QCheckBox::indicator:checked {
-    background-color: #287bde;
-    border-color: #287bde;
+    background-color: #717bbc;
+    border-color: #717bbc;
 }
 QCheckBox::indicator:hover {
-    border-color: #287bde;
+    color: #717bbc;
 }
 QRadioButton {
     color: #a9b7c6;
@@ -549,14 +623,14 @@ QRadioButton::indicator {
 }
 QRadioButton::indicator:checked {
     background-color: #287bde;
-    border-color: #287bde;
+    border-color: #717bbc;
 }
 QRadioButton::indicator:hover {
-    border-color: #287bde;
+    color: #717bbc;
 }
 QCheckBox.star {
     spacing: 0px;
-    color: #9876aa;
+    color: #848484;
     font-size: 10.8px;
     min-width: 12px;
     min-height: 12px;
@@ -568,17 +642,17 @@ QCheckBox.star::indicator {
     background: transparent;
 }
 QCheckBox.star:checked {
-    color: #ffef28;
+    color: #717bbc;
     font-weight: bold;
 }
 QCheckBox.star:hover {
-    color: #cc7832;
+    color: #717bbc;
 }
 
 /* ===================== KLASY CSS I ROZMIARY ===================== */
-QLabel[class="header"] { font-weight: bold; font-size: 11px; color: #ffffff; padding-bottom: 4px; }
-QLabel[class="info"] { color: #a9b7c6; font-style: italic; font-size: 10px; }
-QLabel[class="warning"] { color: #cc7832; font-weight: bold; font-size: 10px; }
+QLabel[class="header"] { font-weight: bold; font-size: 11px; padding-bottom: 4px; }
+QLabel[class="info"] { font-style: italic; font-size: 10px; }
+QLabel[class="warning"] { font-weight: bold; font-size: 10px; }
 QLabel[class="mode-label"] { font-weight: bold; margin-bottom: 5px; }
 QLabel[class="text-label"] { font-weight: bold; margin-top: 10px; margin-bottom: 5px; }
 QLabel[class="dialog-header"] { font-weight: bold; font-size: 14px; }
@@ -591,7 +665,6 @@ QPushButton[class="start-button"]:pressed { background-color: #214383; }
 QTextEdit[class="tool-text"] { font-size: 12px; padding: 5px; }
 
 /* ===================== SUWAK DO SKALOWANIA (QSlider) ===================== */
-/* Ustala szerokość suwaka do skalowania na 200px */
 QSlider[objectName="ScaleSlider"], #ScaleSlider {
     min-width: 200px;
     max-width: 200px;
@@ -600,3 +673,9 @@ QSlider[objectName="ScaleSlider"], #ScaleSlider {
 /* =============================================================================
    KONIEC ARKUSZA STYLÓW
    ============================================================================= */
+
+.AssetTileView:hover QLabel,
+.AssetTileView:hover QCheckBox,
+.AssetTileView:hover QLineEdit {
+    color: #717bbc;
+}
