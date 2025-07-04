@@ -100,14 +100,14 @@ QPushButton[class="favorite"]:hover {
 /* ===================== POLA EDYCJI, LISTY, TABELKI ===================== */
 QLineEdit, QTextEdit, QTableWidget, QListWidget, QComboBox, QSpinBox {
     background-color: #313335;
-    border: 1px solid #3a3a3a;
+    border: 1px solid #0026ff;
     border-radius: 2px;
     padding: 2px;
     selection-background-color: #214383;
     font-size: 10px;
 }
 QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QSpinBox:focus {
-    border-color: #717bbc;
+    border-color: #95ff00;
 }
 QLineEdit:disabled, QTextEdit:disabled, QComboBox:disabled, QSpinBox:disabled {
     background-color: #2b2b2b;
@@ -141,8 +141,8 @@ QTabWidget {
     border: none;
 }
 QTabWidget::pane {
-    border: 1px solid #3a3a3a;
-    background-color: #313335;
+    /* border: 1px solid #ff0000; */
+    background-color: #282935;
     top: -1px;
     margin: 0px;
     padding: 2px;
@@ -153,23 +153,27 @@ QTabBar::tab {
     margin-right: 2px;
     /* border-top-left-radius: 2px; */
     /* border-top-right-radius: 2px; */
-    border: 1px solid #3a3a3a;
+    border-bottom: 1px solid #282935;
+    border-top: 1px solid #3b3d48;
+    border-left: 1px solid #3b3d48;
+    border-right: 1px solid #3b3d48;
     min-width: 80px;
     max-height: 25px;
     font-size: 10px;
 }
 QTabBar::tab:selected {
-    background-color: #313335;
-    border-bottom-color: #313335;
+    background-color: #282935;
+    /* border-bottom-color: #282935; */
     font-weight: bold;
 }
 QTabBar::tab:hover {
-    background-color: #3a3a3a;
-    color: #717bbc;
+    background-color: #717bbc;
+    color: #a9b7c6;
 }
 QTabBar::tab:disabled {
     color: #888888;
     background-color: #3a3a3a;
+    border: none;
 }
 QTabWidget::tab-bar {
     alignment: left;
@@ -177,11 +181,11 @@ QTabWidget::tab-bar {
 }
 QTabWidget::tab-bar::tab:selected {
     margin-bottom: -1px;
-    border-bottom: 2px solid #717bbc;
+    /* border-bottom: 2px solid #ffffff; */
 }
 QGroupBox {
     background-color: #313335;
-    border: 1px solid #3a3a3a;
+    border: 1px solid #ffffff;
     border-radius: 2px;
     margin-top: 14px;
     padding-top: 14px;
@@ -214,10 +218,10 @@ QTreeView::item:hover {
 QTreeView::item:selected, QTreeView::item[dropTarget="true"] {
     background-color: #717bbc;
     color: #000000;
-    border: 2px solid #717bbc;
+    /* border: 2px solid #717bbc; */
 }
 QTreeView::item[dropTarget="true"] {
-    border: 2px solid #717bbc;
+    /* border: 2px solid #717bbc; */
 }
 QTreeView::branch {
     background: transparent;
@@ -341,7 +345,7 @@ QLabel[class="thumbnail-container"] {
     padding: 0px;
     margin: 0px;
     min-height: 24px;
-    border-top: 1px solid #202230;
+    /* border-top: 1px solid #202230; */
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z ROZMIARAMI ===================== */
@@ -533,7 +537,7 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
 /* ===================== MENU, STATUSBAR, SEPARATORY ===================== */
 QMenu {
     background-color: #282935;
-    border: 1px solid #3a3a3a;
+    border: 1px solid #3b3d48;
     padding: 2px;
 }
 QMenu::item:selected {
@@ -546,7 +550,7 @@ QMenu::separator {
 }
 QMenuBar {
     background-color: #282935;
-    border-bottom: 1px solid #3a3a3a;
+    /* border-bottom: 1px solid #3a3a3a; */
 }
 QMenuBar::item {
     background: transparent;
@@ -559,15 +563,16 @@ QMenuBar::item:pressed {
     background-color: #214383;
 }
 QStatusBar {
-    background-color: #282935;
-    border-top: 1px solid #3a3a3a;
+    /* max-height: 32px; */
+    background-color: #24252f;
+    /* border-top: 1px solid #3a3a3a; */
 }
 QStatusBar::item {
     border: none;
 }
 QFrame[frameShape="HLine"] {
     border: none;
-    border-top: 1px solid #3a3a3a;
+    /* border-top: 1px solid #3a3a3a; */
 }
 QSlider::groove:horizontal {
     border: 1px solid #717bbc;
@@ -628,10 +633,10 @@ QCheckBox {
     spacing: 4px;
 }
 QCheckBox::indicator {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
     border: 1px solid #717bbc;
-    border-radius: 8px;
+    border-radius: 6px;
     background-color: #313335;
 }
 QCheckBox::indicator:checked {

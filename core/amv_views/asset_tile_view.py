@@ -211,13 +211,13 @@ class AssetTileView(TileBase):
         # ikona(60) + nazwa(136) + rozmiar(60)
         filename_width = 60 + 136 + 60  # 256px
         tile_width = max(self.thumbnail_size, filename_width)
-        tile_height = self.thumbnail_size + 70 + (2 * tile_padding) + (2 * tile_border)
+        tile_height = self.thumbnail_size + 60 + (2 * tile_padding) + (2 * tile_border)
         self.setFixedSize(tile_width, tile_height)
 
         # GŁÓWNY LAYOUT
         layout = QVBoxLayout(self)
         layout.setSpacing(0)
-        layout.setContentsMargins(10, 10, 10,10)
+        layout.setContentsMargins(10, 10, 10,6)
 
         # GŁÓWNY KONTENER dla wszystkich elementów kafelka
         self.main_content_container = QWidget()

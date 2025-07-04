@@ -137,9 +137,9 @@ class AmvView(BaseWidget):
 
     def _create_folder_buttons_panel(self, folder_layout):
         self.buttons_frame = QFrame()
-        self.buttons_frame.setFixedHeight(140)
+        self.buttons_frame.setFixedHeight(80)
         self.buttons_layout = QGridLayout()
-        self.buttons_layout.setContentsMargins(4, 4, 4, 4)
+        self.buttons_layout.setContentsMargins(2, 2, 2, 2)
         self.buttons_layout.setSpacing(4)
         self.buttons_frame.setLayout(self.buttons_layout)
         folder_layout.addWidget(self.buttons_frame)
@@ -186,7 +186,7 @@ class AmvView(BaseWidget):
                             background-color: {folder_color}; color: #FFFFFF;
                         }}
                         QPushButton:disabled {{
-                            background-color: #1E1E1E; color: #666666;
+                            background-color: transparent; color: #666666; border: none;
                             border-color: #3F3F46;
                         }}
                     """
@@ -200,7 +200,7 @@ class AmvView(BaseWidget):
                     button.setStyleSheet(
                         """
                         QPushButton {
-                            background-color: #1E1E1E; color: #666666;
+                            background-color: transparent; color: #666666;
                             border: 1px solid #3F3F46; border-radius: 4px;
                             font-size: 10px; padding: 1px 4px; text-align: center;
                         }
