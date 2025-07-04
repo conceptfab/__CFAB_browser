@@ -123,41 +123,4 @@ class FolderStructureScanner(QThread):
             logger.error(f"Błąd w _scan_folder_structure: {e}")
 
     def handle_folder_click(self, folder_path: str):
-        """
-        Obsługuje kliknięcie użytkownika w folder używając logiki z rules.py
-
-        Ta metoda używa FolderClickRules.decide_action() do podjęcia decyzji
-        o tym, jaką akcję wykonać dla danego folderu.
-
-        Args:
-            folder_path (str): Ścieżka do folderu do analizy
-        """
-        try:
-            logger.info(f"Obsługa kliknięcia folderu: {folder_path}")
-
-            # Użyj logiki z rules.py do podjęcia decyzji
-            result = FolderClickRules.decide_action(folder_path)
-            action = result.get("action")
-            message = result.get("message", "")
-            condition = result.get("condition", "")
-
-            logger.info(f"Decyzja rules.py: {action} - {message} ({condition})")
-
-            # Wykonaj akcję na podstawie decyzji z rules.py
-            if action == "run_scanner":
-                # Zamiast _run_scanner, wywołaj metodę z AssetScannerModelMV
-                # self.asset_scanner_model_mv.scan_folder(folder_path)
-                pass
-            elif action == "show_gallery":
-                self.assets_folder_found.emit(folder_path)
-            elif action == "error":
-                self.error_occurred.emit(message)
-            elif action == "no_action":
-                logger.info(f"Brak akcji dla folderu: {message}")
-            else:
-                logger.warning(f"Nieznana akcja: {action}")
-
-        except Exception as e:
-            error_msg = f"Błąd obsługi kliknięcia folderu {folder_path}: {e}"
-            logger.error(error_msg)
-            self.error_occurred.emit(error_msg)
+        pass
