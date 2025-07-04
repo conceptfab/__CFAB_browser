@@ -24,29 +24,38 @@ QLabel {
 
 /* ===================== PRZYCISKI ===================== */
 QPushButton {
-    background-color: #313335;
-    border: 1px solid #3a3a3a;
-    border-radius: 2px;
-    padding: 4px 12px;
-    min-height: 24px;
-    max-height: 24px;
+    background-color: #282935;
+    color: #a9b7c6;
+    border: 1px solid #717bbc;
+    border-radius: 4px;
     font-size: 10px;
     font-weight: normal;
+    min-width: 35px;
+    max-width: 250px;
+    /* min-height: 18px; */
+    max-height: 18px;
+    padding: 2px 18px;
+    margin: 2px;
+
 }
 QPushButton:hover {
-    background-color: #3a3a3a;
-    border-color: #717bbc;
-    color: #717bbc;
+    background-color: #5b6397;
+    color: #000000;
+    border: 1px solid #a9b7c6;
 }
+
 QPushButton:pressed {
-    background-color: #214383;
-    border-color: #717bbc;
+    background-color: #717bbc;
+    color: #000000;
+    border: 1px solid #717bbc;
 }
+
 QPushButton:disabled {
     background-color: #2b2b2b;
     color: #888888;
-    border-color: #3a3a3a;
+    border: 1px solid #3a3a3a;
 }
+
 QPushButton[action="primary"] {
     background-color: #287bde;
     border: none;
@@ -68,6 +77,24 @@ QPushButton[action="warning"] {
     background-color: #cc7832;
     border: none;
     font-weight: bold;
+}
+QPushButton[class="favorite"] {
+    background-color: #717bbc;
+    color: #ffffff;
+    border: 1px solid #313335;
+    border-radius: 6px;
+    font-weight: bold;
+    min-width: 100px;
+    min-height: 36px;
+    max-width: 300px;
+    max-height: 60px;
+    margin: 6px 8px;
+    padding: 8px 20px;
+}
+QPushButton[class="favorite"]:hover {
+    background-color: #a9b7c6;
+    color: #313335;
+    border: 1px solid #717bbc;
 }
 
 /* ===================== POLA EDYCJI, LISTY, TABELKI ===================== */
@@ -186,15 +213,28 @@ QTreeView::item:hover {
 }
 QTreeView::item:selected, QTreeView::item[dropTarget="true"] {
     background-color: #717bbc;
-    color: #717bbc;
+    color: #000000;
     border: 2px solid #717bbc;
 }
 QTreeView::item[dropTarget="true"] {
     border: 2px solid #717bbc;
 }
 QTreeView::branch {
-    background-color: #282935
+    background: transparent;
+    border: none;
+    min-width: 18px;
+    min-height: 18px;
+    max-width: 18px;
+    max-height: 18px;
+    margin: 0;
+    padding: 0;
+    qproperty-iconSize: 18px 18px;
+    qproperty-alignment: AlignCenter;
+    /* opacity: 0.8; */
 }
+/* QTreeView::branch:hover {
+    opacity: 1.0;
+} */
 
 /* ===================== KAFELKI ASSETÓW ===================== */
 TileBase, .AssetTileView {
@@ -422,12 +462,9 @@ QLabel[class="thumbnail-container"] {
 QProgressBar {
     background-color: #313335;
     border: 1px solid #717bbc;
-    color: #717bbc;
+    color: #000000;
     text-align: center;
     border-radius: 6px;
-    /* margin: 4px;    */
-     min-width: 200px;
-    max-width: 200px;
 }
 QProgressBar::chunk {
     background-color: #717bbc;
@@ -534,32 +571,24 @@ QSlider::groove:horizontal {
     border-radius: 3px;
 }
 
-QSlider::groove:horizontal {
-    border: 1px solid #717bbc;
-    height: 1px;
-    background: #313335;
-    margin: 2px 0;
-    border-radius: 3px;
-}
-
 QSlider::handle:horizontal {
     background-color: #717bbc;
     border: none;
-    width: 12px;
-    height: 12px;
-    margin: -5px 0;
-    border-radius: 6px;
-    image: url(data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><circle cx='6' cy='6' r='6' fill='%23717bbc'/></svg>);
+    width: 14px;
+    height: 14px;
+    margin: -6px 0;
+    border-radius: 7px;
+    outline: none;
 }
 
 QSlider::handle:horizontal:hover {
     background-color: #a9b7c6;
     border: none;
-    width: 12px;
-    height: 12px;
-    margin: -5px 0;
-    border-radius: 6px;
-    image: url(data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><circle cx='6' cy='6' r='6' fill='%23a9b7c6'/></svg>);
+    width: 14px;
+    height: 14px;
+    margin: -6px 0;
+    border-radius: 7px;
+    outline: none;
 }
 
 QSlider::sub-page:horizontal {
@@ -579,15 +608,12 @@ QSlider:disabled {
 QSlider::handle:horizontal:disabled {
     background: #444555;
     border: none;
-    width: 12px;
-    height: 12px;
-    margin: -5px 0;
-    border-radius: 6px;
-    image: url(data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12'><circle cx='6' cy='6' r='6' fill='%23444555'/></svg>);
+    width: 14px;
+    height: 14px;
+    margin: -6px 0;
+    border-radius: 7px;
+    outline: none;
 }
-
-
-
 
 /* ===================== CHECKBOXY, RADIO ===================== */
 QCheckBox {
@@ -598,8 +624,8 @@ QCheckBox {
 QCheckBox::indicator {
     width: 16px;
     height: 16px;
-    border: 1px solid #3a3a3a;
-    border-radius: 2px;
+    border: 1px solid #717bbc;
+    border-radius: 8px;
     background-color: #313335;
 }
 QCheckBox::indicator:checked {
@@ -678,4 +704,16 @@ QSlider[objectName="ScaleSlider"], #ScaleSlider {
 .AssetTileView:hover QCheckBox,
 .AssetTileView:hover QLineEdit {
     color: #717bbc;
+}
+
+#ControlPanelStarsRow {
+    background: transparent;
+    border: none;
+    min-width: 50px;
+max-width: 50px;
+    min-height: 18px;
+    max-height: 18px;
+    margin: 0 8px;
+    padding: 0 4px;
+    qproperty-alignment: AlignCenter;
 }

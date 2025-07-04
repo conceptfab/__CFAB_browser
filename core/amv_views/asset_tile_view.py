@@ -217,7 +217,7 @@ class AssetTileView(TileBase):
         # GŁÓWNY LAYOUT
         layout = QVBoxLayout(self)
         layout.setSpacing(0)
-        layout.setContentsMargins(10, 10, 10, 0)
+        layout.setContentsMargins(10, 10, 10,10)
 
         # GŁÓWNY KONTENER dla wszystkich elementów kafelka
         self.main_content_container = QWidget()

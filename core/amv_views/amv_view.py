@@ -94,22 +94,22 @@ class AmvView(BaseWidget):
         # Przyciski Zwiń i Rozwiń - szersze o 80%, bardzo niskie
         self.collapse_button = PanelButtonBase("Zwiń")
         self.collapse_button.setObjectName("collapseButton")
-        self.collapse_button.setFixedHeight(16)  # Mała wysokość
-        self.collapse_button.setFixedWidth(60)  # Identyczna szerokość
+        # self.collapse_button.setFixedHeight(16)  # Mała wysokość
+        self.collapse_button.setFixedWidth(35)  # Identyczna szerokość
         self.collapse_button.clicked.connect(self._on_collapse_tree_clicked)
 
         self.expand_button = PanelButtonBase("Rozwiń")
         self.expand_button.setObjectName("expandButton")
-        self.expand_button.setFixedHeight(16)  # Mała wysokość
-        self.expand_button.setFixedWidth(60)  # Identyczna szerokość
+        # self.expand_button.setFixedHeight(16)  # Mała wysokość
+        self.expand_button.setFixedWidth(35)  # Identyczna szerokość
         self.expand_button.clicked.connect(self._on_expand_tree_clicked)
 
         self.toggle_button = QPushButton()
         self.toggle_button.setObjectName("panelToggleButton")  # ID dla QSS
-        self.toggle_button.setFixedSize(24, 24)
+        self.toggle_button.setFixedSize(18, 18)
         self.toggle_button.setToolTip("Zamknij panel")
         self.toggle_button.setIcon(self.collapse_icon)
-        self.toggle_button.setIconSize(QSize(18, 18))
+        self.toggle_button.setIconSize(QSize(16, 16))
         self.toggle_button.clicked.connect(lambda: self.toggle_panel_requested.emit())
 
         # Centrowanie przycisków Zwiń i Rozwiń
@@ -139,7 +139,7 @@ class AmvView(BaseWidget):
         self.buttons_frame = QFrame()
         self.buttons_frame.setFixedHeight(140)
         self.buttons_layout = QGridLayout()
-        self.buttons_layout.setContentsMargins(8, 8, 8, 8)
+        self.buttons_layout.setContentsMargins(4, 4, 4, 4)
         self.buttons_layout.setSpacing(4)
         self.buttons_frame.setLayout(self.buttons_layout)
         folder_layout.addWidget(self.buttons_frame)
@@ -285,13 +285,13 @@ class AmvView(BaseWidget):
         self.control_panel.setFixedHeight(32)
         self.control_panel.setFixedWidth(990)  # Stała szerokość panelu
         control_layout = QHBoxLayout()
-        control_layout.setContentsMargins(0, 0, 0, 0)
+        control_layout.setContentsMargins(0, 0, 0, 2)
         control_layout.setSpacing(8)
         control_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Wyśrodkowanie
         self.progress_bar = QProgressBar()
         self.progress_bar.setFixedHeight(12)  # Chudszy progress bar
-        self.progress_bar.setMinimumWidth(200)  # Minimalna szerokość
-        self.progress_bar.setMaximumWidth(400)  # Maksymalna szerokość
+        self.progress_bar.setMinimumWidth(100)  # Minimalna szerokość
+        self.progress_bar.setMaximumWidth(120)  # Maksymalna szerokość
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(True)  # Upewniamy się, że jest widoczny
         self.thumbnail_size_slider = QSlider(Qt.Orientation.Horizontal)
@@ -299,7 +299,7 @@ class AmvView(BaseWidget):
         self.thumbnail_size_slider.setMinimum(50)
         self.thumbnail_size_slider.setMaximum(256)
         self.thumbnail_size_slider.setValue(256)
-        self.thumbnail_size_slider.setFixedWidth(200)  # SZTYWNA SZEROKOŚĆ
+        self.thumbnail_size_slider.setFixedWidth(120)  # SZTYWNA SZEROKOŚĆ
         self.selection_buttons = []
         # Styl kompaktowy jak na przyciskach Zwiń/Rozwiń
         button_style = """
