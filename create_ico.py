@@ -5,7 +5,6 @@ Skrypt do utworzenia poprawnego pliku ICO
 
 import os
 import subprocess
-import sys
 
 from PIL import Image
 
@@ -28,9 +27,6 @@ def create_ico_with_pil_manual():
         if os.path.exists(ico_path):
             os.remove(ico_path)
 
-        # Rozmiary dla Windows
-        sizes = [16, 32, 48]
-
         # Skaluj do najmniejszego rozmiaru i zapisz
         small_img = img.resize((16, 16), Image.Resampling.LANCZOS)
         small_img.save(ico_path, format="ICO")
@@ -40,36 +36,6 @@ def create_ico_with_pil_manual():
 
         return ico_path
 
-    except Exception as e:
-        print(f"❌ Błąd: {e}")
-        return None
-
-
-def create_ico_with_icoextract():
-    """Tworzy plik ICO używając icoextract"""
-    png_path = "core/resources/img/icon.png"
-    ico_path = "core/resources/img/icon_extract.ico"
-
-    print("🔧 TWORZENIE ICO (ICOEXTRACT)")
-    print("=" * 40)
-
-    try:
-        import icoextract
-
-        # Usuń stary plik
-        if os.path.exists(ico_path):
-            os.remove(ico_path)
-
-        # Utwórz plik ICO z PNG
-        # icoextract może nie obsługiwać bezpośredniej konwersji PNG->ICO
-        # Spróbujmy innego podejścia
-
-        print("⚠️  icoextract nie obsługuje bezpośredniej konwersji PNG->ICO")
-        return None
-
-    except ImportError:
-        print("❌ icoextract nie jest zainstalowany")
-        return None
     except Exception as e:
         print(f"❌ Błąd: {e}")
         return None

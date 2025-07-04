@@ -548,7 +548,7 @@ class AssetTileView(QFrame):
         result = drag.exec(Qt.DropAction.MoveAction)
         logger.debug(f"Drag exec result: {result}")
 
-    def _on_thumbnail_clicked(self, _ev):
+    def _on_thumbnail_clicked(self, ev):
         logger.debug(f"AssetTileView: Thumbnail clicked for asset {self.asset_id}")
         if self.model.is_special_folder:
             folder_path = self.model.get_special_folder_path()
@@ -558,7 +558,7 @@ class AssetTileView(QFrame):
                 self.asset_id, self.model.get_preview_path(), self
             )
 
-    def _on_filename_clicked(self, _ev):
+    def _on_filename_clicked(self, ev):
         logger.debug(f"AssetTileView: Filename clicked for asset {self.asset_id}")
         if self.model.is_special_folder:
             folder_path = self.model.get_special_folder_path()

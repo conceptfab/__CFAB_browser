@@ -160,7 +160,7 @@ class ControlPanelController(QObject):
             self._update_star_checkboxes(min_stars)
             filtered_assets = self._get_filtered_assets(min_stars)
             self.controller.asset_grid_controller.rebuild_asset_grid(
-                filtered_assets, preserve_filter=False
+                filtered_assets
             )
         except Exception as e:
             logger.error(f"Error while filtering assets: {e}")

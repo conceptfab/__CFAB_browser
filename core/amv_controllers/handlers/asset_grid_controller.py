@@ -51,7 +51,7 @@ class AssetGridController(QObject):
             self.set_original_assets([])
             return
         self.set_original_assets(assets)
-        self.rebuild_asset_grid(assets, preserve_filter=False)
+        self.rebuild_asset_grid(assets)
 
         # After rebuilding the grid, if a filter is active, apply it
         current_star_filter = (
@@ -65,7 +65,7 @@ class AssetGridController(QObject):
         # Update button states after asset change
         self.controller.control_panel_controller.update_button_states()
 
-    def rebuild_asset_grid(self, assets: list, preserve_filter: bool = True):
+    def rebuild_asset_grid(self, assets: list):
         """
         Intelligently synchronizes the grid with the new asset list, minimizing
         UI operations to eliminate flickering and loading errors.
