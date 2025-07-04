@@ -67,7 +67,7 @@ QPushButton:pressed {
 }
 
 QPushButton:disabled {
-    background-color: #2b2b2b;
+    background-color: #2c2e3c;
     color: #888888;
     border: 1px solid #3a3a3a;
 }
@@ -78,11 +78,11 @@ QPushButton[action="primary"] {
     font-weight: bold;
 }
 QPushButton[action="primary"]:hover {
-    background-color: #214383;
+    background-color: #717bbc;
     color: #717bbc;
 }
 QPushButton[action="primary"]:pressed {
-    background-color: #214383;
+    background-color: #717bbc;
 }
 QPushButton[action="success"] {
     background-color: #a5c261;
@@ -115,18 +115,18 @@ QPushButton[class="favorite"]:hover {
 
 /* ===================== POLA EDYCJI, LISTY, TABELKI ===================== */
 QLineEdit, QTextEdit, QTableWidget, QListWidget, QComboBox, QSpinBox {
-    background-color: #313335;
+    background-color: #2c2e3c;
     border: 1px solid #3B3D48;
-    border-radius: 2px;
+    border-radius: 6px;
     padding: 2px;
-    selection-background-color: #214383;
+    selection-background-color: #717bbc;
     font-size: 10px;
 }
 QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QSpinBox:focus {
     border-color: #95ff00;
 }
 QLineEdit:disabled, QTextEdit:disabled, QComboBox:disabled, QSpinBox:disabled {
-    background-color: #2b2b2b;
+    background-color: #2c2e3c;
     color: #888888;
 }
 QListWidget::item {
@@ -134,7 +134,7 @@ QListWidget::item {
     border: none;
 }
 QListWidget::item:selected {
-    background-color: #214383;
+    background-color: #717bbc;
     color: #ffffff;
 }
 QListWidget::item:hover {
@@ -142,7 +142,7 @@ QListWidget::item:hover {
     color: #717bbc;
 }
 QTableWidget::item:selected {
-    background-color: #214383;
+    background-color: #717bbc;
     color: #ffffff;
 }
 QHeaderView::section {
@@ -165,7 +165,7 @@ QTabWidget::pane {
     padding: 2px;
 }
 QTabBar::tab {
-    background-color: #2b2b2b;
+    background-color: #2c2e3c;
     padding: 5px 10px;
     margin-right: 2px;
     /* border-top-left-radius: 2px; */
@@ -191,7 +191,7 @@ QTabBar::tab:disabled {
 }
 QTabWidget::tab-bar {
     alignment: left;
-    background: #2b2b2b;
+    background: #2c2e3c;
 }
 QTabWidget::tab-bar::tab:selected {
     margin-bottom: -1px;
@@ -530,7 +530,7 @@ QProgressBar::chunk {
 /* ===================== PASKI PRZEWIJANIA ===================== */
 QScrollBar:vertical {
     border: none;
-    background: #2b2b2b;
+    background: #2c2e3c;
     width: 12px;
     margin: 12px 0 12px 0;
     border-radius: 6px;
@@ -554,7 +554,7 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
 }
 QScrollBar:horizontal {
     border: none;
-    background: #2b2b2b;
+    background: #2c2e3c;
     height: 12px;
     margin: 0 12px 0 12px;
     border-radius: 6px;
@@ -587,7 +587,7 @@ QMenu {
     padding: 2px;
 }
 QMenu::item:selected {
-    background-color: #214383;
+    background-color: #717bbc;
 }
 QMenu::separator {
     height: 1px;
@@ -606,7 +606,7 @@ QMenuBar::item:selected {
     background-color: #3a3a3a;
 }
 QMenuBar::item:pressed {
-    background-color: #214383;
+    background-color: #717bbc;
 }
 QStatusBar {
     /* max-height: 32px; */
@@ -743,8 +743,8 @@ QLabel[class="example-label"] { color: #888888; font-style: italic; font-size: 1
 QLabel[class="folder-label"] { font-style: italic; color: #888888; }
 QLabel[class="folder-label-normal"] { font-style: normal; color: #a9b7c6; }
 QPushButton[class="start-button"] { font-size: 14px; padding: 5px 10px; font-weight: bold; background-color: #287bde; color: #ffffff; border: none; border-radius: 4px; }
-QPushButton[class="start-button"]:hover { background-color: #214383; }
-QPushButton[class="start-button"]:pressed { background-color: #214383; }
+QPushButton[class="start-button"]:hover { background-color: #717bbc; }
+QPushButton[class="start-button"]:pressed { background-color: #717bbc; }
 QTextEdit[class="tool-text"] { font-size: 12px; padding: 5px; }
 
 /* ===================== SUWAK DO SKALOWANIA (QSlider) ===================== */

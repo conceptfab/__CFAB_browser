@@ -3,10 +3,9 @@ import os
 import subprocess
 import sys
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -14,7 +13,6 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
-    QSizePolicy,
     QSlider,
     QVBoxLayout,
     QWidget,
@@ -22,6 +20,7 @@ from PyQt6.QtWidgets import (
 
 from core.amv_models.pairing_model import PairingModel
 from core.amv_views.preview_gallery_view import PreviewGalleryView
+from core.base_widgets import BaseCheckBox
 from core.preview_window import PreviewWindow
 from core.workers.asset_rebuilder_worker import AssetRebuilderWorker
 
@@ -44,7 +43,8 @@ class ArchiveListItem(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
 
-        self.checkbox = QCheckBox()
+        self.checkbox = BaseCheckBox()
+        self.checkbox.setObjectName("AssetTileCheckBox")
         self.checkbox.stateChanged.connect(self._on_checkbox_state_changed)
         layout.addWidget(self.checkbox)
 
@@ -74,6 +74,13 @@ class ArchiveListItem(QWidget):
 
     def set_checked(self, checked):
         self.checkbox.setChecked(checked)
+
+    def sizeHint(self):
+        """Zwraca zwiększoną wysokość wiersza o 30%"""
+        base_size = super().sizeHint()
+        # Zwiększ wysokość o 30%
+        increased_height = int(base_size.height() * 1.5)
+        return QSize(base_size.width(), increased_height)
 
 
 class PairingTab(QWidget):
