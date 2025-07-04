@@ -1,14 +1,13 @@
 import logging
 import sys
 
-from PyQt6.QtGui import QAction, QCloseEvent, QIcon
+from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,
     QMenu,
     QMenuBar,
-    QMessageBox,
     QStatusBar,
     QTabWidget,
     QVBoxLayout,
@@ -121,7 +120,7 @@ class MainWindow(QMainWindow):
             # Sprawdź czy poziom logowania jest poprawny
             if not hasattr(logging, logger_level):
                 logger_level = "INFO"
-                print(f"Warning: Invalid logger level in config. Using INFO.")
+                print("Warning: Invalid logger level in config. Using INFO.")
 
             # Konfiguracja loggera tylko jeśli nie został już skonfigurowany
             if not logging.getLogger().handlers:
@@ -186,6 +185,8 @@ class MainWindow(QMainWindow):
                         self.pairing_tab = tab_instance
                     elif isinstance(tab_instance, ToolsTab):
                         self.tools_tab = tab_instance
+                        # Wymuszenie dezaktywacji przycisków na starcie
+                        self.tools_tab.clear_working_directory()
 
                     self.tabs.addTab(tab_instance, tab_name)
                     successful_tabs += 1
