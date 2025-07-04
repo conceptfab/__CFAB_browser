@@ -747,3 +747,44 @@ max-width: 50px;
     background: transparent;
     opacity: 1.0;
 }
+
+/* ===================== PRZYCISK KRAWĘDZI PANELU ===================== */
+#edgePanelButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px 0px 0px 4px;
+    color: #CCCCCC;
+    font-size: 12px;
+    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    max-width: 18px;
+    min-height: 18px;
+    max-height: 18px;
+    padding: 0px;
+    margin: 0px;
+    opacity: 0.8;
+}
+
+#edgePanelButton:hover {
+    background-color: transparent;
+    color: #717bbc;
+    opacity: 1.0;
+    transform: translateX(1px);
+}
+
+#edgePanelButton:pressed {
+    background-color: #007ACC;
+    color: #FFFFFF;
+    border-color: #005A9E;
+    opacity: 1.0;
+    transform: translateX(2px);
+}
+
+#edgePanelButton:disabled {
+    background-color: #1E1E1E;
+    color: #666666;
+    border-color: #3F3F46;
+    opacity: 0.5;
+}

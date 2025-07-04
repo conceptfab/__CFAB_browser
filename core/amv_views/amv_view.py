@@ -63,18 +63,23 @@ class AmvView(BaseWidget):
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+
+        # Utwórz przycisk krawędzi PRZED splitterem
+        self._create_edge_button()
+
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.setSizes([200, 800])
         self.splitter.splitterMoved.connect(self._on_splitter_moved)
         self._create_left_panel()
         self._create_gallery_panel()
-        self._create_edge_button()
+
+        # Dodaj przycisk krawędzi na początku layoutu
         layout.addWidget(self.edge_button)
         layout.addWidget(self.splitter)
         self.setLayout(layout)
 
-        # Domyślnie pokaż przycisk krawędzi (do testowania)
-        self.edge_button.show()
+        # Domyślnie ukryj przycisk krawędzi (panel jest otwarty)
+        self.edge_button.hide()
 
     def _create_left_panel(self):
         self.left_panel = QFrame()
@@ -112,11 +117,12 @@ class AmvView(BaseWidget):
         self.toggle_button = QPushButton()
         self.toggle_button.setObjectName("panelToggleButton")  # ID dla QSS
         self.toggle_button.setFixedSize(18, 18)
-        self.toggle_button.setToolTip("Zamknij okno")
+        self.toggle_button.setToolTip("Zamknij panel")
         self.toggle_button.setIcon(self.collapse_icon)
         self.toggle_button.setIconSize(QSize(16, 16))
-        self.toggle_button.setFlat(True)  # Dodaj tylko tę linię
-        self.toggle_button.clicked.connect(self.window().close)
+        self.toggle_button.setFlat(True)
+        # POPRAWKA: Podłącz do toggle_panel_requested zamiast window().close
+        self.toggle_button.clicked.connect(lambda: self.toggle_panel_requested.emit())
 
         # Centrowanie przycisków Zwiń i Rozwiń
         header_layout.addStretch(1)
@@ -244,32 +250,9 @@ class AmvView(BaseWidget):
         self.edge_button.setFixedSize(18, 18)  # Taki sam rozmiar jak przycisk zamykania
         self.edge_button.setToolTip("Otwórz panel")
         self.edge_button.setIcon(QIcon("core/resources/img/open_panel.png"))
-        self.edge_button.setIconSize(QSize(18, 18))
+        self.edge_button.setIconSize(QSize(16, 16))  # Ikona mniejsza niż przycisk
         self.edge_button.setFlat(True)
         self.edge_button.clicked.connect(lambda: self.toggle_panel_requested.emit())
-
-        # Stylowanie przycisku podobne do przycisku zamykania
-        self.edge_button.setStyleSheet(
-            """
-            QPushButton#edgePanelButton {
-                background-color: #2D2D30;
-                border: 1px solid #3F3F46;
-                border-right: none;
-                border-radius: 4px 0px 0px 4px;
-                color: #CCCCCC;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton#edgePanelButton:hover {
-                background-color: #3F3F46;
-                border-color: #007ACC;
-            }
-            QPushButton#edgePanelButton:pressed {
-                background-color: #007ACC;
-                color: #FFFFFF;
-            }
-        """
-        )
 
     def _create_scroll_area(self):
         self.scroll_area = QScrollArea()
@@ -423,7 +406,7 @@ class AmvView(BaseWidget):
                 "Zamknij panel" if is_panel_open else "Otwórz panel"
             )
 
-        # Obsługa przycisku krawędzi
+        # POPRAWKA: Obsługa przycisku krawędzi
         if hasattr(self, "edge_button"):
             if is_panel_open:
                 self.edge_button.hide()  # Ukryj przycisk krawędzi gdy panel jest otwarty

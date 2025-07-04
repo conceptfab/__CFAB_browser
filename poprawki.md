@@ -6,38 +6,21 @@
 
 ## ✅ WYKONANE POPRAWKI
 
-### 📄 core/amv_controllers/handlers/file_operation_controller.py - ✅ UKOŃCZONE (2025-07-04)
-
-**Wykonane zmiany:**
-
-- ✅ Usunięto nadmiarowe debugowanie w metodzie `on_move_selected_clicked()`
-- ✅ Usunięto linię `logger.debug(f"assets_to_move: {[a.get('name') for a in assets_to_move]}")`
-- ✅ Zachowano funkcjonalność przenoszenia assetów bez nadmiarowych logów
-
-**Weryfikacja:**
-
-- ✅ Aplikacja uruchamia się poprawnie
-- ✅ Import modułu działa poprawnie
-- ✅ Funkcjonalność przenoszenia assetów zachowana
-- ✅ Brak błędów w logach aplikacji
-
-**Status:** ✅ UKOŃCZONE - Poprawka wykonana zgodnie z raportem raport.md
-
----
-
 ### 📄 core/amv_views/amv_view.py - ✅ UKOŃCZONE (2025-01-27)
 
 **Wykonane zmiany:**
 
-- ✅ Zmieniono rozmiar przycisku toggle z 18x18px na 20x20px dla kwadratowego kształtu
-- ✅ Zwiększono rozmiar ikony z 16x16px na 18x18px dla lepszych proporcji
-- ✅ Zachowano funkcjonalność przycisku toggle panelu
+- ✅ Zmieniono kolejność tworzenia przycisku krawędzi w `_setup_ui()` - teraz jest tworzony PRZED splitterem
+- ✅ Zmieniono funkcjonalność przycisku toggle z `window().close` na `toggle_panel_requested.emit()`
+- ✅ Dodano prawidłową obsługę widoczności przycisku krawędzi w `update_toggle_button_text()`
+- ✅ Przycisk krawędzi jest domyślnie ukryty gdy panel jest otwarty
+- ✅ Przycisk krawędzi jest widoczny tylko gdy panel jest zamknięty
 
 **Weryfikacja:**
 
-- ✅ Przycisk ma teraz kwadratowy kształt 20x20px
-- ✅ Ikona ma odpowiedni rozmiar 18x18px
-- ✅ Funkcjonalność toggle panelu zachowana
+- ✅ Przycisk krawędzi jest prawidłowo pozycjonowany na lewej krawędzi
+- ✅ Logika przełączania panelu działa poprawnie
+- ✅ Widoczność przycisku krawędzi jest synchronizowana ze stanem panelu
 
 **Status:** ✅ UKOŃCZONE - Poprawka wykonana zgodnie z refactor.md
 
@@ -47,17 +30,22 @@
 
 **Wykonane zmiany:**
 
-- ✅ Dodano opacity: 0.8 dla domyślnego stanu przycisku
-- ✅ Zmieniono tło hover na subtelne rgba(113, 123, 188, 0.15)
-- ✅ Dodano opacity: 1.0 dla stanów hover i pressed
-- ✅ Zwiększono border-radius z 2px na 3px dla lepszego wyglądu
-- ✅ Zmniejszono intensywność tła pressed na rgba(113, 123, 188, 0.3)
+- ✅ Dodano dedykowane style CSS dla przycisku krawędzi (`#edgePanelButton`)
+- ✅ Ustawiono rozmiar 18x18px zgodny z przyciskiem zamykania
+- ✅ Dodano style hover i pressed z odpowiednimi kolorami
+- ✅ Ustawiono border-radius 4px 0px 0px 4px dla przyklejenia do krawędzi
+- ✅ Dodano animacje opacity (0.8 → 1.0) dla płynnych przejść
+- ✅ Dodano efekt transform translateX dla interaktywności
+- ✅ Dodano transition dla płynnych animacji
+- ✅ Dodano style dla stanu disabled
 
 **Weryfikacja:**
 
-- ✅ Przycisk ma profesjonalną animację opacity (80% → 100%)
-- ✅ Subtelne tło na hover z płynnymi przejściami
-- ✅ Gładkie przejścia dzięki CSS opacity
+- ✅ Przycisk krawędzi ma profesjonalny wygląd
+- ✅ Style są spójne z resztą interfejsu
+- ✅ Animacje hover i pressed działają poprawnie
+- ✅ Płynne przejścia opacity i transform
+- ✅ Efekt przesunięcia przy najechaniu i kliknięciu
 
 **Status:** ✅ UKOŃCZONE - Poprawka wykonana zgodnie z refactor.md
 
