@@ -39,5 +39,5 @@ def update_main_window_status(widget):
             if hasattr(widget, "update_selection_status"):
                 widget.update_selection_status()
                 break
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Exception updating main window status: {e}")

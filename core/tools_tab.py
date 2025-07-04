@@ -1,6 +1,6 @@
 import logging
 import os
-import random
+import secrets
 import string
 import subprocess
 import sys
@@ -685,11 +685,11 @@ class FileRenamerWorker(BaseWorker):
     def _generate_random_name(self) -> str:
         """Generuje losową nazwę z zestawu 8 cyfr + 8 liter"""
         # Generuj 8 cyfr i 8 liter
-        digits = "".join(random.choices(string.digits, k=8))
-        letters = "".join(random.choices(string.ascii_uppercase, k=8))
+        digits = "".join(secrets.choice(string.digits) for _ in range(8))
+        letters = "".join(secrets.choice(string.ascii_uppercase) for _ in range(8))
         # Połącz i wymieszaj
         combined = digits + letters
-        shuffled = "".join(random.sample(combined, len(combined)))
+        shuffled = "".join(secrets.choice(combined) for _ in range(len(combined)))
         return shuffled
 
     def _rename_file(self, file_path: str, new_name: str) -> bool:
@@ -1240,10 +1240,22 @@ class ToolsTab(QWidget):
                 if sys.platform == "win32":
                     os.startfile(full_path)
                 elif sys.platform == "darwin":  # macOS
-                    subprocess.Popen(["open", full_path])
+                    subprocess.run(["open", full_path], check=True, timeout=10)
                 else:  # Linux
-                    subprocess.Popen(["xdg-open", full_path])
+                    subprocess.run(["xdg-open", full_path], check=True, timeout=10)
                 logger.info(f"Otworzono archiwum: {full_path}")
+            except subprocess.TimeoutExpired:
+                logger.error(f"Timeout podczas otwierania archiwum: {full_path}")
+                QMessageBox.warning(
+                    self, "Błąd", f"Timeout podczas otwierania archiwum"
+                )
+            except subprocess.CalledProcessError as e:
+                logger.error(
+                    f"Błąd procesu podczas otwierania archiwum {full_path}: {e}"
+                )
+                QMessageBox.warning(
+                    self, "Błąd", f"Błąd procesu podczas otwierania archiwum"
+                )
             except Exception as e:
                 logger.error(f"Błąd podczas otwierania archiwum {full_path}: {e}")
                 QMessageBox.warning(self, "Błąd", f"Nie można otworzyć archiwum: {e}")

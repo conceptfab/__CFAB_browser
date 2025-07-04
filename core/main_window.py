@@ -392,8 +392,8 @@ class MainWindow(QMainWindow):
                             self.main_window.show_log_info(
                                 record.levelname, record.getMessage()
                             )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.debug(f"Exception in status handler: {e}")
 
                 def _should_show_in_status(self, record):
                     """Sprawdza czy komunikat powinien być wyświetlony w pasku statusu"""

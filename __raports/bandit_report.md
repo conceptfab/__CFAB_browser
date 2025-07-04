@@ -1,26 +1,15 @@
 # 🛡️ Raport Bandit (Bezpieczeństwo)
 
-**Data generowania:** 2025-07-05 01:19:01
+**Data generowania:** 2025-07-05 01:25:45
 
 ---
 
 ## Wyniki analizy bezpieczeństwa folderu `core`
 
 ```text
-Run started:2025-07-04 23:19:03.127358
+Run started:2025-07-04 23:25:47.354455
 
 Test results:
->> Issue: [B110:try_except_pass] Try, Except, Pass detected.
-   Severity: Low   Confidence: High
-   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
-   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
-   Location: core\amv_views\asset_tile_view.py:593:12
-592	                self.model.data_changed.disconnect(self.update_ui)
-593	            except Exception:
-594	                pass
-595	        self.model = None
-
---------------------------------------------------
 >> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
@@ -31,125 +20,126 @@ Test results:
 9	import sys
 
 --------------------------------------------------
->> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
-   Severity: Low   Confidence: High
-   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
-   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
-   Location: core\file_utils.py:40:12
-39	            )
-40	            subprocess.run(["explorer", normalized_path])
-41	        elif sys.platform == "darwin":  # macOS
-
---------------------------------------------------
 >> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
-   Location: core\file_utils.py:40:12
-39	            )
-40	            subprocess.run(["explorer", normalized_path])
-41	        elif sys.platform == "darwin":  # macOS
+   Location: core\file_utils.py:27:8
+26	    try:
+27	        subprocess.run(
+28	            [command, "--version"], capture_output=True, timeout=5, check=False
+29	        )
+30	        return True
 
 --------------------------------------------------
 >> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
-   Location: core\file_utils.py:42:12
-41	        elif sys.platform == "darwin":  # macOS
-42	            subprocess.run(["open", normalized_path])
-43	        else:  # Linux
+   Location: core\file_utils.py:78:12
+77	                return False
+78	            subprocess.run(["explorer", normalized_path], check=True, timeout=10)
+79	        elif sys.platform == "darwin":  # macOS
 
 --------------------------------------------------
 >> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
-   Location: core\file_utils.py:42:12
-41	        elif sys.platform == "darwin":  # macOS
-42	            subprocess.run(["open", normalized_path])
-43	        else:  # Linux
+   Location: core\file_utils.py:78:12
+77	                return False
+78	            subprocess.run(["explorer", normalized_path], check=True, timeout=10)
+79	        elif sys.platform == "darwin":  # macOS
 
 --------------------------------------------------
 >> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
-   Location: core\file_utils.py:44:12
-43	        else:  # Linux
-44	            subprocess.run(["xdg-open", normalized_path])
-45	        logger.info(f"Otworzono ścieżkę w eksploratorze: {normalized_path}")
+   Location: core\file_utils.py:83:12
+82	                return False
+83	            subprocess.run(["open", normalized_path], check=True, timeout=10)
+84	        else:  # Linux
 
 --------------------------------------------------
 >> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
-   Location: core\file_utils.py:44:12
-43	        else:  # Linux
-44	            subprocess.run(["xdg-open", normalized_path])
-45	        logger.info(f"Otworzono ścieżkę w eksploratorze: {normalized_path}")
+   Location: core\file_utils.py:83:12
+82	                return False
+83	            subprocess.run(["open", normalized_path], check=True, timeout=10)
+84	        else:  # Linux
+
+--------------------------------------------------
+>> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
+   Location: core\file_utils.py:88:12
+87	                return False
+88	            subprocess.run(["xdg-open", normalized_path], check=True, timeout=10)
+89	        logger.info(f"Otworzono ścieżkę w eksploratorze: {normalized_path}")
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: core\file_utils.py:88:12
+87	                return False
+88	            subprocess.run(["xdg-open", normalized_path], check=True, timeout=10)
+89	        logger.info(f"Otworzono ścieżkę w eksploratorze: {normalized_path}")
 
 --------------------------------------------------
 >> Issue: [B606:start_process_with_no_shell] Starting a process without a shell.
    Severity: Low   Confidence: Medium
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b606_start_process_with_no_shell.html
-   Location: core\file_utils.py:69:12
-68	        if sys.platform == "win32":
-69	            os.startfile(path)
-70	        elif sys.platform == "darwin":  # macOS
+   Location: core\file_utils.py:139:12
+138	        if sys.platform == "win32":
+139	            os.startfile(path)
+140	        elif sys.platform == "darwin":  # macOS
 
 --------------------------------------------------
 >> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
-   Location: core\file_utils.py:71:12
-70	        elif sys.platform == "darwin":  # macOS
-71	            subprocess.run(["open", path])
-72	        else:  # Linux
+   Location: core\file_utils.py:144:12
+143	                return False
+144	            subprocess.run(["open", path], check=True, timeout=10)
+145	        else:  # Linux
 
 --------------------------------------------------
 >> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
-   Location: core\file_utils.py:71:12
-70	        elif sys.platform == "darwin":  # macOS
-71	            subprocess.run(["open", path])
-72	        else:  # Linux
+   Location: core\file_utils.py:144:12
+143	                return False
+144	            subprocess.run(["open", path], check=True, timeout=10)
+145	        else:  # Linux
 
 --------------------------------------------------
 >> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
-   Location: core\file_utils.py:73:12
-72	        else:  # Linux
-73	            subprocess.run(["xdg-open", path])
-74	        logger.info(f"Otworzono plik w domyślnej aplikacji: {path}")
+   Location: core\file_utils.py:149:12
+148	                return False
+149	            subprocess.run(["xdg-open", path], check=True, timeout=10)
+150	        logger.info(f"Otworzono plik w domyślnej aplikacji: {path}")
 
 --------------------------------------------------
 >> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
-   Location: core\file_utils.py:73:12
-72	        else:  # Linux
-73	            subprocess.run(["xdg-open", path])
-74	        logger.info(f"Otworzono plik w domyślnej aplikacji: {path}")
-
---------------------------------------------------
->> Issue: [B110:try_except_pass] Try, Except, Pass detected.
-   Severity: Low   Confidence: High
-   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
-   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
-   Location: core\main_window.py:395:20
-394	                            )
-395	                    except Exception:
-396	                        pass
-397	
+   Location: core\file_utils.py:149:12
+148	                return False
+149	            subprocess.run(["xdg-open", path], check=True, timeout=10)
+150	        logger.info(f"Otworzono plik w domyślnej aplikacji: {path}")
 
 --------------------------------------------------
 >> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
@@ -166,50 +156,50 @@ Test results:
    Severity: Low   Confidence: Medium
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b606_start_process_with_no_shell.html
-   Location: core\pairing_tab.py:250:12
-249	        if sys.platform == "win32":
-250	            os.startfile(full_path)
-251	        elif sys.platform == "darwin":  # macOS
+   Location: core\pairing_tab.py:257:16
+256	            if sys.platform == "win32":
+257	                os.startfile(full_path)
+258	            elif sys.platform == "darwin":  # macOS
 
 --------------------------------------------------
 >> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
-   Location: core\pairing_tab.py:252:12
-251	        elif sys.platform == "darwin":  # macOS
-252	            subprocess.Popen(["open", full_path])
-253	        else:  # linux
+   Location: core\pairing_tab.py:259:16
+258	            elif sys.platform == "darwin":  # macOS
+259	                subprocess.run(["open", full_path], check=True, timeout=10)
+260	            else:  # linux
 
 --------------------------------------------------
 >> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
-   Location: core\pairing_tab.py:252:12
-251	        elif sys.platform == "darwin":  # macOS
-252	            subprocess.Popen(["open", full_path])
-253	        else:  # linux
+   Location: core\pairing_tab.py:259:16
+258	            elif sys.platform == "darwin":  # macOS
+259	                subprocess.run(["open", full_path], check=True, timeout=10)
+260	            else:  # linux
 
 --------------------------------------------------
 >> Issue: [B607:start_process_with_partial_path] Starting a process with a partial executable path
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
-   Location: core\pairing_tab.py:254:12
-253	        else:  # linux
-254	            subprocess.Popen(["xdg-open", full_path])
-255	        self.selected_preview = file_name if file_name else None
+   Location: core\pairing_tab.py:261:16
+260	            else:  # linux
+261	                subprocess.run(["xdg-open", full_path], check=True, timeout=10)
+262	        except subprocess.TimeoutExpired:
 
 --------------------------------------------------
 >> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
    Severity: Low   Confidence: High
    CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
-   Location: core\pairing_tab.py:254:12
-253	        else:  # linux
-254	            subprocess.Popen(["xdg-open", full_path])
-255	        self.selected_preview = file_name if file_name else None
+   Location: core\pairing_tab.py:261:16
+260	            else:  # linux
+261	                subprocess.run(["xdg-open", full_path], check=True, timeout=10)
+262	        except subprocess.TimeoutExpired:
 
 --------------------------------------------------
 >> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
@@ -220,36 +210,6 @@ Test results:
 4	import string
 5	import subprocess
 6	import sys
-
---------------------------------------------------
->> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
-   Severity: Low   Confidence: High
-   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
-   More Info: https://bandit.readthedocs.io/en/1.8.5/blacklists/blacklist_calls.html#b311-random
-   Location: core\tools_tab.py:688:25
-687	        # Generuj 8 cyfr i 8 liter
-688	        digits = "".join(random.choices(string.digits, k=8))
-689	        letters = "".join(random.choices(string.ascii_uppercase, k=8))
-
---------------------------------------------------
->> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
-   Severity: Low   Confidence: High
-   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
-   More Info: https://bandit.readthedocs.io/en/1.8.5/blacklists/blacklist_calls.html#b311-random
-   Location: core\tools_tab.py:689:26
-688	        digits = "".join(random.choices(string.digits, k=8))
-689	        letters = "".join(random.choices(string.ascii_uppercase, k=8))
-690	        # Połącz i wymieszaj
-
---------------------------------------------------
->> Issue: [B311:blacklist] Standard pseudo-random generators are not suitable for security/cryptographic purposes.
-   Severity: Low   Confidence: High
-   CWE: CWE-330 (https://cwe.mitre.org/data/definitions/330.html)
-   More Info: https://bandit.readthedocs.io/en/1.8.5/blacklists/blacklist_calls.html#b311-random
-   Location: core\tools_tab.py:692:27
-691	        combined = digits + letters
-692	        shuffled = "".join(random.sample(combined, len(combined)))
-693	        return shuffled
 
 --------------------------------------------------
 >> Issue: [B606:start_process_with_no_shell] Starting a process without a shell.
@@ -268,7 +228,7 @@ Test results:
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
    Location: core\tools_tab.py:1243:20
 1242	                elif sys.platform == "darwin":  # macOS
-1243	                    subprocess.Popen(["open", full_path])
+1243	                    subprocess.run(["open", full_path], check=True, timeout=10)
 1244	                else:  # Linux
 
 --------------------------------------------------
@@ -278,7 +238,7 @@ Test results:
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
    Location: core\tools_tab.py:1243:20
 1242	                elif sys.platform == "darwin":  # macOS
-1243	                    subprocess.Popen(["open", full_path])
+1243	                    subprocess.run(["open", full_path], check=True, timeout=10)
 1244	                else:  # Linux
 
 --------------------------------------------------
@@ -288,7 +248,7 @@ Test results:
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b607_start_process_with_partial_path.html
    Location: core\tools_tab.py:1245:20
 1244	                else:  # Linux
-1245	                    subprocess.Popen(["xdg-open", full_path])
+1245	                    subprocess.run(["xdg-open", full_path], check=True, timeout=10)
 1246	                logger.info(f"Otworzono archiwum: {full_path}")
 
 --------------------------------------------------
@@ -298,37 +258,27 @@ Test results:
    More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b603_subprocess_without_shell_equals_true.html
    Location: core\tools_tab.py:1245:20
 1244	                else:  # Linux
-1245	                    subprocess.Popen(["xdg-open", full_path])
+1245	                    subprocess.run(["xdg-open", full_path], check=True, timeout=10)
 1246	                logger.info(f"Otworzono archiwum: {full_path}")
-
---------------------------------------------------
->> Issue: [B110:try_except_pass] Try, Except, Pass detected.
-   Severity: Low   Confidence: High
-   CWE: CWE-703 (https://cwe.mitre.org/data/definitions/703.html)
-   More Info: https://bandit.readthedocs.io/en/1.8.5/plugins/b110_try_except_pass.html
-   Location: core\utilities.py:42:4
-41	                break
-42	    except Exception:
-43	        pass
 
 --------------------------------------------------
 
 Code scanned:
-	Total lines of code: 8259
+	Total lines of code: 8357
 	Total lines skipped (#nosec): 0
 	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 0
 
 Run metrics:
 	Total issues (by severity):
 		Undefined: 0
-		Low: 30
+		Low: 25
 		Medium: 0
 		High: 0
 	Total issues (by confidence):
 		Undefined: 0
 		Low: 0
 		Medium: 3
-		High: 27
+		High: 22
 Files skipped (0):
 ```
 

@@ -246,12 +246,25 @@ class PairingTab(QWidget):
 
         full_path = os.path.join(work_folder, file_name)
         print(f"Opening archive: {full_path}")
-        if sys.platform == "win32":
-            os.startfile(full_path)
-        elif sys.platform == "darwin":  # macOS
-            subprocess.Popen(["open", full_path])
-        else:  # linux
-            subprocess.Popen(["xdg-open", full_path])
+        
+        # Walidacja ścieżki
+        if not os.path.exists(full_path):
+            logger.error(f"Plik nie istnieje: {full_path}")
+            return
+            
+        try:
+            if sys.platform == "win32":
+                os.startfile(full_path)
+            elif sys.platform == "darwin":  # macOS
+                subprocess.run(["open", full_path], check=True, timeout=10)
+            else:  # linux
+                subprocess.run(["xdg-open", full_path], check=True, timeout=10)
+        except subprocess.TimeoutExpired:
+            logger.error(f"Timeout podczas otwierania pliku: {full_path}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Błąd procesu podczas otwierania pliku {full_path}: {e}")
+        except Exception as e:
+            logger.error(f"Błąd podczas otwierania pliku {full_path}: {e}")
         self.selected_preview = file_name if file_name else None
         self._update_button_states()
 

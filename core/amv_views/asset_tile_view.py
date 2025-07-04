@@ -590,8 +590,8 @@ class AssetTileView(QFrame):
         if hasattr(self, "model") and self.model:
             try:
                 self.model.data_changed.disconnect(self.update_ui)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Exception during disconnect: {e}")
         self.model = None
         logger.debug("Resources released for tile: %s", self.asset_id)
 
