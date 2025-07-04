@@ -29,3 +29,15 @@ def get_file_size_mb(file_path: str) -> float:
     except Exception as e:
         logger.error(f"Błąd podczas pobierania rozmiaru pliku {file_path}: {e}")
         return 0.0
+
+
+def update_main_window_status(widget):
+    """Aktualizuje pasek statusu w głównym oknie, jeśli widget nadrzędny go posiada."""
+    try:
+        while widget and widget.parent():
+            widget = widget.parent()
+            if hasattr(widget, "update_selection_status"):
+                widget.update_selection_status()
+                break
+    except Exception:
+        pass

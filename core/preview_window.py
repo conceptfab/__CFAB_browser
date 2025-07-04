@@ -82,7 +82,6 @@ class PreviewWindow(QDialog):
     def __init__(self, image_path: str, parent=None):
         super().__init__(parent)
         self.image_path = image_path
-        self.original_pixmap: Optional[QPixmap] = None
         self.pre_scaled_pixmap: Optional[QPixmap] = None
         self.thread_pool = QThreadPool()
         self.image_loader: Optional[ImageLoader] = None
@@ -206,7 +205,6 @@ class PreviewWindow(QDialog):
         self.scale_timer.stop()
 
         # Clear pixmaps to free memory
-        self.original_pixmap = None
         self.pre_scaled_pixmap = None
 
         # Wait for background threads to finish

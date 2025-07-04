@@ -687,11 +687,9 @@ class FileRenamerWorker(BaseWorker):
         # Generuj 8 cyfr i 8 liter
         digits = "".join(random.choices(string.digits, k=8))
         letters = "".join(random.choices(string.ascii_uppercase, k=8))
-
         # Połącz i wymieszaj
         combined = digits + letters
         shuffled = "".join(random.sample(combined, len(combined)))
-
         return shuffled
 
     def _rename_file(self, file_path: str, new_name: str) -> bool:
@@ -1007,8 +1005,7 @@ class ToolsTab(QWidget):
 
         if not directory_path or not os.path.exists(directory_path):
             logger.warning(f"Nieprawidłowy folder roboczy: {directory_path}")
-            self.clear_lists()
-            self._update_button_states()
+            self.clear_working_directory()
             return
 
         self.current_working_directory = directory_path
@@ -1070,7 +1067,8 @@ class ToolsTab(QWidget):
             self._update_preview_list(preview_files)
 
             logger.info(
-                f"Skanowanie zakończone: {len(archive_files)} archiwów, {len(preview_files)} podglądów"
+                f"Skanowanie zakończone: {len(archive_files)} archiwów, "
+                f"{len(preview_files)} podglądów"
             )
 
         except Exception as e:
@@ -1514,6 +1512,13 @@ class ToolsTab(QWidget):
         else:
             # Użytkownik potwierdził - kontynuuj operację
             self.file_renamer.confirm_operation()
+
+    def clear_working_directory(self):
+        """Czyści folder roboczy, dezaktywuje przyciski i czyści listy"""
+        self.current_working_directory = ""
+        self.clear_lists()
+        self._update_button_states()
+        self.working_directory_changed.emit("")
 
 
 if __name__ == "__main__":

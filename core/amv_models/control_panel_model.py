@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 class ControlPanelModel(QObject):
-    """Model dla panelu kontrolnego - stan kontrolek"""
+    """Model for the control panel - control states"""
 
     progress_changed = pyqtSignal(int)
     thumbnail_size_changed = pyqtSignal(int)

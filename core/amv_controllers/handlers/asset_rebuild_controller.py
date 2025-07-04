@@ -1,5 +1,5 @@
 """
-AssetRebuildController - Kontroler zarządzający przebudową assetów w tle
+AssetRebuildController - Controller for managing background asset rebuilding.
 """
 
 import logging
@@ -20,57 +20,58 @@ class AssetRebuildController(QObject):
         self.asset_rebuilder = None
 
     def rebuild_assets_in_folder(self, folder_path: str):
-        """Przebudowuje assety w określonym folderze"""
-        logger.debug("Rozpoczęto przebudowę assetów w folderze: %s", folder_path)
+        """Rebuilds assets in the specified folder"""
+        logger.debug("Started rebuilding assets in folder: %s", folder_path)
 
-        # Utwórz worker do przebudowy
+        # Create a worker for rebuilding
         self.asset_rebuilder = AssetRebuilderWorker(folder_path)
 
-        # Połącz sygnały
+        # Connect signals
         self.asset_rebuilder.progress_updated.connect(self.on_rebuild_progress)
         self.asset_rebuilder.finished.connect(self.on_rebuild_finished)
         self.asset_rebuilder.error_occurred.connect(self.on_rebuild_error)
 
-        # Uruchom worker
+        # Start the worker
         self.asset_rebuilder.start()
 
     def on_rebuild_progress(self, current: int, total: int, message: str):
-        """Obsługuje postęp przebudowy assetów"""
+        """Handles asset rebuild progress"""
         progress = int((current / total) * 100) if total > 0 else 0
         self.model.control_panel_model.set_progress(progress)
         logger.debug(f"Rebuild progress: {progress}% - {message}")
-        # Aktualizuj stan przycisków podczas przebudowy
+        # Update button states during rebuild
         self.controller.control_panel_controller.update_button_states()
 
     def on_rebuild_finished(self, message: str):
-        """Obsługuje zakończenie przebudowy assetów"""
-        logger.debug(f"Przebudowa zakończona: {message}")
+        """Handles asset rebuild completion"""
+        logger.debug(f"Rebuild finished: {message}")
         self.model.control_panel_model.set_progress(100)
 
-        # Odśwież widok
+        # ODŚWIEŻ FOLDER po przebudowie assetów
         current_folder = self.model.asset_grid_model.get_current_folder()
         if current_folder:
-            self.controller.folder_tree_controller.on_folder_clicked(current_folder)
+            self.controller.folder_tree_controller.on_folder_refresh_requested(current_folder)
+            logger.info(f"ODŚWIEŻONO FOLDER po przebudowie: {current_folder}")
         else:
-            # Aktualizuj stan przycisków jeśli nie ma folderu roboczego
+            # Update button states if there is no working folder
             self.controller.control_panel_controller.update_button_states()
 
     def on_rebuild_error(self, error_message: str):
-        """Obsługuje błędy podczas przebudowy assetów"""
-        logger.error(f"Błąd przebudowy assetów: {error_message}")
+        """Handles errors during asset rebuild"""
+        logger.error(f"Asset rebuild error: {error_message}")
 
-        # Zatrzymaj spinner postępu
+        # Stop the progress spinner
         self.model.control_panel_model.set_progress(0)
 
-        # Pokaż komunikat błędu użytkownikowi
+        # Show error message to the user
         self.view.update_gallery_placeholder(
-            f"Błąd przebudowy assetów: {error_message}"
+            f"Asset rebuild error: {error_message}"
         )
 
-        # Wyczyść worker
+        # Clean up the worker
         if self.asset_rebuilder:
             self.asset_rebuilder.deleteLater()
             self.asset_rebuilder = None
 
-        # Aktualizuj stan przycisków po błędzie przebudowy
+        # Update button states after rebuild error
         self.controller.control_panel_controller.update_button_states()

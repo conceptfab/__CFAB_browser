@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class FileOperationsWorker(QThread):
-    """Worker do wykonywania operacji na plikach w osobnym wątku"""
+    """Worker for performing file operations in a separate thread"""
 
     operation_progress = pyqtSignal(int, int, str)  # current, total, message
     operation_completed = pyqtSignal(list, list)  # success_messages, error_messages
@@ -115,82 +115,80 @@ class FileOperationsWorker(QThread):
         Przenosi pojedynczy asset z obsługą konfliktów nazw.
         Zwraca dict z kluczami: success (bool), message (str), final_name (str)
         """
-        # Wygeneruj unikalną nazwę
         unique_name = self._generate_unique_asset_name(original_name)
-
         try:
-            # Przygotuj mapowanie plików źródłowych na docelowe
-            files_to_move = []
-
-            # 1. Plik .asset
-            source_asset = os.path.join(
-                self.source_folder_path, f"{original_name}.asset"
+            files_to_move, source_asset, target_asset = self._prepare_files_to_move(
+                asset_data, original_name, unique_name
             )
-            target_asset = os.path.join(self.target_folder_path, f"{unique_name}.asset")
-            if os.path.exists(source_asset):
-                files_to_move.append((source_asset, target_asset))
-
-            # 2. Plik archiwum
-            archive_filename = asset_data.get("archive")
-            if archive_filename:
-                source_archive = os.path.join(self.source_folder_path, archive_filename)
-                if os.path.exists(source_archive):
-                    archive_ext = os.path.splitext(archive_filename)[1]
-                    target_archive = os.path.join(
-                        self.target_folder_path, f"{unique_name}{archive_ext}"
-                    )
-                    files_to_move.append((source_archive, target_archive))
-
-            # 3. Plik podglądu
-            preview_filename = asset_data.get("preview")
-            if preview_filename:
-                source_preview = os.path.join(self.source_folder_path, preview_filename)
-                if os.path.exists(source_preview):
-                    preview_ext = os.path.splitext(preview_filename)[1]
-                    target_preview = os.path.join(
-                        self.target_folder_path, f"{unique_name}{preview_ext}"
-                    )
-                    files_to_move.append((source_preview, target_preview))
-
-            # 4. Plik .thumb w folderze .cache
-            source_thumb = os.path.join(
-                self.source_folder_path, ".cache", f"{original_name}.thumb"
+            moved_files = self._move_files(files_to_move)
+            self._handle_post_move(
+                unique_name, original_name, source_asset, target_asset
             )
-            if os.path.exists(source_thumb):
-                target_cache_dir = os.path.join(self.target_folder_path, ".cache")
-                os.makedirs(target_cache_dir, exist_ok=True)
-                target_thumb = os.path.join(target_cache_dir, f"{unique_name}.thumb")
-                files_to_move.append((source_thumb, target_thumb))
-
-            # Przenieś wszystkie pliki
-            moved_files = []
-            for source_path, target_path in files_to_move:
-                shutil.move(source_path, target_path)
-                moved_files.append(target_path)
-                logger.debug(f"Przeniesiono: {source_path} -> {target_path}")
-
-            # Jeśli nazwa została zmieniona, zaktualizuj plik .asset
-            if unique_name != original_name:
-                self._update_asset_file_after_rename(source_asset, target_asset)
-                if os.path.exists(source_asset):
-                    self._mark_asset_as_duplicate(target_asset, source_asset)
-
-            if unique_name != original_name:
-                message = (
-                    f"Przeniesiono asset: {original_name} -> {unique_name} "
-                    f"(zmieniono nazwę z powodu konfliktu)"
-                )
-            else:
-                message = f"Pomyślnie przeniesiono asset: {original_name}"
-
+            message = self._compose_move_message(unique_name, original_name)
             return {"success": True, "message": message, "final_name": unique_name}
-
         except Exception as e:
             return {
                 "success": False,
                 "message": f"Błąd przenoszenia assetu {original_name}: {e}",
                 "final_name": original_name,
             }
+
+    def _prepare_files_to_move(self, asset_data, original_name, unique_name):
+        files_to_move = []
+        source_asset = os.path.join(self.source_folder_path, f"{original_name}.asset")
+        target_asset = os.path.join(self.target_folder_path, f"{unique_name}.asset")
+        if os.path.exists(source_asset):
+            files_to_move.append((source_asset, target_asset))
+        archive_filename = asset_data.get("archive")
+        if archive_filename:
+            source_archive = os.path.join(self.source_folder_path, archive_filename)
+            if os.path.exists(source_archive):
+                archive_ext = os.path.splitext(archive_filename)[1]
+                target_archive = os.path.join(
+                    self.target_folder_path, f"{unique_name}{archive_ext}"
+                )
+                files_to_move.append((source_archive, target_archive))
+        preview_filename = asset_data.get("preview")
+        if preview_filename:
+            source_preview = os.path.join(self.source_folder_path, preview_filename)
+            if os.path.exists(source_preview):
+                preview_ext = os.path.splitext(preview_filename)[1]
+                target_preview = os.path.join(
+                    self.target_folder_path, f"{unique_name}{preview_ext}"
+                )
+                files_to_move.append((source_preview, target_preview))
+        source_thumb = os.path.join(
+            self.source_folder_path, ".cache", f"{original_name}.thumb"
+        )
+        if os.path.exists(source_thumb):
+            target_cache_dir = os.path.join(self.target_folder_path, ".cache")
+            os.makedirs(target_cache_dir, exist_ok=True)
+            target_thumb = os.path.join(target_cache_dir, f"{unique_name}.thumb")
+            files_to_move.append((source_thumb, target_thumb))
+        return files_to_move, source_asset, target_asset
+
+    def _move_files(self, files_to_move):
+        moved_files = []
+        for source_path, target_path in files_to_move:
+            shutil.move(source_path, target_path)
+            moved_files.append(target_path)
+            logger.debug(f"Przeniesiono: {source_path} -> {target_path}")
+        return moved_files
+
+    def _handle_post_move(self, unique_name, original_name, source_asset, target_asset):
+        if unique_name != original_name:
+            self._update_asset_file_after_rename(source_asset, target_asset)
+            if os.path.exists(source_asset):
+                self._mark_asset_as_duplicate(target_asset, source_asset)
+
+    def _compose_move_message(self, unique_name, original_name):
+        if unique_name != original_name:
+            return (
+                f"Przeniesiono asset: {original_name} -> {unique_name} "
+                f"(zmieniono nazwę z powodu konfliktu)"
+            )
+        else:
+            return f"Pomyślnie przeniesiono asset: {original_name}"
 
     def _update_asset_file_after_rename(self, original_asset_path, new_asset_path):
         try:
@@ -251,32 +249,6 @@ class FileOperationsWorker(QThread):
 
         except Exception as e:
             logger.error(f"Błąd podczas oznaczania assetu jako duplikat: {e}")
-
-    def remove_duplicate_status(self, asset_path):
-        try:
-            if os.path.exists(asset_path):
-                with open(asset_path, "r", encoding="utf-8") as f:
-                    asset_data = json.load(f)
-
-                # Usuń informację o duplikacie
-                if "meta" in asset_data:
-                    if "duplicate_of" in asset_data["meta"]:
-                        del asset_data["meta"]["duplicate_of"]
-                    if "duplicate_date" in asset_data["meta"]:
-                        del asset_data["meta"]["duplicate_date"]
-
-                    # Jeśli meta jest puste, usuń je całkowicie
-                    if not asset_data["meta"]:
-                        del asset_data["meta"]
-
-                # Zapisz zaktualizowane dane
-                with open(asset_path, "w", encoding="utf-8") as f:
-                    json.dump(asset_data, f, indent=2, ensure_ascii=False)
-
-                logger.debug(f"Usunięto status duplikatu z assetu: {asset_path}")
-
-        except Exception as e:
-            logger.error(f"Błąd podczas usuwania statusu duplikatu: {e}")
 
     def _delete_assets(self):
         """Usuwa zaznaczone assety."""
@@ -427,4 +399,3 @@ class FileOperationsModel(QObject):
             self._worker.deleteLater()
             self._worker = None
             logger.debug("Worker został usunięty.")
-

@@ -10,11 +10,11 @@ class SignalConnector:
         self.controller = controller
 
     def connect_all(self):
-        # Pobierz referencje do pod-kontrolerów
+        # Get references to sub-controllers
         asset_grid_controller = self.controller.asset_grid_controller
         control_panel_controller = self.controller.control_panel_controller
 
-        # --- Podstawowe sygnały UI ---
+        # --- Basic UI signals ---
         self.view.splitter_moved.connect(self.model.set_splitter_sizes)
         self.view.toggle_panel_requested.connect(self.model.toggle_left_panel)
         self.model.splitter_state_changed.connect(
@@ -24,7 +24,7 @@ class SignalConnector:
             asset_grid_controller.on_gallery_resized
         )
 
-        # --- Sygnały modelu folderów ---
+        # --- Folder model signals ---
         folder_controller = self.controller.folder_tree_controller
         self.model.folder_system_model.folder_clicked.connect(
             folder_controller.on_folder_clicked
@@ -39,7 +39,7 @@ class SignalConnector:
             folder_controller.on_workspace_folder_clicked
         )
 
-        # --- Sygnały modelu siatki assetów ---
+        # --- Asset grid model signals ---
         asset_grid_controller = self.controller.asset_grid_controller
         self.model.asset_grid_model.assets_changed.connect(
             asset_grid_controller.on_assets_changed
@@ -48,7 +48,7 @@ class SignalConnector:
             asset_grid_controller.on_loading_state_changed
         )
 
-        # --- Sygnały panelu kontrolnego ---
+        # --- Control panel signals ---
         self.model.control_panel_model.progress_changed.connect(
             self.view.progress_bar.setValue
         )
@@ -75,25 +75,27 @@ class SignalConnector:
             self.controller.file_operation_controller.on_delete_selected_clicked
         )
 
-        # --- Sygnały gwiazdek z panelu kontrolnego ---
+        # --- Star signals from the control panel ---
         for i, star_cb in enumerate(self.view.star_checkboxes):
             star_cb.setAutoExclusive(False)
+            # Make sure we have the correct objectName
+            star_cb.setObjectName(f"ControlPanelStar_{i+1}")
             star_cb.clicked.connect(
                 lambda checked, star_index=i: control_panel_controller.on_star_filter_clicked(
                     star_index + 1
                 )
             )
 
-        # --- Sygnały AssetGridModel dla przebudowy siatki ---
+        # --- AssetGridModel signals for grid rebuild ---
         self.model.asset_grid_model.recalculate_columns_requested.connect(
             asset_grid_controller.on_recalculate_columns_requested
         )
 
-        # --- Sygnały przebudowy assetów ---
-        # Sygnały z workera przebudowy assetów
-        # (progress, finished, error) są podpinane w AssetRebuildController
+        # --- Asset rebuild signals ---
+        # Signals from the asset rebuild worker
+        # (progress, finished, error) are connected in AssetRebuildController
 
-        # --- Sygnały skanowania ---
+        # --- Scan signals ---
         self.model.asset_grid_model.scan_started.connect(
             self.controller._on_scan_started
         )
@@ -105,18 +107,18 @@ class SignalConnector:
         )
         self.model.asset_grid_model.scan_error.connect(self.controller._on_scan_error)
 
-        # --- Sygnały konfiguracji ---
+        # --- Configuration signals ---
         self.model.config_manager.config_loaded.connect(
             self.controller._on_config_loaded
         )
         self.model.state_initialized.connect(self.controller._on_state_initialized)
 
-        # --- Sygnały SelectionModel ---
+        # --- SelectionModel signals ---
         self.model.selection_model.selection_changed.connect(
             control_panel_controller.on_selection_changed
         )
 
-        # --- Sygnały FileOperationsModel ---
+        # --- FileOperationsModel signals ---
         self.model.file_operations_model.operation_progress.connect(
             self.controller.file_operation_controller.on_file_operation_progress
         )
@@ -127,7 +129,7 @@ class SignalConnector:
             self.controller.file_operation_controller.on_file_operation_error
         )
 
-        # --- Sygnały DragDropModel ---
+        # --- DragDropModel signals ---
         self.model.drag_drop_model.drag_started.connect(
             self.controller.file_operation_controller.on_drag_drop_started
         )
@@ -138,7 +140,7 @@ class SignalConnector:
             self.controller.file_operation_controller.on_drag_drop_completed
         )
 
-        # --- Sygnały rozwijania/zwijania drzewa ---
+        # --- Tree expand/collapse signals ---
         folder_controller = self.controller.folder_tree_controller
         self.view.collapse_tree_requested.connect(
             folder_controller.on_collapse_tree_requested

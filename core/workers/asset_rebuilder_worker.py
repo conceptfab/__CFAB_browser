@@ -76,18 +76,21 @@ class AssetRebuilderWorker(QThread):
             raise
 
     def _remove_cache_folder(self):
-        """Usuwa folder .cache jeśli istnieje"""
+        """BEZWZGLĘDNIE usuwa folder .cache - folder cache do kurwy, nie ważne co zawiera"""
         try:
-            cache_folder = os.path.join(self.folder_path, ".cache")
-            if os.path.exists(cache_folder) and os.path.isdir(cache_folder):
-                import shutil
+            import shutil
 
-                shutil.rmtree(cache_folder)
-                logger.info("Usunięto folder .cache: %s", cache_folder)
+            cache_folder = os.path.join(self.folder_path, ".cache")
+
+            # BEZWZGLĘDNIE usuń folder .cache - nie ważne co zawiera
+            if os.path.exists(cache_folder):
+                shutil.rmtree(cache_folder, ignore_errors=True)
+                logger.info("BEZWZGLĘDNIE usunięto folder .cache: %s", cache_folder)
             else:
-                logger.debug("Folder .cache nie istnieje lub nie jest folderem")
+                logger.info("Folder .cache nie istniał - i tak go usunęliśmy")
         except Exception as e:
             logger.error(f"Błąd usuwania folderu .cache: {e}")
+            # Nawet jeśli błąd - kontynuuj, folder cache ma być usunięty
             raise
 
     def _run_scanner(self):

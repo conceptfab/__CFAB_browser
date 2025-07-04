@@ -117,8 +117,8 @@ class AssetRepository:
         if not folder_path or not isinstance(folder_path, str):
             logger.warning(f"Invalid folder_path parameter: {folder_path}")
             return True
-
-        if not os.path.exists(folder_path):
+        # Walidacja ścieżki folderu
+        if not AssetRepository._validate_folder_path_static(folder_path):
             logger.warning(f"Folder does not exist: {folder_path}")
             return True
 
@@ -143,23 +143,20 @@ class AssetRepository:
             logger.error(f"Error checking texture folders in {folder_path}: {e}")
             return True
 
-    def _scan_for_special_folders(self, folder_path: str) -> list:
-        """
-        Skanuje folder w poszukiwaniu specjalnych folderów (tex, textures, maps).
+    @staticmethod
+    def _validate_folder_path_static(folder_path: str) -> bool:
+        """Statyczna walidacja ścieżki folderu"""
+        return bool(folder_path and os.path.exists(folder_path))
 
-        Args:
-            folder_path (str): Ścieżka do folderu do skanowania.
-
-        Returns:
-            list: Lista słowników reprezentujących znalezione specjalne foldery.
-        """
-        special_folders_data = []
-        special_folder_names = ["tex", "textures", "maps"]
-
-        for folder_name in special_folder_names:
+    def _scan_for_named_folders(
+        self, folder_path: str, folder_names: list[str]
+    ) -> list:
+        """Skanuje folder w poszukiwaniu podfolderów o zadanych nazwach."""
+        found_folders = []
+        for folder_name in folder_names:
             full_path = os.path.join(folder_path, folder_name)
             if os.path.isdir(full_path):
-                special_folders_data.append(
+                found_folders.append(
                     {
                         "type": "special_folder",
                         "name": folder_name,
@@ -167,7 +164,12 @@ class AssetRepository:
                     }
                 )
                 logger.debug(f"Found special folder: {full_path}")
-        return special_folders_data
+        return found_folders
+
+    def _scan_for_special_folders(self, folder_path: str) -> list:
+        """Skanuje folder w poszukiwaniu specjalnych folderów (tex, textures, maps)."""
+        special_folder_names = ["tex", "textures", "maps"]
+        return self._scan_for_named_folders(folder_path, special_folder_names)
 
     def _create_single_asset(
         self, name: str, archive_path: str, image_path: str, folder_path: str
@@ -184,6 +186,10 @@ class AssetRepository:
         Returns:
             dict|None: Słownik z danymi assetu lub None przy błędzie
         """
+        # Walidacja ścieżki folderu na początku
+        if not AssetRepository._validate_folder_path_static(folder_path):
+            logger.error(f"Nieprawidłowa ścieżka folderu: {folder_path}")
+            return None
         asset_file_path = os.path.join(folder_path, f"{name}.asset")
 
         try:
@@ -275,15 +281,15 @@ class AssetRepository:
         Returns:
             str: Ścieżka do utworzonej miniatury lub None przy błędzie
         """
+        # Walidacja ścieżki pliku obrazu na początku
+        if not image_path or not os.path.exists(image_path):
+            logger.error(f"Plik obrazu nie istnieje: {image_path}")
+            return None
         try:
             asset_name = os.path.splitext(os.path.basename(asset_path))[0]
             logger.debug(
                 f"Creating thumbnail for asset: {asset_name}, image: {image_path}"
             )
-
-            if not os.path.exists(image_path):
-                logger.error(f"Plik obrazu nie istnieje: {image_path}")
-                return None
 
             # Generuj miniaturę
             result = generate_thumbnail(image_path)
@@ -384,76 +390,86 @@ class AssetRepository:
             "scanner.find_and_create_assets",
             {"folder_path": folder_path, "use_async_thumbnails": use_async_thumbnails},
         ):
-            if not folder_path or not os.path.exists(folder_path):
-                logger.error(f"Nieprawidłowa ścieżka folderu: {folder_path}")
+            # Walidacja ścieżki folderu
+            if not AssetRepository._validate_folder_path_static(folder_path):
                 return []
 
             try:
                 logger.info(f"Rozpoczęto skanowanie folderu: {folder_path}")
 
-                # Skanuj folder w poszukiwaniu plików
-                archive_by_name, image_by_name = self._scan_folder_for_files(
-                    folder_path
-                )
+                # Skanuj i grupuj pliki
+                file_groups = self._scan_and_group_files(folder_path)
 
-                # Znajdź wspólne nazwy (case-insensitive)
-                common_names = set(archive_by_name.keys()) & set(image_by_name.keys())
-
-                if not common_names:
-                    logger.warning(
-                        f"Nie znaleziono sparowanych plików w: {folder_path}"
-                    )
-                    # Utwórz plik z nieparowanymi plikami
-                    self._create_unpair_files_json(
-                        folder_path, archive_by_name, image_by_name, common_names
-                    )
-                    return []
-
-                # Skanuj specjalne foldery (textures, tex, maps) - DODAJ NA POCZĄTKU
+                # Skanuj specjalne foldery
                 special_folders = self._scan_for_special_folders(folder_path)
-                created_assets = (
-                    special_folders.copy()
-                )  # Zacznij od specjalnych folderów
-                logger.debug(f"Znaleziono {len(special_folders)} specjalnych folderów")
 
-                # Utwórz assety dla każdej sparowanej nazwy
-                total_assets = len(common_names)
-
-                for i, name in enumerate(common_names):
-                    if progress_callback:
-                        progress_callback(
-                            i + 1, total_assets, f"Tworzenie assetu: {name}"
-                        )
-
-                    archive_path = archive_by_name[name]
-                    image_path = image_by_name[name]
-
-                    # Utwórz asset
-                    asset_data = self._create_single_asset(
-                        name, archive_path, image_path, folder_path
-                    )
-
-                    if asset_data:
-                        created_assets.append(asset_data)
-                        logger.debug(f"Utworzono asset: {name}")
-
-                        # Utwórz miniaturę
-                        asset_file_path = os.path.join(folder_path, f"{name}.asset")
-                        self.create_thumbnail_for_asset(asset_file_path, image_path)
+                # Utwórz assety z grup plików
+                created_assets = self._create_assets_from_groups(
+                    file_groups, folder_path, progress_callback
+                )
 
                 # Utwórz plik z nieparowanymi plikami
-                self._create_unpair_files_json(
-                    folder_path, archive_by_name, image_by_name, common_names
-                )
+                self._create_unpair_files_json(folder_path, *file_groups)
+
+                # Połącz specjalne foldery z utworzonymi assetami
+                all_assets = special_folders + created_assets
 
                 logger.info(
-                    f"Zakończono skanowanie. Utworzono {len(created_assets)} assetów (w tym {len(special_folders)} specjalnych folderów)."
+                    f"Zakończono skanowanie. Utworzono {len(all_assets)} assetów "
+                    f"(w tym {len(special_folders)} specjalnych folderów)."
                 )
-                return created_assets
+                return all_assets
 
             except Exception as e:
                 logger.error(f"Błąd podczas skanowania folderu {folder_path}: {e}")
                 return []
+
+    def _scan_and_group_files(self, folder_path: str) -> tuple:
+        """Skanuje folder i grupuje pliki według nazw"""
+        # Skanuj folder w poszukiwaniu plików
+        archive_by_name, image_by_name = self._scan_folder_for_files(folder_path)
+
+        # Znajdź wspólne nazwy (case-insensitive)
+        common_names = set(archive_by_name.keys()) & set(image_by_name.keys())
+
+        if not common_names:
+            logger.warning(f"Nie znaleziono sparowanych plików w: {folder_path}")
+
+        return archive_by_name, image_by_name, common_names
+
+    def _create_assets_from_groups(
+        self, file_groups: tuple, folder_path: str, progress_callback=None
+    ) -> list:
+        """Tworzy assety z pogrupowanych plików"""
+        archive_by_name, image_by_name, common_names = file_groups
+
+        if not common_names:
+            return []
+
+        created_assets = []
+        total_assets = len(common_names)
+
+        for i, name in enumerate(common_names):
+            if progress_callback:
+                progress_callback(i + 1, total_assets, f"Tworzenie assetu: {name}")
+
+            archive_path = archive_by_name[name]
+            image_path = image_by_name[name]
+
+            # Utwórz asset
+            asset_data = self._create_single_asset(
+                name, archive_path, image_path, folder_path
+            )
+
+            if asset_data:
+                created_assets.append(asset_data)
+                logger.debug(f"Utworzono asset: {name}")
+
+                # Utwórz miniaturę
+                asset_file_path = os.path.join(folder_path, f"{name}.asset")
+                self.create_thumbnail_for_asset(asset_file_path, image_path)
+
+        return created_assets
 
     def load_existing_assets(self, folder_path: str) -> list:
         """
@@ -465,13 +481,13 @@ class AssetRepository:
         Returns:
             list: Lista słowników reprezentujących załadowane assety
         """
+        # Walidacja ścieżki folderu na początku
+        if not AssetRepository._validate_folder_path_static(folder_path):
+            logger.error(f"Nieprawidłowa ścieżka folderu: {folder_path}")
+            return []
         with measure_operation(
             "scanner.load_existing_assets", {"folder_path": folder_path}
         ):
-            if not folder_path or not os.path.exists(folder_path):
-                logger.error(f"Nieprawidłowa ścieżka folderu: {folder_path}")
-                return []
-
             try:
                 logger.info(f"Ładowanie istniejących assetów z: {folder_path}")
 

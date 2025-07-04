@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class AssetTileModel(QObject):
-    """Model dla pojedynczego kafelka assetu"""
+    """Model for a single asset tile"""
 
     data_changed = pyqtSignal()
 
@@ -41,40 +41,40 @@ class AssetTileModel(QObject):
         return int(stars) if stars is not None else 0
 
     def set_stars(self, stars: int):
-        """Ustawia ocenę gwiazdkową (0-5) i zapisuje do pliku"""
+        """Sets the star rating (0-5) and saves to file"""
         if 0 <= stars <= 5:
             self.data["stars"] = stars
-            self._save_to_file()  # Zapisz do pliku .asset
+            self._save_to_file()  # Save to .asset file
             self.data_changed.emit()
-            logger.debug(f"Ustawiono {stars} gwiazdek dla assetu: {self.get_name()}")
+            logger.debug(f"Set {stars} stars for asset: {self.get_name()}")
         else:
-            logger.warning(f"Nieprawidłowa liczba gwiazdek: {stars}. Dozwolone: 0-5")
+            logger.warning(f"Invalid number of stars: {stars}. Allowed: 0-5")
 
     def _save_to_file(self):
-        """Zapisuje dane assetu do pliku .asset"""
+        """Saves asset data to the .asset file"""
         try:
             if not self.asset_file_path:
-                logger.error(f"Brak asset_file_path dla assetu: {self.get_name()}")
+                logger.error(f"Missing asset_file_path for asset: {self.get_name()}")
                 return
 
             if not os.path.exists(self.asset_file_path):
-                logger.error(f"Plik .asset nie istnieje: {self.asset_file_path}")
+                logger.error(f"Asset file does not exist: {self.asset_file_path}")
                 return
 
-            # Zapisz dane do pliku
+            # Save data to file
             save_to_file(self.data, self.asset_file_path, indent=True)
-            logger.debug(f"Zapisano dane assetu do pliku: {self.asset_file_path}")
+            logger.debug(f"Saved asset data to file: {self.asset_file_path}")
 
         except Exception as e:
-            logger.error(f"Błąd podczas zapisywania assetu {self.get_name()}: {e}")
+            logger.error(f"Error saving asset {self.get_name()}: {e}")
 
     def has_textures_in_archive(self) -> bool:
         return self.data.get("textures_in_the_archive", False)
 
     def get_folder_path(self) -> str:
-        """Zwraca ścieżkę do folderu assetu obliczoną z lokalizacji pliku"""
+        """Returns the path to the asset folder calculated from the file location"""
         if not self.asset_file_path:
-            logger.warning(f"Brak asset_file_path dla assetu: {self.get_name()}")
+            logger.warning(f"Missing asset_file_path for asset: {self.get_name()}")
             return ""
         return os.path.dirname(self.asset_file_path)
 
@@ -100,7 +100,7 @@ class AssetTileModel(QObject):
         return ""
 
     def get_special_folder_path(self) -> str:
-        """Zwraca ścieżkę do specjalnego folderu (textures, tex, maps)"""
+        """Returns the path to a special folder (textures, tex, maps)"""
         if self.is_special_folder:
             return self.data.get("folder_path", "")
         return ""

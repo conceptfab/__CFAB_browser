@@ -3,7 +3,7 @@ import os
 import subprocess
 import sys
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -14,7 +14,6 @@ from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPushButton,
-    QSizePolicy,
     QSlider,
     QVBoxLayout,
     QWidget,
@@ -45,6 +44,7 @@ class ArchiveListItem(QWidget):
         layout.setSpacing(5)
 
         self.checkbox = QCheckBox()
+        self.checkbox.setObjectName("AssetTileCheckBox")
         self.checkbox.stateChanged.connect(self._on_checkbox_state_changed)
         layout.addWidget(self.checkbox)
 
@@ -75,6 +75,13 @@ class ArchiveListItem(QWidget):
     def set_checked(self, checked):
         self.checkbox.setChecked(checked)
 
+    def sizeHint(self):
+        """Zwraca zwiększoną wysokość wiersza o 30%"""
+        base_size = super().sizeHint()
+        # Zwiększ wysokość o 30%
+        increased_height = int(base_size.height() * 1.5)
+        return QSize(base_size.width(), increased_height)
+
 
 class PairingTab(QWidget):
     def __init__(self):
@@ -89,6 +96,7 @@ class PairingTab(QWidget):
         print(f"PairingTab: Received new working directory: {path}")
         self.model.set_work_folder(path)
         self.load_data()
+        self._update_button_states()
 
     def init_ui(self):
         # Main vertical layout
@@ -210,7 +218,7 @@ class PairingTab(QWidget):
                 []
             )  # Clear previews if no folder is set
 
-        self._update_create_asset_button_state()
+        self._update_button_states()
         self.archive_list_widget.update()
         self.preview_gallery_view.update()
 
@@ -226,7 +234,7 @@ class PairingTab(QWidget):
         else:
             if hasattr(self, "selected_archive") and self.selected_archive == file_name:
                 self.selected_archive = None
-        self._update_create_asset_button_state()
+        self._update_button_states()
 
     def _on_archive_clicked(self, file_name):
         work_folder = (
@@ -245,11 +253,11 @@ class PairingTab(QWidget):
         else:  # linux
             subprocess.Popen(["xdg-open", full_path])
         self.selected_preview = file_name if file_name else None
-        self._update_create_asset_button_state()
+        self._update_button_states()
 
     def _on_preview_selected(self, file_name: str):
         self.selected_preview = file_name if file_name else None
-        self._update_create_asset_button_state()
+        self._update_button_states()
 
     def _on_preview_clicked(self, file_path: str):
         print(f"Opening preview: {file_path}")
@@ -276,14 +284,37 @@ class PairingTab(QWidget):
         self.preview_gallery_view.remove_preview_by_path(preview_full_path)
         print(f"Removed preview from UI: {preview_name}")
 
+    def _update_button_states(self):
+        """Aktualizuje stan wszystkich przycisków na podstawie folderu roboczego"""
+        has_working_folder = bool(
+            hasattr(self.model, "work_folder")
+            and self.model.work_folder
+            and os.path.exists(self.model.work_folder)
+        )
+
+        # Aktualizuj stan wszystkich przycisków
+        if hasattr(self, "delete_previews_button"):
+            self.delete_previews_button.setEnabled(has_working_folder)
+        if hasattr(self, "delete_archives_button"):
+            self.delete_archives_button.setEnabled(has_working_folder)
+        if hasattr(self, "rebuild_assets_button"):
+            self.rebuild_assets_button.setEnabled(has_working_folder)
+
+        # Przycisk "Utwórz asset" wymaga dodatkowo wybranych elementów
+        if hasattr(self, "create_asset_button"):
+            is_archive_selected = (
+                hasattr(self, "selected_archive") and self.selected_archive is not None
+            )
+            is_preview_selected = (
+                hasattr(self, "selected_preview") and self.selected_preview is not None
+            )
+            self.create_asset_button.setEnabled(
+                has_working_folder and is_archive_selected and is_preview_selected
+            )
+
     def _update_create_asset_button_state(self):
-        is_archive_selected = (
-            hasattr(self, "selected_archive") and self.selected_archive is not None
-        )
-        is_preview_selected = (
-            hasattr(self, "selected_preview") and self.selected_preview is not None
-        )
-        self.create_asset_button.setEnabled(is_archive_selected and is_preview_selected)
+        """Aktualizuje stan przycisku 'Utwórz asset' - teraz używa _update_button_states()"""
+        self._update_button_states()
 
     def _on_create_asset_button_clicked(self):
         if (

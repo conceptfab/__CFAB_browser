@@ -10,6 +10,7 @@ from typing import Optional
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -25,19 +26,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from core.base_widgets import (
-    BaseWidget,
-    ControlButtonBase,
-    PanelButtonBase,
-    StarCheckBoxBase,
-)
-
 from .gallery_widgets import GalleryContainerWidget
 
 logger = logging.getLogger(__name__)
 
 
-class AmvView(BaseWidget):
+class AmvView(QWidget):
     """View dla zakładki AMV - prezentacja UI"""
 
     splitter_moved = pyqtSignal(list)
@@ -63,13 +57,23 @@ class AmvView(BaseWidget):
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+
+        # Utwórz przycisk krawędzi PRZED splitterem
+        self._create_edge_button()
+
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.setSizes([200, 800])
         self.splitter.splitterMoved.connect(self._on_splitter_moved)
         self._create_left_panel()
         self._create_gallery_panel()
+
+        # Dodaj przycisk krawędzi na początku layoutu
+        layout.addWidget(self.edge_button)
         layout.addWidget(self.splitter)
         self.setLayout(layout)
+
+        # Domyślnie ukryj przycisk krawędzi (panel jest otwarty)
+        self.edge_button.hide()
 
     def _create_left_panel(self):
         self.left_panel = QFrame()
@@ -92,24 +96,26 @@ class AmvView(BaseWidget):
         header_layout.setContentsMargins(12, 8, 12, 8)
 
         # Przyciski Zwiń i Rozwiń - szersze o 80%, bardzo niskie
-        self.collapse_button = PanelButtonBase("Zwiń")
+        self.collapse_button = QPushButton("Zwiń")
         self.collapse_button.setObjectName("collapseButton")
-        self.collapse_button.setFixedHeight(16)  # Mała wysokość
-        self.collapse_button.setFixedWidth(60)  # Identyczna szerokość
+        # self.collapse_button.setFixedHeight(16)  # Mała wysokość
+        self.collapse_button.setFixedWidth(35)  # Identyczna szerokość
         self.collapse_button.clicked.connect(self._on_collapse_tree_clicked)
 
-        self.expand_button = PanelButtonBase("Rozwiń")
+        self.expand_button = QPushButton("Rozwiń")
         self.expand_button.setObjectName("expandButton")
-        self.expand_button.setFixedHeight(16)  # Mała wysokość
-        self.expand_button.setFixedWidth(60)  # Identyczna szerokość
+        # self.expand_button.setFixedHeight(16)  # Mała wysokość
+        self.expand_button.setFixedWidth(35)  # Identyczna szerokość
         self.expand_button.clicked.connect(self._on_expand_tree_clicked)
 
         self.toggle_button = QPushButton()
         self.toggle_button.setObjectName("panelToggleButton")  # ID dla QSS
-        self.toggle_button.setFixedSize(24, 24)
+        self.toggle_button.setFixedSize(18, 18)
         self.toggle_button.setToolTip("Zamknij panel")
         self.toggle_button.setIcon(self.collapse_icon)
-        self.toggle_button.setIconSize(QSize(18, 18))
+        self.toggle_button.setIconSize(QSize(16, 16))
+        self.toggle_button.setFlat(True)
+        # POPRAWKA: Podłącz do toggle_panel_requested zamiast window().close
         self.toggle_button.clicked.connect(lambda: self.toggle_panel_requested.emit())
 
         # Centrowanie przycisków Zwiń i Rozwiń
@@ -137,9 +143,9 @@ class AmvView(BaseWidget):
 
     def _create_folder_buttons_panel(self, folder_layout):
         self.buttons_frame = QFrame()
-        self.buttons_frame.setFixedHeight(140)
+        self.buttons_frame.setFixedHeight(80)
         self.buttons_layout = QGridLayout()
-        self.buttons_layout.setContentsMargins(8, 8, 8, 8)
+        self.buttons_layout.setContentsMargins(2, 2, 2, 2)
         self.buttons_layout.setSpacing(4)
         self.buttons_frame.setLayout(self.buttons_layout)
         folder_layout.addWidget(self.buttons_frame)
@@ -171,7 +177,7 @@ class AmvView(BaseWidget):
                         except Exception as e:
                             logger.debug(f"Icon loading failed for {icon_path}: {e}")
                     # Ustawienie domyślnego koloru tła na kolor z config, jeśli jest zdefiniowany
-                    default_bg_color = folder_color if folder_color else "#2D2D30"
+                    default_bg_color = folder_color if folder_color else "#717bbc"
                     button.setStyleSheet(
                         f"""
                         QPushButton {{
@@ -180,13 +186,13 @@ class AmvView(BaseWidget):
                             font-size: 10px; padding: 1px 4px; text-align: center;
                         }}
                         QPushButton:hover {{
-                            background-color: #3F3F46; border-color: {folder_color};
+                            background-color: #717bbc; border-color: {folder_color};
                         }}
                         QPushButton:pressed {{
                             background-color: {folder_color}; color: #FFFFFF;
                         }}
                         QPushButton:disabled {{
-                            background-color: #1E1E1E; color: #666666;
+                            background-color: transparent; color: #666666; border: none;
                             border-color: #3F3F46;
                         }}
                     """
@@ -200,7 +206,7 @@ class AmvView(BaseWidget):
                     button.setStyleSheet(
                         """
                         QPushButton {
-                            background-color: #1E1E1E; color: #666666;
+                            background-color: transparent; color: #666666;
                             border: 1px solid #3F3F46; border-radius: 4px;
                             font-size: 10px; padding: 1px 4px; text-align: center;
                         }
@@ -220,16 +226,84 @@ class AmvView(BaseWidget):
         gallery_vertical_layout = QVBoxLayout()
         gallery_vertical_layout.setSpacing(0)
         gallery_vertical_layout.setContentsMargins(0, 0, 0, 0)
-        self._create_gallery_content_widget()  # Dodaj PRZED _create_scroll_area!
+        self._create_gallery_content_widget()
         self._create_scroll_area()
         self._create_control_panel()
+
+        # ZMIANA: Tylko galeria w layout - zajmuje całą przestrzeń
         gallery_vertical_layout.addWidget(self.scroll_area)
-        # Wyśrodkowanie panelu kontrolnego
-        gallery_vertical_layout.addWidget(
-            self.control_panel, alignment=Qt.AlignmentFlag.AlignHCenter
-        )
+
         self.gallery_panel.setLayout(gallery_vertical_layout)
+
+        # POPRAWKA: Panel kontrolny jako dziecko scroll_area zamiast gallery_panel
+        self.control_panel.setParent(self.scroll_area)
+
         self.splitter.addWidget(self.gallery_panel)
+
+        # Pozycjonuj panel kontrolny po utworzeniu z większym opóźnieniem
+        from PyQt6.QtCore import QTimer
+
+        QTimer.singleShot(500, self._position_control_panel)  # Zwiększone opóźnienie
+
+    def _position_control_panel(self):
+        """Pozycjonuje panel kontrolny na dole galerii"""
+        if hasattr(self, "control_panel") and hasattr(self, "gallery_panel"):
+            # POPRAWKA: Użyj scroll_area jako referencji zamiast gallery_panel
+            if hasattr(self, "scroll_area"):
+                # Pobierz rzeczywisty rozmiar obszaru przewijania (widocznej galerii)
+                scroll_geometry = self.scroll_area.geometry()
+                scroll_width = scroll_geometry.width()
+                scroll_height = scroll_geometry.height()
+                scroll_x = scroll_geometry.x()
+                scroll_y = scroll_geometry.y()
+
+                panel_width = self.control_panel.width()
+                panel_height = self.control_panel.height()
+
+                # Wyśrodkuj w obszarze scroll_area
+                x = scroll_x + (scroll_width - panel_width) // 2
+                y = (
+                    scroll_y + scroll_height - panel_height - 10
+                )  # 10px od dołu scroll_area
+
+                # Zabezpieczenie przed ujemnymi współrzędnymi
+                x = max(scroll_x, x)
+                y = max(scroll_y, y)
+
+                self.control_panel.move(x, y)
+                self.control_panel.raise_()
+
+                logger.debug(
+                    f"Panel kontrolny: pozycja=({x}, {y}), scroll_area=({scroll_x}, {scroll_y}, {scroll_width}x{scroll_height}), panel={panel_width}x{panel_height}"
+                )
+            else:
+                # Fallback do starej metody
+                gallery_rect = self.gallery_panel.geometry()
+                gallery_width = gallery_rect.width()
+                gallery_height = gallery_rect.height()
+
+                panel_width = self.control_panel.width()
+                panel_height = self.control_panel.height()
+
+                x = (gallery_width - panel_width) // 2
+                y = gallery_height - panel_height - 10
+
+                x = max(0, x)
+                y = max(0, y)
+
+                self.control_panel.move(x, y)
+                self.control_panel.raise_()
+
+    def _create_edge_button(self):
+        """Tworzy przycisk przyklejony do lewej krawędzi do otwierania panelu"""
+        self.edge_button = QPushButton()
+        self.edge_button.setObjectName("edgePanelButton")
+        self.edge_button.setFixedSize(18, 18)  # Taki sam rozmiar jak przycisk zamykania
+        self.edge_button.setToolTip("Otwórz panel")
+        self.edge_button.setIcon(QIcon("core/resources/img/open_panel.png"))
+        self.edge_button.setIconSize(QSize(16, 16))  # Ikona mniejsza niż przycisk
+        self.edge_button.setFlat(True)
+        self.edge_button.clicked.connect(lambda: self.toggle_panel_requested.emit())
 
     def _create_scroll_area(self):
         self.scroll_area = QScrollArea()
@@ -242,6 +316,21 @@ class AmvView(BaseWidget):
         )
         self.scroll_area.setFrameStyle(QScrollArea.Shape.NoFrame)
         self.scroll_area.setWidget(self.gallery_container_widget)
+
+        # DODAJ: Obsługa zmian rozmiaru scroll_area
+        def on_scroll_area_resize():
+            from PyQt6.QtCore import QTimer
+
+            QTimer.singleShot(50, self._position_control_panel)
+
+        # Podpnij zdarzenia
+        original_resize = self.scroll_area.resizeEvent
+
+        def new_resize_event(event):
+            original_resize(event)
+            on_scroll_area_resize()
+
+        self.scroll_area.resizeEvent = new_resize_event
 
     def _create_gallery_content_widget(self):
         self.gallery_content_widget = QWidget()
@@ -283,15 +372,27 @@ class AmvView(BaseWidget):
     def _create_control_panel(self):
         self.control_panel = QFrame()
         self.control_panel.setFixedHeight(32)
-        self.control_panel.setFixedWidth(990)  # Stała szerokość panelu
+        self.control_panel.setFixedWidth(1000)  # Szerokość 1000px
+
+        # ZMIANA: Półprzezroczyste tło, żeby panel był widoczny nad galerią
+        self.control_panel.setStyleSheet(
+            """
+            QFrame {
+                background-color: rgba(40, 41, 53, 220);
+                border: 1px solid #717bbc;
+                border-radius: 4px;
+            }
+        """
+        )
+
         control_layout = QHBoxLayout()
-        control_layout.setContentsMargins(0, 0, 0, 0)
+        control_layout.setContentsMargins(8, 4, 8, 4)  # Marginesy wewnętrzne
         control_layout.setSpacing(8)
-        control_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Wyśrodkowanie
+        control_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.progress_bar = QProgressBar()
         self.progress_bar.setFixedHeight(12)  # Chudszy progress bar
-        self.progress_bar.setMinimumWidth(200)  # Minimalna szerokość
-        self.progress_bar.setMaximumWidth(400)  # Maksymalna szerokość
+        self.progress_bar.setMinimumWidth(100)  # Minimalna szerokość
+        self.progress_bar.setMaximumWidth(120)  # Maksymalna szerokość
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(True)  # Upewniamy się, że jest widoczny
         self.thumbnail_size_slider = QSlider(Qt.Orientation.Horizontal)
@@ -299,7 +400,7 @@ class AmvView(BaseWidget):
         self.thumbnail_size_slider.setMinimum(50)
         self.thumbnail_size_slider.setMaximum(256)
         self.thumbnail_size_slider.setValue(256)
-        self.thumbnail_size_slider.setFixedWidth(200)  # SZTYWNA SZEROKOŚĆ
+        self.thumbnail_size_slider.setFixedWidth(120)  # SZTYWNA SZEROKOŚĆ
         self.selection_buttons = []
         # Styl kompaktowy jak na przyciskach Zwiń/Rozwiń
         button_style = """
@@ -332,22 +433,22 @@ class AmvView(BaseWidget):
                 border-color: #3F3F46;
             }
         """
-        self.select_all_button = ControlButtonBase("Zaznacz wszystkie")
+        self.select_all_button = QPushButton("Zaznacz wszystkie")
         self.select_all_button.setObjectName("selectAllButton")
         self.select_all_button.setEnabled(False)  # Wyłączony domyślnie
         self.selection_buttons.append(self.select_all_button)
 
-        self.move_selected_button = ControlButtonBase("Przenieś zaznaczone")
+        self.move_selected_button = QPushButton("Przenieś zaznaczone")
         self.move_selected_button.setObjectName("moveSelectedButton")
         self.move_selected_button.setEnabled(False)  # Wyłączony domyślnie
         self.selection_buttons.append(self.move_selected_button)
 
-        self.delete_selected_button = ControlButtonBase("Usuń zaznaczone")
+        self.delete_selected_button = QPushButton("Usuń zaznaczone")
         self.delete_selected_button.setObjectName("deleteSelectedButton")
         self.delete_selected_button.setEnabled(False)  # Wyłączony domyślnie
         self.selection_buttons.append(self.delete_selected_button)
 
-        self.deselect_all_button = ControlButtonBase("Odznacz wszystkie")
+        self.deselect_all_button = QPushButton("Odznacz wszystkie")
         self.deselect_all_button.setObjectName("deselectAllButton")
         self.deselect_all_button.setEnabled(False)  # Wyłączony domyślnie
         self.selection_buttons.append(self.deselect_all_button)
@@ -355,8 +456,12 @@ class AmvView(BaseWidget):
         # 5 gwiazdek po przycisku "Odznacz wszystkie"
         self.star_checkboxes = []
         for i in range(5):
-            star_cb = StarCheckBoxBase("★")
+            star_cb = QCheckBox("★")
+            star_cb.setObjectName(f"ControlPanelStar_{i+1}")
             star_cb.setProperty("class", "star")
+            # Ustaw identyczne właściwości jak w kafelku
+            star_cb.setFixedSize(12, 12)
+            star_cb.setText("★")
             self.star_checkboxes.append(star_cb)
 
         control_layout.addWidget(self.progress_bar, 3)  # Większy stretch factor
@@ -382,6 +487,13 @@ class AmvView(BaseWidget):
             self.toggle_button.setToolTip(
                 "Zamknij panel" if is_panel_open else "Otwórz panel"
             )
+
+        # POPRAWKA: Obsługa przycisku krawędzi
+        if hasattr(self, "edge_button"):
+            if is_panel_open:
+                self.edge_button.hide()  # Ukryj przycisk krawędzi gdy panel jest otwarty
+            else:
+                self.edge_button.show()  # Pokaż przycisk krawędzi gdy panel jest zamknięty
 
     def _on_collapse_tree_clicked(self):
         logger.info("Żądanie zwinięcia drzewa folderów")
@@ -410,3 +522,24 @@ class AmvView(BaseWidget):
         self.gallery_container_widget.update()
         self.gallery_container_widget.repaint()
         logger.info(f"Successfully removed {len(widgets_to_remove)} asset tiles.")
+
+    def showEvent(self, event):
+        """Obsługuje pokazanie widoku"""
+        super().showEvent(event)
+        # DODAJ: Pozycjonuj panel po pokazaniu widoku
+        if hasattr(self, "_position_control_panel"):
+            from PyQt6.QtCore import QTimer
+
+            QTimer.singleShot(
+                100, self._position_control_panel
+            )  # 100ms opóźnienia po pokazaniu
+
+    def resizeEvent(self, event):
+        """Obsługuje zmianę rozmiaru okna"""
+        super().resizeEvent(event)
+        # POPRAWKA: Dodaj opóźnienie dla stabilnego pozycjonowania
+        if hasattr(self, "_position_control_panel"):
+            # Użyj QTimer.singleShot dla opóźnionego pozycjonowania
+            from PyQt6.QtCore import QTimer
+
+            QTimer.singleShot(50, self._position_control_panel)  # 50ms opóźnienia

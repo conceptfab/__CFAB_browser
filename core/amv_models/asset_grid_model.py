@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Any, List, Optional
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QStandardItem, QStandardItemModel
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class AssetGridModel(QObject):
-    """Model dla siatki assetów - architektura M/V"""
+    """Model for the asset grid - M/V architecture"""
 
     assets_changed = pyqtSignal(list)
     grid_layout_changed = pyqtSignal(int)
@@ -35,55 +36,55 @@ class AssetGridModel(QObject):
 
         logger.debug("AssetGridModel initialized")
 
-    def set_assets(self, assets: list):
-        self._assets = assets
+    def set_assets(self, assets: Optional[List[Any]]) -> None:
+        if assets is None:
+            self._assets = []
+        else:
+            self._assets = assets
         self.assets_changed.emit(self._assets)
-        logger.debug(f"Assets set: {len(self._assets)} items")
+        logger.debug("Assets set: %d items", len(self._assets))
 
-    def get_assets(self):
-        return self._assets
+    def get_assets(self) -> List[Any]:
+        return self._assets if self._assets is not None else []
 
     def set_columns(self, columns: int):
         if self._columns != columns:
             self._columns = max(1, columns)
-            logger.debug(f"Grid columns updated to: {self._columns}")
+            logger.debug("Grid columns updated to: %d", self._columns)
 
     def get_columns(self):
         return self._columns
 
     def set_current_folder(self, folder_path: str):
         self._current_folder_path = folder_path
-        logger.debug(f"Current folder set: {folder_path}")
+        logger.debug("Current folder set: %s", folder_path)
 
     def get_current_folder(self):
         return self._current_folder_path
 
     def scan_folder(self, folder_path: str):
-        """Skanuje folder z raportowaniem postępu"""
+        """WCZYTUJE OD NOWA assety w folderze - odświeżenie = wczytanie od nowa!"""
         import time
 
         start_time = time.time()
 
         try:
             self.scan_started.emit(folder_path)
-            logger.info(f"Rozpoczynam skanowanie folderu: {folder_path}")
+            logger.info("WCZYTYWANIE OD NOWA assetów w folderze: %s", folder_path)
 
             if not os.path.exists(folder_path):
-                error_msg = f"Folder nie istnieje: {folder_path}"
+                error_msg = f"Folder does not exist: {folder_path}"
                 logger.error(error_msg)
                 self.scan_error.emit(error_msg)
                 return
 
-            # Załaduj istniejące assety
+            # WCZYTAJ OD NOWA - najpierw skanuj i utwórz assety
             asset_repository = AssetRepository()
-            existing_assets = asset_repository.load_existing_assets(folder_path)
-            logger.debug(f"Załadowano {len(existing_assets)} istniejących assetów")
-            self.scan_progress.emit(0, 100, "Załadowano istniejące assety")
-
-            # Skanuj folder
+            
+            # Skanuj folder i utwórz nowe assety
             def progress_callback(current, total, message):
                 if total > 0:
-                    # Mapuj postęp skanowania na przedział 10-90%
+                    # Map scan progress to the 10-90% range
                     progress_percent = 10 + int((current / total) * 80)
                     self.scan_progress.emit(progress_percent, 100, message)
                 else:
@@ -92,33 +93,24 @@ class AssetGridModel(QObject):
             scanned_assets = asset_repository.find_and_create_assets(
                 folder_path, progress_callback, use_async_thumbnails=False
             )
-            logger.debug(
-                f"Przeskanowano folder, znaleziono {len(scanned_assets)} assetów"
-            )
+            logger.debug("Skanowanie zakończone, znaleziono %d assetów", len(scanned_assets))
 
-            # Połącz assety, usuwając duplikaty
-            all_assets = existing_assets.copy()
-            existing_names = {asset.get("name", "") for asset in existing_assets}
-
-            for asset in scanned_assets:
-                if asset.get("name", "") not in existing_names:
-                    all_assets.append(asset)
-
-            # Po zakończeniu skanowania wczytaj assety z plików .asset, aby mieć aktualne pole 'thumbnail'
+            # WCZYTAJ OD NOWA - teraz załaduj wszystkie assety z plików .asset
             all_assets = asset_repository.load_existing_assets(folder_path)
+            logger.debug("WCZYTANO OD NOWA %d assetów z plików .asset", len(all_assets))
 
             duration = time.time() - start_time
-            logger.debug(f"Skanowanie zakończone, łącznie {len(all_assets)} assetów")
+            logger.debug(f"WCZYTYWANIE OD NOWA zakończone, łącznie {len(all_assets)} assetów")
             self.scan_completed.emit(all_assets, duration, "scan_folder")
 
         except Exception as e:
             duration = time.time() - start_time
-            error_msg = f"Błąd podczas skanowania: {str(e)}"
+            error_msg = f"Error during scan: {str(e)}"
             logger.error(error_msg)
             self.scan_error.emit(error_msg)
 
     def request_recalculate_columns(self, available_width: int, thumbnail_size: int):
-        """Żąda przeliczenia kolumn z debouncingiem."""
+        """Requests column recalculation with debouncing."""
         logger.debug(
             f"AssetGridModel: Request recalculate columns - "
             f"width: {available_width}, thumb_size: {thumbnail_size}"
@@ -128,7 +120,7 @@ class AssetGridModel(QObject):
         self._recalc_timer.start(100)  # 100ms delay
 
     def _perform_recalculate_columns(self):
-        """Wykonuje przeliczenie kolumn i emituje sygnał."""
+        """Performs column recalculation and emits the signal."""
         calculated_columns = self._calculate_columns_cached(
             self._last_available_width, self._last_thumbnail_size
         )
@@ -142,20 +134,20 @@ class AssetGridModel(QObject):
     def _calculate_columns_cached(
         self, available_width: int, thumbnail_size: int
     ) -> int:
-        """Oblicza optymalną liczbę kolumn dla STAŁYCH rozmiarów kafelków."""
-        # ZMIANA: STAŁA szerokość kafelka = miniatura + marginesy
-        tile_width = thumbnail_size + 16  # STAŁA szerokość kafelka!
+        """Calculates the optimal number of columns for FIXED tile sizes."""
+        # CHANGE: FIXED tile width = thumbnail + margins
+        tile_width = thumbnail_size + 16  # FIXED tile width!
 
-        # Marginesy layoutu
+        # Layout margins
         layout_margins = 16
 
-        # Spacing między kafelkami (8px)
+        # Spacing between tiles (8px)
         spacing = 8
 
-        # Dostępna szerokość po odjęciu marginesów
+        # Available width after subtracting margins
         effective_width = available_width - layout_margins
 
-        # Oblicz liczbę kolumn - kafelki mają STAŁĄ szerokość
+        # Calculate the number of columns - tiles have FIXED width
         if (tile_width + spacing) > 0:
             columns_calc = (effective_width + spacing) // (tile_width + spacing)
         else:
@@ -163,46 +155,22 @@ class AssetGridModel(QObject):
 
         calculated_columns = max(1, columns_calc)
 
-        # DODAJ: Logowanie dla debugowania
+        # ADD: Logging for debugging
         logger.debug(
-            f"Kalkulacja kolumn: width={available_width}, tile_width={tile_width}, "
-            f"columns={calculated_columns}"
+            "Column calculation: width=%d, tile_width=%d, columns=%d",
+            available_width,
+            tile_width,
+            calculated_columns,
         )
 
         return calculated_columns
 
 
-class FolderTreeModel(QObject):
-    """Model dla drzewa folderów - architektura M/V"""
 
-    folder_structure_changed = pyqtSignal(object)
-    root_folder_changed = pyqtSignal(str)
-
-    def __init__(self):
-        super().__init__()
-        self._tree_model = QStandardItemModel()
-        self._tree_model.setHorizontalHeaderLabels(["Folders"])
-        self._root_folder = ""
-        logger.debug("FolderTreeModel initialized")
-
-    def get_tree_model(self):
-        return self._tree_model
-
-    def set_root_folder(self, folder_path: str):
-        if self._root_folder != folder_path:
-            self._root_folder = folder_path
-            self._tree_model.clear()
-            self._tree_model.setHorizontalHeaderLabels(["Folders"])
-            self.root_folder_changed.emit(folder_path)
-            self.folder_structure_changed.emit(self._tree_model)
-            logger.debug(f"Root folder changed: {folder_path}")
-
-    def get_root_folder(self):
-        return self._root_folder
 
 
 class FolderSystemModel(QObject):
-    """Model dla systemu folderów w architekturze M/V"""
+    """Model for the folder system in M/V architecture"""
 
     folder_clicked = pyqtSignal(str)
     folder_expanded = pyqtSignal(str)
@@ -224,17 +192,18 @@ class FolderSystemModel(QObject):
     def set_root_folder(self, folder_path: str):
         if self._root_folder != folder_path:
             logger.debug(
-                f"FolderSystemModel set_root_folder - otrzymana ścieżka: {folder_path}"
+                "FolderSystemModel set_root_folder - otrzymana ścieżka: %s", folder_path
             )
             # Normalizuj ścieżkę root folder
             normalized_path = os.path.normpath(folder_path)
             logger.debug(
-                f"FolderSystemModel set_root_folder - znormalizowana ścieżka: {normalized_path}"
+                "FolderSystemModel set_root_folder - znormalizowana ścieżka: %s",
+                normalized_path,
             )
 
             self._root_folder = normalized_path
             self._load_folder_structure()
-            logger.debug(f"Root folder changed: {self._root_folder}")
+            logger.debug("Root folder changed: %s", folder_path)
 
     def get_root_folder(self):
         return self._root_folder

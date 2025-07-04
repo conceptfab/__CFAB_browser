@@ -3,6 +3,7 @@ ThumbnailCache - Zarządzanie buforowaniem miniatur w pamięci.
 """
 
 import logging
+import threading
 from collections import OrderedDict
 from typing import Optional
 
@@ -17,10 +18,13 @@ class ThumbnailCache:
     """
 
     _instance = None
+    _lock = threading.Lock()
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            cls._instance = super(ThumbnailCache, cls).__new__(cls)
+            with cls._lock:
+                if not cls._instance:
+                    cls._instance = super(ThumbnailCache, cls).__new__(cls)
         return cls._instance
 
     def __init__(self, max_size_mb: int = 200):
@@ -30,7 +34,7 @@ class ThumbnailCache:
         Args:
             max_size_mb (int): Maksymalny rozmiar cache w megabajtach.
         """
-        if not hasattr(self, '_initialized'):  # Zapobiega ponownej inicjalizacji
+        if not hasattr(self, "_initialized"):  # Zapobiega ponownej inicjalizacji
             self.max_size_bytes = max_size_mb * 1024 * 1024
             self.current_size_bytes = 0
             self.cache = OrderedDict()
@@ -75,7 +79,10 @@ class ThumbnailCache:
         # Dodaj nowy element
         self.cache[path] = pixmap
         self.current_size_bytes += pixmap_size
-        logger.debug(f"Dodano do cache: {path} ({pixmap_size / 1024:.1f} KB). Aktualny rozmiar cache: {self.current_size_bytes / (1024*1024):.1f} MB")
+        logger.debug(
+            f"Dodano do cache: {path} ({pixmap_size / 1024:.1f} KB)."
+            f" Aktualny rozmiar cache: {self.current_size_bytes / (1024*1024):.1f} MB"
+        )
 
     def _evict_oldest(self):
         """Usuwa najstarszy element z cache (LRU)."""
@@ -85,7 +92,10 @@ class ThumbnailCache:
         oldest_path, oldest_pixmap = self.cache.popitem(last=False)
         pixmap_size = oldest_pixmap.toImage().sizeInBytes()
         self.current_size_bytes -= pixmap_size
-        logger.debug(f"Usunięto z cache (LRU): {oldest_path}. Aktualny rozmiar cache: {self.current_size_bytes / (1024*1024):.1f} MB")
+        logger.debug(
+            f"Usunięto z cache (LRU): {oldest_path}."
+            f" Aktualny rozmiar cache: {self.current_size_bytes / (1024*1024):.1f} MB"
+        )
 
     def clear(self):
         """Czyści cały cache."""

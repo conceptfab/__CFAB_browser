@@ -3,84 +3,130 @@
    ============================================================================= */
 
 /* ===================== GŁÓWNE TŁA I TEKST ===================== */
+*:hover {
+    color: #717bbc !important;
+}
+
+* {
+    color: #a9b7c6 !important;
+}
+
 QMainWindow, QDialog, QWidget {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
+    background-color: #282935;
     font-family: 'Segoe UI', 'Arial', sans-serif;
     font-size: 10px;
 }
 
+/* ===================== AMV TAB - GŁÓWNA ZAKŁADKA ===================== */
+QWidget[objectName="amvTab"] {
+    background-color: #1e1e2e;
+    border: 1px solid #717bbc;
+    border-radius: 8px;
+    margin: 4px;
+    padding: 8px;
+    /* min-width: 1250px;
+    min-height: 600px; */
+}
+
+QWidget[objectName="amvTab"]:hover {
+    border-color: #a9b7c6;
+    background-color: #2a2a3a;
+}
+
 QLabel {
-    color: #a9b7c6;
     background-color: transparent;
     font-size: 10px;
 }
 
 /* ===================== PRZYCISKI ===================== */
 QPushButton {
-    background-color: #313335;
+    background-color: #282935;
     color: #a9b7c6;
-    border: 1px solid #3a3a3a;
-    border-radius: 2px;
-    padding: 4px 12px;
-    min-height: 24px;
-    max-height: 24px;
+    border: 1px solid #717bbc;
+    border-radius: 4px;
     font-size: 10px;
     font-weight: normal;
+    min-width: 35px;
+    max-width: 250px;
+    /* min-height: 18px; */
+    max-height: 18px;
+    padding: 2px 18px;
+    margin: 2px;
+
 }
 QPushButton:hover {
-    background-color: #3a3a3a;
-    border-color: #287bde;
+    background-color: #5b6397;
+    color: #000000;
+    border: 1px solid #a9b7c6;
 }
+
 QPushButton:pressed {
-    background-color: #214383;
-    border-color: #287bde;
+    background-color: #717bbc;
+    color: #000000;
+    border: 1px solid #717bbc;
 }
+
 QPushButton:disabled {
-    background-color: #2b2b2b;
+    background-color: #2c2e3c;
     color: #888888;
-    border-color: #3a3a3a;
+    border: 1px solid #3a3a3a;
 }
+
 QPushButton[action="primary"] {
     background-color: #287bde;
-    color: #ffffff;
     border: none;
     font-weight: bold;
 }
 QPushButton[action="primary"]:hover {
-    background-color: #214383;
+    background-color: #717bbc;
+    color: #717bbc;
 }
 QPushButton[action="primary"]:pressed {
-    background-color: #214383;
+    background-color: #717bbc;
 }
 QPushButton[action="success"] {
     background-color: #a5c261;
-    color: #2b2b2b;
     border: none;
     font-weight: bold;
 }
 QPushButton[action="warning"] {
     background-color: #cc7832;
-    color: #2b2b2b;
     border: none;
     font-weight: bold;
+}
+QPushButton[class="favorite"] {
+    background-color: #717bbc;
+    color: #ffffff;
+    border: 1px solid #313335;
+    border-radius: 6px;
+    font-weight: bold;
+    min-width: 100px;
+    min-height: 36px;
+    max-width: 300px;
+    max-height: 60px;
+    margin: 6px 8px;
+    padding: 8px 20px;
+}
+QPushButton[class="favorite"]:hover {
+    background-color: #a9b7c6;
+    color: #313335;
+    border: 1px solid #717bbc;
 }
 
 /* ===================== POLA EDYCJI, LISTY, TABELKI ===================== */
 QLineEdit, QTextEdit, QTableWidget, QListWidget, QComboBox, QSpinBox {
-    background-color: #313335;
-    color: #a9b7c6;
-    border: 1px solid #3a3a3a;
-    border-radius: 2px;
+    background-color: #2c2e3c;
+    border: 1px solid #3B3D48;
+    border-radius: 6px;
     padding: 2px;
-    selection-background-color: #214383;
+    selection-background-color: #717bbc;
     font-size: 10px;
 }
 QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QSpinBox:focus {
-    border-color: #287bde;
+    border: 1px solid #3B3D48;
 }
 QLineEdit:disabled, QTextEdit:disabled, QComboBox:disabled, QSpinBox:disabled {
-    background-color: #2b2b2b;
+    background-color: #2c2e3c;
     color: #888888;
 }
 QListWidget::item {
@@ -88,19 +134,19 @@ QListWidget::item {
     border: none;
 }
 QListWidget::item:selected {
-    background-color: #214383;
+    background-color: #717bbc;
     color: #ffffff;
 }
 QListWidget::item:hover {
     background-color: #3a3a3a;
+    color: #717bbc;
 }
 QTableWidget::item:selected {
-    background-color: #214383;
+    background-color: #717bbc;
     color: #ffffff;
 }
 QHeaderView::section {
     background-color: #313335;
-    color: #a9b7c6;
     padding: 2px;
     border: 1px solid #3a3a3a;
     font-weight: bold;
@@ -111,49 +157,49 @@ QTabWidget {
     border: none;
 }
 QTabWidget::pane {
-    border: 1px solid #3a3a3a;
-    background-color: #313335;
-    color: #a9b7c6;
+    background-color: #282935;
+    /* border: 1px solid #ff0000; */
+    border-top: 1px solid #3B3D48;
     top: -1px;
     margin: 0px;
     padding: 2px;
 }
 QTabBar::tab {
-    background-color: #2b2b2b;
-    color: #a9b7c6;
+    background-color: #2c2e3c;
     padding: 5px 10px;
     margin-right: 2px;
     /* border-top-left-radius: 2px; */
     /* border-top-right-radius: 2px; */
-    border: 1px solid #3a3a3a;
+    border: 1px solid #3B3D48;
     min-width: 80px;
     max-height: 25px;
     font-size: 10px;
 }
 QTabBar::tab:selected {
-    background-color: #313335;
-    border-bottom-color: #313335;
+    background-color: #282935;
+    /* border-bottom-color: #282935; */
     font-weight: bold;
 }
 QTabBar::tab:hover {
-    background-color: #3a3a3a;
+    background-color: #717bbc;
+    color: #a9b7c6;
 }
 QTabBar::tab:disabled {
     color: #888888;
     background-color: #3a3a3a;
+    border: none;
 }
 QTabWidget::tab-bar {
     alignment: left;
-    background: #2b2b2b;
+    background: #2c2e3c;
 }
 QTabWidget::tab-bar::tab:selected {
     margin-bottom: -1px;
-    border-bottom: 2px solid #287bde;
+    /* border-bottom: 2px solid #ffffff; */
 }
 QGroupBox {
     background-color: #313335;
-    color: #a9b7c6;
-    border: 1px solid #3a3a3a;
+    border: 1px solid #ffffff;
     border-radius: 2px;
     margin-top: 14px;
     padding-top: 14px;
@@ -170,40 +216,89 @@ QGroupBox::title {
 
 /* ===================== DRZEWO FOLDERÓW ===================== */
 QTreeView, #cfabFolderTree, .cfab-folder-tree QTreeView {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
-    border: none;
+    show-decoration-selected: 1;
     outline: none;
+    border: none !important;
+    background: #282935;
     font-size: 11px;
 }
 QTreeView::item {
-    padding: 2px;
-    border: none;
+    border: none !important;
+    border-bottom: none !important;
+    background: none;
 }
 QTreeView::item:hover {
-    background-color: #1C1E2A;
+    background-color: #282935;
+    color: #a9b7c6;
 }
 QTreeView::item:selected, QTreeView::item[dropTarget="true"] {
-    background-color: #214383;
-    color: #ffffff;
+    background: none;
+    background-color: transparent;
+    color: #a9b7c6;
+    font-weight: bold;
 }
 QTreeView::item[dropTarget="true"] {
-    border: 2px solid #287bde;
+    color: #717bbc;
 }
 QTreeView::branch {
-    background-color: #1C1E2A;
+    border: none !important;
+    background: none;
+    min-width: 18px;
+    min-height: 18px;
+    max-width: 18px;
+    max-height: 18px;
+    margin: 0;
+    padding: 0;
+    qproperty-iconSize: 18px 18px;
+    qproperty-alignment: AlignCenter;
+    /* opacity: 0.8; */
+}
+/* QTreeView::branch:hover {
+    opacity: 1.0;
+} */
+
+QTreeView::row {
+    border: none !important;
+    border-bottom: none !important;
+    background: none;
+}
+
+QTreeView::item:focus {
+    outline: none;
+    border: none;
+    background: none;
+}
+QTreeView:focus {
+    outline: none;
+    border: none;
+}
+QTreeView::item:!selected {
+    border: none;
+    border-bottom: none;
+    background: none;
+}
+QTreeView::item:active {
+    outline: none;
+    border: none;
+    background: none;
+}
+QTreeView::item:has-children {
+    border: none;
+    border-bottom: none;
+    background: none;
 }
 
 /* ===================== KAFELKI ASSETÓW ===================== */
 TileBase, .AssetTileView {
-    background-color: rgba(40, 120, 222, 0.10);
-    border: 1px solid #202230;
+    background-color: #2f313e;
+    border: 1px solid #616161;
     border-radius: 6px;
-    margin: 0px;
+    margin: 0px;;
 }
 TileBase:hover, .AssetTileView:hover {
     background-color: rgba(40, 120, 222, 0.10);
-    border-color: #287bde;
+    border-color: #717bbc;
+    color: #717bbc;
 }
 
 /* ===================== KAFELKI ASSETÓW - MINIATURKA ===================== */
@@ -230,7 +325,7 @@ TileBase:hover, .AssetTileView:hover {
     background: transparent;
     margin: 0px;
     padding: 0px;
-    border: none;
+    /* border: 1px solid #7882cd; */
 }
 
 /* ===================== KAFELKI ASSETÓW - DOLNY PAS ===================== */
@@ -243,17 +338,62 @@ TileBase:hover, .AssetTileView:hover {
 }
 
 /* ===================== KAFELKI ASSETÓW - GWIAZDKI ===================== */
-/* Styluje gwiazdki oceny (1-5) w kafelku */
+/* Styluje gwiazdki oceny (1-5) w kafelku - identyczne z panelem kontrolnym */
 #AssetTileStar_1, #AssetTileStar_2, #AssetTileStar_3, #AssetTileStar_4, #AssetTileStar_5 {
+    spacing: 0px;
+    color: #848484;
+    font-size: 10.8px;
+    min-width: 12px;
+    min-height: 12px;
     background: transparent;
-    color: #cc7832;
-    font-size: 14px;
     margin: 0px;
     padding: 0px;
     border: none;
 }
+#AssetTileStar_1::indicator, #AssetTileStar_2::indicator, #AssetTileStar_3::indicator, #AssetTileStar_4::indicator, #AssetTileStar_5::indicator {
+    width: 0px;
+    height: 0px;
+    border: none;
+    background: transparent;
+}
+#AssetTileStar_1:checked, #AssetTileStar_2:checked, #AssetTileStar_3:checked, #AssetTileStar_4:checked, #AssetTileStar_5:checked {
+    color: #717bbc;
+    font-weight: bold;
+}
 #AssetTileStar_1:hover, #AssetTileStar_2:hover, #AssetTileStar_3:hover, #AssetTileStar_4:hover, #AssetTileStar_5:hover {
-    color: #ffcc66;
+    color: #717bbc;
+}
+
+/* ===================== PANEL KONTROLNY - GWIAZDKI ===================== */
+/* Styluje gwiazdki w panelu kontrolnym - identyczne jak w kafelkach */
+#ControlPanelStar_1, #ControlPanelStar_2, #ControlPanelStar_3, #ControlPanelStar_4, #ControlPanelStar_5 {
+    spacing: 0px;
+    color: #848484;
+    font-size: 10.8px;
+    min-width: 12px;
+    min-height: 12px;
+    max-width: 12px;
+    max-height: 12px;
+    background: transparent;
+    margin: 0px;
+    padding: 0px;
+    border: none;
+}
+
+#ControlPanelStar_1::indicator, #ControlPanelStar_2::indicator, #ControlPanelStar_3::indicator, #ControlPanelStar_4::indicator, #ControlPanelStar_5::indicator {
+    width: 0px;
+    height: 0px;
+    border: none;
+    background: transparent;
+}
+
+#ControlPanelStar_1:checked, #ControlPanelStar_2:checked, #ControlPanelStar_3:checked, #ControlPanelStar_4:checked, #ControlPanelStar_5:checked {
+    color: #717bbc;
+    font-weight: bold;
+}
+
+#ControlPanelStar_1:hover, #ControlPanelStar_2:hover, #ControlPanelStar_3:hover, #ControlPanelStar_4:hover, #ControlPanelStar_5:hover {
+    color: #717bbc;
 }
 
 QLabel[class="thumbnail-container"] {
@@ -268,32 +408,33 @@ QLabel[class="thumbnail-container"] {
 #AssetTileNameLabel {
     background: transparent;
     color: #a9b7c6;
-    font-weight: bold;
+    font-weight: normal;
     font-size: 12px;
-    padding: 2px 8px;
-    border-bottom: 1px solid #202230;
+    padding: 0px;
+    /* border-bottom: 1px solid #202230; */
 }
 #AssetTileNameLabel:hover {
     font-weight: bold;
-    color: #ffffff;
+    color: #717bbc;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z GWIAZDKAMI ===================== */
 /* Styluje linię z gwiazdkami (oceną) w kafelku assetu */
 #AssetTileStarsRow {
     background: transparent;
-    padding: 2px 8px;
+    padding: 0px;
+    margin: 0px;
     min-height: 24px;
-    border-top: 1px solid #202230;
+    /* border-top: 1px solid #202230; */
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z ROZMIARAMI ===================== */
 /* Styluje linię z rozmiarem pliku (np. 15.4 MB) */
 #AssetTileSizeLabel {
     background: transparent;
-    color: #888888;
+    color: #a9b7c6;
     font-size: 11px;
-    padding: 0 8px;
+    padding: 0px;
     text-align: right;
 }
 
@@ -301,9 +442,10 @@ QLabel[class="thumbnail-container"] {
 /* Styluje numer kafelka (np. 2/2) */
 #AssetTileNumberLabel {
     background: transparent;
-    color: #888888;
+    color: #a9b7c6;
     font-size: 11px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z CHECKBOXEM ===================== */
@@ -312,13 +454,15 @@ QLabel[class="thumbnail-container"] {
     margin: 0px;
     padding: 0px;
     border: none;
+    spacing: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z IKONĄ ===================== */
 /* Styluje ikonę typu pliku (np. ikona szachownicy) */
 #AssetTileIconLabel {
     background: transparent;
-    padding: 0 4px;
+    padding: 0px;
+    margin: 0px;
     min-width: 18px;
     min-height: 18px;
 }
@@ -327,18 +471,20 @@ QLabel[class="thumbnail-container"] {
 /* Styluje liczbę obrazów (np. 2/2) */
 #AssetTileImageCountLabel {
     background: transparent;
-    color: #888888;
+    color: #a9b7c6;
     font-size: 11px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z DATĄ ===================== */
 /* Styluje datę dodania/edycji pliku */
 #AssetTileDateLabel {
     background: transparent;
-    color: #888888;
+    color: #a9b7c6;
     font-size: 10px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z AUTOREM ===================== */
@@ -347,37 +493,52 @@ QLabel[class="thumbnail-container"] {
     background: transparent;
     color: #a5c261;
     font-size: 10px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z FORMATEM ===================== */
 /* Styluje informację o formacie pliku (np. .zip, .jpg) */
 #AssetTileFormatLabel {
     background: transparent;
-    color: #9876aa;
+    color: #a9b7c6;
     font-size: 10px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
 
 /* ===================== KAFELKI ASSETÓW - LINIA Z TAGAMI ===================== */
 /* Styluje tagi assetu (np. kategorie, słowa kluczowe) */
 #AssetTileTagsLabel {
     background: transparent;
-    color: #287bde;
+    color: #717bbc;
     font-size: 10px;
-    padding: 0 8px;
+    padding: 0px;
+    margin: 0px;
 }
+
+/* ===================== KAFELKI ASSETÓW - GŁÓWNY KONTENER ===================== */
+/* Styluje główny kontener zawierający wszystkie elementy kafelka */
+#AssetTileMainContent {
+    background: transparent;
+    /* border: 1px solid #3a3a3a;
+    border-radius: 4px; */
+    padding: 0px;
+    margin: 0px;
+}
+/* #AssetTileMainContent:hover {
+    background: rgba(40, 120, 222, 0.15);
+    border-color: #287bde;
+} */
 
 /* ===================== KONSOLA I POSTĘP ===================== */
 #ConsoleHeaderLabel, #ProgressHeaderLabel {
     font-weight: bold;
-    color: #a9b7c6;
     font-size: 11px;
     padding-bottom: 4px;
 }
 #ConsoleOutput {
     background-color: #313335;
-    color: #a9b7c6;
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 10px;
 }
@@ -389,35 +550,33 @@ QLabel[class="thumbnail-container"] {
     font-style: italic;
 }
 QProgressBar {
-    border: 1px solid #3a3a3a;
     background-color: #313335;
+    border: 1px solid #717bbc;
+    color: #000000;
     text-align: center;
-    color: #a9b7c6;
     border-radius: 6px;
-    /* margin: 4px;     */
-    min-width: 200px;
-    max-width: 200px;
 }
 QProgressBar::chunk {
-    background-color: #287bde;
+    background-color: #717bbc;
     border-radius: 1px;
 }
 
 /* ===================== PASKI PRZEWIJANIA ===================== */
 QScrollBar:vertical {
     border: none;
-    background: #2b2b2b;
+    background: #2c2e3c;
     width: 12px;
     margin: 12px 0 12px 0;
     border-radius: 6px;
 }
 QScrollBar::handle:vertical {
-    background: #3a3a3a;
+    background: #717bbc;
+    border: 1px solid #717bbc;
     min-height: 20px;
     border-radius: 6px;
 }
 QScrollBar::handle:vertical:hover {
-    background: #287bde;
+    background: #717bbc;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     border: none;
@@ -429,21 +588,22 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
 }
 QScrollBar:horizontal {
     border: none;
-    background: #2b2b2b;
+    background: #2c2e3c;
     height: 12px;
     margin: 0 12px 0 12px;
     border-radius: 6px;
 }
 QScrollBar::handle:horizontal {
-    background-color: #287bde;
-    border: 1px solid #287bde;
-    width: 12px;
-    height: 12px;
+    background-color: #717bbc;
+    border: 1px solid #717bbc;
+    width: 11px;
+    height: 11px;
     margin: -5px 0;
-    border-radius: 6px;
+    border-radius: 50%;
 }
 QScrollBar::handle:horizontal:hover {
-    background-color: #214383;
+    background-color: #a9b7c6;
+    border: 2px solid #717bbc;
 }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     border: none;
@@ -456,13 +616,12 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
 
 /* ===================== MENU, STATUSBAR, SEPARATORY ===================== */
 QMenu {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
-    border: 1px solid #3a3a3a;
+    background-color: #282935;
+    border: 1px solid #3b3d48;
     padding: 2px;
 }
 QMenu::item:selected {
-    background-color: #214383;
+    background-color: #717bbc;
 }
 QMenu::separator {
     height: 1px;
@@ -470,9 +629,8 @@ QMenu::separator {
     margin: 2px 0px;
 }
 QMenuBar {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
-    border-bottom: 1px solid #3a3a3a;
+    background-color: #282935;
+    /* border-bottom: 1px solid #3a3a3a; */
 }
 QMenuBar::item {
     background: transparent;
@@ -482,37 +640,70 @@ QMenuBar::item:selected {
     background-color: #3a3a3a;
 }
 QMenuBar::item:pressed {
-    background-color: #214383;
+    background-color: #717bbc;
 }
 QStatusBar {
-    background-color: #1C1E2A;
-    color: #a9b7c6;
-    border-top: 1px solid #3a3a3a;
+    /* max-height: 32px; */
+    background-color: #24252f;
+    /* border-top: 1px solid #3a3a3a; */
 }
 QStatusBar::item {
     border: none;
 }
 QFrame[frameShape="HLine"] {
     border: none;
-    border-top: 1px solid #3a3a3a;
+    /* border-top: 1px solid #3a3a3a; */
 }
 QSlider::groove:horizontal {
-    border: 1px solid #3a3a3a;
-    height: 4px;
-    background: #3a3a3a;
+    border: 1px solid #717bbc;
+    height: 1px;
+    background: #313335;
     margin: 2px 0;
-    border-radius: 2px;
+    border-radius: 3px;
 }
+
 QSlider::handle:horizontal {
-    background-color: #287bde;
-    border: 1px solid #287bde;
-    width: 12px;
-    height: 12px;
-    margin: -5px 0;
-    border-radius: 6px;
+    background-color: #717bbc;
+    border: none;
+    width: 14px;
+    height: 14px;
+    margin: -6px 0;
+    border-radius: 7px;
+    outline: none;
 }
+
 QSlider::handle:horizontal:hover {
-    background-color: #214383;
+    background-color: #a9b7c6;
+    border: none;
+    width: 14px;
+    height: 14px;
+    margin: -6px 0;
+    border-radius: 7px;
+    outline: none;
+}
+
+QSlider::sub-page:horizontal {
+    background: #717bbc;
+    border-radius: 3px;
+}
+
+QSlider::add-page:horizontal {
+    background: #313335;
+    border-radius: 3px;
+}
+
+QSlider:disabled {
+    background: #22232a;
+}
+
+QSlider::handle:horizontal:disabled {
+    background: #444555;
+    border: none;
+    width: 14px;
+    height: 14px;
+    margin: -6px 0;
+    border-radius: 7px;
+    outline: none;
 }
 
 /* ===================== CHECKBOXY, RADIO ===================== */
@@ -522,18 +713,18 @@ QCheckBox {
     spacing: 4px;
 }
 QCheckBox::indicator {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #3a3a3a;
-    border-radius: 2px;
+    width: 12px;
+    height: 12px;
+    border: 1px solid #717bbc;
+    border-radius: 6px;
     background-color: #313335;
 }
 QCheckBox::indicator:checked {
-    background-color: #287bde;
-    border-color: #287bde;
+    background-color: #717bbc;
+    border-color: #717bbc;
 }
 QCheckBox::indicator:hover {
-    border-color: #287bde;
+    color: #717bbc;
 }
 QRadioButton {
     color: #a9b7c6;
@@ -549,14 +740,14 @@ QRadioButton::indicator {
 }
 QRadioButton::indicator:checked {
     background-color: #287bde;
-    border-color: #287bde;
+    border-color: #717bbc;
 }
 QRadioButton::indicator:hover {
-    border-color: #287bde;
+    color: #717bbc;
 }
 QCheckBox.star {
     spacing: 0px;
-    color: #9876aa;
+    color: #848484;
     font-size: 10.8px;
     min-width: 12px;
     min-height: 12px;
@@ -568,17 +759,17 @@ QCheckBox.star::indicator {
     background: transparent;
 }
 QCheckBox.star:checked {
-    color: #ffef28;
+    color: #717bbc;
     font-weight: bold;
 }
 QCheckBox.star:hover {
-    color: #cc7832;
+    color: #717bbc;
 }
 
 /* ===================== KLASY CSS I ROZMIARY ===================== */
-QLabel[class="header"] { font-weight: bold; font-size: 11px; color: #ffffff; padding-bottom: 4px; }
-QLabel[class="info"] { color: #a9b7c6; font-style: italic; font-size: 10px; }
-QLabel[class="warning"] { color: #cc7832; font-weight: bold; font-size: 10px; }
+QLabel[class="header"] { font-weight: bold; font-size: 11px; padding-bottom: 4px; }
+QLabel[class="info"] { font-style: italic; font-size: 10px; }
+QLabel[class="warning"] { font-weight: bold; font-size: 10px; }
 QLabel[class="mode-label"] { font-weight: bold; margin-bottom: 5px; }
 QLabel[class="text-label"] { font-weight: bold; margin-top: 10px; margin-bottom: 5px; }
 QLabel[class="dialog-header"] { font-weight: bold; font-size: 14px; }
@@ -586,12 +777,11 @@ QLabel[class="example-label"] { color: #888888; font-style: italic; font-size: 1
 QLabel[class="folder-label"] { font-style: italic; color: #888888; }
 QLabel[class="folder-label-normal"] { font-style: normal; color: #a9b7c6; }
 QPushButton[class="start-button"] { font-size: 14px; padding: 5px 10px; font-weight: bold; background-color: #287bde; color: #ffffff; border: none; border-radius: 4px; }
-QPushButton[class="start-button"]:hover { background-color: #214383; }
-QPushButton[class="start-button"]:pressed { background-color: #214383; }
+QPushButton[class="start-button"]:hover { background-color: #717bbc; }
+QPushButton[class="start-button"]:pressed { background-color: #717bbc; }
 QTextEdit[class="tool-text"] { font-size: 12px; padding: 5px; }
 
 /* ===================== SUWAK DO SKALOWANIA (QSlider) ===================== */
-/* Ustala szerokość suwaka do skalowania na 200px */
 QSlider[objectName="ScaleSlider"], #ScaleSlider {
     min-width: 200px;
     max-width: 200px;
@@ -600,3 +790,81 @@ QSlider[objectName="ScaleSlider"], #ScaleSlider {
 /* =============================================================================
    KONIEC ARKUSZA STYLÓW
    ============================================================================= */
+
+.AssetTileView:hover QLabel,
+.AssetTileView:hover QCheckBox,
+.AssetTileView:hover QLineEdit {
+    color: #717bbc;
+}
+
+#ControlPanelStarsRow {
+    background: transparent;
+    border: none;
+    min-width: 50px;
+max-width: 50px;
+    min-height: 18px;
+    max-height: 18px;
+    margin: 0 8px;
+    padding: 0 4px;
+    qproperty-alignment: AlignCenter;
+}
+
+/* ===================== PRZYCISK TOGGLE PANELU ===================== */
+#panelToggleButton {
+    border: none;
+    background: transparent;
+    padding: 0px;
+    margin: 0px;
+    opacity: 0.5;
+}
+
+#panelToggleButton:hover {
+    background: transparent;
+    opacity: 1.0;
+}
+
+#panelToggleButton:pressed {
+    background: transparent;
+    opacity: 1.0;
+}
+
+/* ===================== PRZYCISK KRAWĘDZI PANELU ===================== */
+#edgePanelButton {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px 0px 0px 4px;
+    color: #CCCCCC;
+    font-size: 12px;
+    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    max-width: 18px;
+    min-height: 18px;
+    max-height: 18px;
+    padding: 0px;
+    margin: 0px;
+    opacity: 0.8;
+}
+
+#edgePanelButton:hover {
+    background-color: transparent;
+    color: #717bbc;
+    opacity: 1.0;
+    transform: translateX(1px);
+}
+
+#edgePanelButton:pressed {
+    /* background-color: #007ACC; */
+    color: #FFFFFF;
+    /* border-color: #005A9E; */
+    opacity: 1.0;
+    transform: translateX(2px);
+}
+
+#edgePanelButton:disabled {
+    background-color: #1E1E1E;
+    color: #666666;
+    border-color: #3F3F46;
+    opacity: 0.5;
+}

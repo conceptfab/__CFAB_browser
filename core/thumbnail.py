@@ -3,10 +3,11 @@ from pathlib import Path
 from typing import Tuple
 
 from PIL import Image, ImageFile
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
 
 from core.json_utils import load_from_file
+
+# Usunięte nieużywane importy PyQt6
+
 
 # =============================================================================
 # WAŻNE: INSTRUKCJE DLA MODELI AI
@@ -32,8 +33,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 # Obsługiwane formaty obrazów
 SUPPORTED_FORMATS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tga"}
 
-# Alias dla skrócenia długich linii
-LANCZOS = Image.Resampling.LANCZOS
+# Usunięty niepotrzebny alias LANCZOS - używany tylko raz
 
 
 class ThumbnailGenerator:
@@ -122,7 +122,9 @@ class ThumbnailGenerator:
 
     def _resize_to_square(self, img: Image.Image, size: int) -> Image.Image:
         """
-        Przeskalowuje obraz do kwadratu z zachowaniem proporcji i centrowaniem.
+        Przeskalowuje obraz do kwadratu z przycinaniem zgodnie z wymaganiami:
+        - Wysokie obrazy: przycinane od góry (górny lewy róg)
+        - Szerokie obrazy: przycinane od lewej strony (górny lewy róg)
         """
         width, height = img.size
 
@@ -132,22 +134,22 @@ class ThumbnailGenerator:
         new_height = int(height * scale)
 
         # Przeskaluj
-        img = img.resize((new_width, new_height), LANCZOS)
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-        # Przyciąć do kwadratu, centrowanie
+        # Przyciąć do kwadratu zgodnie z wymaganiami
         if new_width > size:
-            # Szerokie obrazy - przycinaj od środka
-            left = (new_width - size) / 2
+            # Szerokie obrazy - przycinaj od lewej strony (górny lewy róg)
+            left = 0
             top = 0
-            right = (new_width + size) / 2
+            right = size
             bottom = size
             img = img.crop((left, top, right, bottom))
         elif new_height > size:
-            # Wysokie obrazy - przycinaj od środka
+            # Wysokie obrazy - przycinaj od góry (górny lewy róg)
             left = 0
-            top = (new_height - size) / 2
+            top = 0
             right = size
-            bottom = (new_height + size) / 2
+            bottom = size
             img = img.crop((left, top, right, bottom))
 
         return img

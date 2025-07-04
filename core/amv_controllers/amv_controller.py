@@ -1,6 +1,6 @@
 """
-AmvController - Kontroler dla zakładki AMV
-Łączy Model z Widokiem, obsługuje interakcje użytkownika i aktualizuje stan aplikacji.
+AmvController - Controller for the AMV tab
+Connects the Model with the View, handles user interactions, and updates the application state.
 """
 
 import logging
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class AmvController(QObject):
-    """Controller dla zakładki AMV - łącznik Model-View"""
+    """Controller for the AMV tab - Model-View connector"""
 
     # Sygnał emitowany przy zmianie folderu roboczego
     working_directory_changed = pyqtSignal(str)
@@ -63,20 +63,13 @@ class AmvController(QObject):
         self.file_operation_controller.setup()
 
         self._connect_signals()
-        logger.debug("AmvController initialized with dependency injection - ETAP 15")
+        logger.debug("AmvController initialized with dependency injection - STAGE 15")
 
     def _connect_signals(self):
         from .handlers.signal_connector import SignalConnector
 
         self.signal_connector = SignalConnector(self.model, self.view, self)
         self.signal_connector.connect_all()
-
-    def _on_folder_structure_changed(self, tree_model):
-        self.view.folder_tree_view.setModel(tree_model)
-        if tree_model.rowCount() > 0:
-            root_index = tree_model.index(0, 0)
-            self.view.folder_tree_view.expand(root_index)
-        logger.debug("Folder structure updated in view")
 
     def _on_splitter_state_changed(self, is_open: bool):
         sizes = self.model.get_splitter_sizes()
@@ -87,25 +80,25 @@ class AmvController(QObject):
 
     def _on_config_loaded(self, config: dict):
         self.model.set_config(config)
-        logger.debug("Konfiguracja załadowana pomyślnie")
+        logger.debug("Configuration loaded successfully")
 
     def _on_state_initialized(self):
         self.model.workspace_folders_model.load_folders()
-        logger.debug("Stan aplikacji zainicjalizowany")
+        logger.debug("Application state initialized")
 
     def _on_scan_started(self, folder_path: str):
         logger.info(f"Controller: Scan started for: {folder_path}")
-        self.view.update_gallery_placeholder("Skanowanie folderu...")
+        self.view.update_gallery_placeholder("Scanning folder...")
         self.model.control_panel_model.set_progress(0)
-        # Aktualizuj stan przycisków na początku skanowania
+        # Update button states at the start of the scan
         self.control_panel_controller.update_button_states()
 
     def _on_scan_progress(self, current: int, total: int, message: str):
-        """Obsługuje postęp skanowania."""
+        """Handles scan progress."""
         progress = int((current / total) * 100) if total > 0 else 0
         self.model.control_panel_model.set_progress(progress)
         logger.debug(f"Scan progress: {progress}% - {message}")
-        # Aktualizuj stan przycisków podczas skanowania
+        # Update button states during the scan
         self.control_panel_controller.update_button_states()
 
     def _on_scan_completed(self, assets: list, duration: float, operation_type: str):
@@ -132,7 +125,7 @@ class AmvController(QObject):
     def _on_scan_error(self, error_msg: str):
         logger.error(f"Controller: Scan error: {error_msg}")
         self.model.control_panel_model.set_progress(0)
-        self.view.update_gallery_placeholder(f"Błąd skanowania: {error_msg}")
+        self.view.update_gallery_placeholder(f"Scan error: {error_msg}")
         # Aktualizuj stan przycisków po błędzie skanowania
         self.control_panel_controller.update_button_states()
 
@@ -147,7 +140,7 @@ class AmvController(QObject):
                 if os.path.isdir(path):
                     # Otwórz folder w eksploratorze
                     open_path_in_explorer(path, self.view)
-                    logger.info(f"Otworzono folder w eksploratorze: {path}")
+                    logger.info(f"Opened folder in explorer: {path}")
                 else:
                     if action_type == "thumbnail":
                         from core.preview_window import PreviewWindow
@@ -161,13 +154,13 @@ class AmvController(QObject):
 
                         self.current_preview_window = PreviewWindow(path, self.view)
                         self.current_preview_window.show_window()
-                        logger.info(f"Otworzono podgląd w dedykowanym oknie: {path}")
+                        logger.info(f"Opened preview in dedicated window: {path}")
                     elif action_type == "filename":
                         open_file_in_default_app(path, self.view)
-                        logger.info(f"Otworzono plik w zewnętrznej aplikacji: {path}")
+                        logger.info(f"Opened file in external application: {path}")
             except Exception as e:
-                logger.error(f"Błąd podczas otwierania {path}: {e}")
-                QMessageBox.warning(self.view, "Błąd", f"Nie można otworzyć: {path}")
+                logger.error(f"Error while opening {path}: {e}")
+                QMessageBox.warning(self.view, "Error", f"Cannot open: {path}")
         else:
-            logger.warning(f"Ścieżka nie istnieje: {path}")
-            QMessageBox.warning(self.view, "Błąd", f"Ścieżka nie istnieje: {path}")
+            logger.warning(f"Path does not exist: {path}")
+            QMessageBox.warning(self.view, "Error", f"Path does not exist: {path}")

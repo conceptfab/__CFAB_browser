@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 class DragDropModel(QObject):
-    """Model dla operacji Drag and Drop"""
+    """Model for Drag and Drop operations"""
 
     drag_started = pyqtSignal(list)  # Lista ID assetów przeciąganych
     drop_possible = pyqtSignal(bool)  # Czy upuszczenie jest możliwe

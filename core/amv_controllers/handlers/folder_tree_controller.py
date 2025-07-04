@@ -44,7 +44,7 @@ class FolderTreeController(QObject):
                 self.on_folder_refresh_requested
             )
 
-        # Podpięcie sygnału currentChanged po ustawieniu modelu
+        # Connect the currentChanged signal after setting the model
         if hasattr(self.view.folder_tree_view, "_on_current_folder_changed"):
             sel_model = self.view.folder_tree_view.selectionModel()
             if sel_model:
@@ -52,7 +52,7 @@ class FolderTreeController(QObject):
                     self.view.folder_tree_view._on_current_folder_changed
                 )
 
-        logger.debug("Folder system model connected to view - ETAP 6")
+        logger.debug("Folder system model connected to view - STAGE 6")
 
     def on_folder_structure_changed(self, tree_model):
         self.view.folder_tree_view.setModel(tree_model)
@@ -66,9 +66,9 @@ class FolderTreeController(QObject):
         self.model.asset_grid_model.set_current_folder(folder_path)
         self.model.asset_grid_model.scan_folder(folder_path)
         self.controller.control_panel_controller.update_button_states()
-        logger.info(f"Emituję sygnał working_directory_changed: {folder_path}")
+        logger.info(f"Emitting working_directory_changed signal: {folder_path}")
         self.controller.working_directory_changed.emit(folder_path)
-        logger.info("Sygnał working_directory_changed został wyemitowany")
+        logger.info("working_directory_changed signal was emitted")
 
     def on_workspace_folder_clicked(self, folder_path: str):
         logger.info("Workspace folder clicked: %s", folder_path)
@@ -98,37 +98,36 @@ class FolderTreeController(QObject):
             self.model.folder_system_model.collapse_folder(folder_path)
 
     def on_collapse_tree_requested(self):
-        logger.info("Zwijanie wszystkich elementów drzewa folderów")
+        logger.info("Collapsing all items in the folder tree")
         try:
             self.view.folder_tree_view.collapseAll()
-            logger.debug("Drzewo folderów zostało zwinięte")
+            logger.debug("Folder tree has been collapsed")
         except Exception as e:
-            logger.error(f"Błąd podczas zwijania drzewa folderów: {e}")
+            logger.error(f"Error while collapsing the folder tree: {e}")
         self.controller.control_panel_controller.update_button_states()
 
     def on_expand_tree_requested(self):
-        logger.info("Rozwijanie wszystkich węzłów drzewa folderów")
+        logger.info("Expanding all nodes in the folder tree")
         try:
             self.view.folder_tree_view.expandAll()
-            logger.debug("Pomyślnie rozwinięto wszystkie węzły drzewa")
+            logger.debug("Successfully expanded all tree nodes")
         except Exception as e:
-            logger.error(f"Błąd podczas rozwijania drzewa: {e}")
+            logger.error(f"Error while expanding the tree: {e}")
         self.controller.control_panel_controller.update_button_states()
 
     def on_folder_refresh_requested(self, folder_path: str):
-        """Obsługuje żądanie odświeżenia folderu z menu kontekstowego."""
-        logger.info(f"Odświeżanie folderu: {folder_path}")
+        """Handles the folder refresh request from the context menu."""
+        logger.info(f"ODŚWIEŻANIE FOLDERU: {folder_path}")
         try:
-            # Odśwież strukturę drzewa folderów
+            # Refresh the folder tree structure
             self.model.folder_system_model.refresh_folder(folder_path)
 
-            # Jeśli to aktualnie wybrany folder, odśwież też siatkę assetów
-            current_folder = self.model.asset_grid_model.get_current_folder()
-            if current_folder == folder_path:
-                self.model.asset_grid_model.scan_folder(folder_path)
-                self.controller.control_panel_controller.update_button_states()
-                logger.info(f"Odświeżono siatkę assetów dla folderu: {folder_path}")
+            # USTAW folder jako aktualny i odśwież assety
+            self.model.asset_grid_model.set_current_folder(folder_path)
+            self.model.asset_grid_model.scan_folder(folder_path)
+            self.controller.control_panel_controller.update_button_states()
+            logger.info(f"ODŚWIEŻONO FOLDER I ASSETY: {folder_path}")
 
-            logger.debug(f"Pomyślnie odświeżono folder: {folder_path}")
+            logger.debug(f"Successfully refreshed folder: {folder_path}")
         except Exception as e:
-            logger.error(f"Błąd podczas odświeżania folderu {folder_path}: {e}")
+            logger.error(f"Error while refreshing folder {folder_path}: {e}")

@@ -51,18 +51,24 @@ class PreviewGalleryView(QWidget):
         self.setLayout(main_layout)
 
     def _clear_gallery(self):
-        """Usuwa wszystkie widgety z galerii."""
-        while self.gallery_layout.count():
-            child = self.gallery_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+        """Usuwa wszystkie widgety z galerii w sposób zoptymalizowany."""
+        self.setUpdatesEnabled(False)
+        for i in reversed(range(self.gallery_layout.count())):
+            item = self.gallery_layout.itemAt(i)
+            widget = item.widget()
+            if widget is not None:
+                self.gallery_layout.removeWidget(widget)
+                widget.deleteLater()
+        self.setUpdatesEnabled(True)
 
     def set_previews(self, preview_paths: list[str]):
-        logger.info(f"PreviewGalleryView.set_previews() called with {len(preview_paths)} paths")
-        
+        logger.info(
+            f"PreviewGalleryView.set_previews() called with {len(preview_paths)} paths"
+        )
+
         self._current_preview_paths = preview_paths[:]
         self.selected_preview = None
-        
+
         self._clear_gallery()
 
         col = 0
@@ -97,7 +103,11 @@ class PreviewGalleryView(QWidget):
             # Uncheck all other previews
             for i in range(self.gallery_layout.count()):
                 tile = self.gallery_layout.itemAt(i).widget()
-                if isinstance(tile, PreviewTile) and tile.file_path != file_path and tile.is_checked():
+                if (
+                    isinstance(tile, PreviewTile)
+                    and tile.file_path != file_path
+                    and tile.is_checked()
+                ):
                     tile.set_checked(False)
             self.selected_preview = file_path
             self.preview_selected.emit(file_path)
@@ -124,21 +134,21 @@ class PreviewGalleryView(QWidget):
 
     def remove_preview_by_path(self, path_to_remove: str):
         logger.info(f"Removing preview from gallery: {path_to_remove}")
-        
+
         tile_to_remove = None
         for i in range(self.gallery_layout.count()):
             tile = self.gallery_layout.itemAt(i).widget()
             if isinstance(tile, PreviewTile) and tile.file_path == path_to_remove:
                 tile_to_remove = tile
                 break
-        
+
         if tile_to_remove:
             self.gallery_layout.removeWidget(tile_to_remove)
             tile_to_remove.deleteLater()
-            
+
             if path_to_remove in self._current_preview_paths:
                 self._current_preview_paths.remove(path_to_remove)
-            
+
             self._reorganize_tiles()
             logger.info(f"Successfully removed preview: {path_to_remove}")
         else:
@@ -151,16 +161,16 @@ class PreviewGalleryView(QWidget):
             child = self.gallery_layout.takeAt(0)
             if child.widget():
                 widgets.append(child.widget())
-        
+
         col = 0
         row = 0
         cols = self.get_columns_count()
-        
+
         for widget in widgets:
             self.gallery_layout.addWidget(widget, row, col)
             col += 1
             if col >= cols:
                 col = 0
                 row += 1
-        
+
         self.gallery_widget.update()

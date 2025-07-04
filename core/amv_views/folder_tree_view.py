@@ -6,7 +6,7 @@ Zawiera niestandardowy QTreeView z funkcjonalnością przeciągania assetów.
 import logging
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction, QIcon
+from PyQt6.QtGui import QAction, QBrush, QColor, QIcon
 from PyQt6.QtWidgets import QMenu, QTreeView
 
 from core.file_utils import open_path_in_explorer
@@ -393,24 +393,16 @@ class CustomFolderTreeView(QTreeView):
             logger.error("Source folder path is empty!")
 
     def _highlight_folder_at_position(self, pos):
-        """Podświetla folder pod podaną pozycją."""
+        """Podświetla folder pod podaną pozycją bez zmiany zaznaczenia roboczego."""
         try:
+            # Najpierw wyczyść poprzednie podświetlenie
+            self._clear_folder_highlight()
             index = self.indexAt(pos)
             if index.isValid():
-                # Wyczyść poprzednie podświetlenie
-                if self._highlighted_index and self._highlighted_index.isValid():
-                    # Usuń zaznaczenie z poprzedniego elementu
-                    self.selectionModel().clearSelection()
-
-                # Ustaw nowe podświetlenie
+                item = self.model().itemFromIndex(index)
+                if item:
+                    item.setForeground(QBrush(QColor("#717bbc")))
                 self._highlighted_index = index
-                # Zaznacz nowy element
-                self.setCurrentIndex(index)
-                self.selectionModel().select(
-                    index, self.selectionModel().SelectionFlag.Select
-                )
-
-                # Wymuś odświeżenie widoku
                 self.viewport().update()
                 logger.debug(f"Highlighted folder at position: {pos}")
             else:
@@ -419,17 +411,19 @@ class CustomFolderTreeView(QTreeView):
             logger.error(f"Error highlighting folder at position {pos}: {e}")
 
     def _clear_folder_highlight(self):
-        """Czyści podświetlenie folderu."""
+        """Czyści podświetlenie folderu docelowego."""
         try:
             if self._highlighted_index and self._highlighted_index.isValid():
-                # Usuń zaznaczenie
-                self.selectionModel().clearSelection()
+                item = self.model().itemFromIndex(self._highlighted_index)
+                if item:
+                    item.setForeground(
+                        QBrush(QColor("#a9b7c6"))
+                    )  # Przywróć domyślny kolor
+                self._highlighted_index = None
                 self.viewport().update()
                 logger.debug("Cleared folder highlight")
-            self._highlighted_index = None
         except Exception as e:
             logger.error(f"Error clearing folder highlight: {e}")
-            self._highlighted_index = None
 
     def _on_item_expanded(self, index):
         item = self.model().itemFromIndex(index)

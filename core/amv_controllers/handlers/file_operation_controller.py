@@ -1,6 +1,6 @@
 """
-FileOperationController - Kontroler zarządzający operacjami na plikach
-Odpowiedzialny za przenoszenie, usuwanie i obsługę drag & drop assetów.
+FileOperationController - Controller for managing file operations.
+Responsible for moving, deleting, and handling drag & drop of assets.
 """
 
 import logging
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class FileOperationController(QObject):
-    """Controller zarządzający operacjami na plikach"""
+    """Controller for managing file operations"""
 
     def __init__(self, model, view, controller):
         super().__init__()
@@ -23,39 +23,44 @@ class FileOperationController(QObject):
         self.controller = controller
 
     def setup(self):
-        """Inicjalizuje kontroler operacji na plikach"""
+        """Initializes the file operations controller"""
         logger.debug("File operation controller initialized")
 
-    def get_assets_by_ids(self, asset_ids: list) -> list:
-        """Pobiera pełne dane assetów na podstawie listy ID."""
+    def _get_assets_by_ids(self, asset_ids: list) -> list:
+        """Gets full asset data based on a list of IDs."""
         all_assets = self.model.asset_grid_model.get_assets()
         return [asset for asset in all_assets if asset.get("name") in asset_ids]
 
-    def on_move_selected_clicked(self):
-        """Obsługuje kliknięcie przycisku 'Przenieś zaznaczone'."""
+    def _validate_selection(self, operation_name: str) -> list:
+        """Wspólna walidacja zaznaczenia dla operacji"""
         selected_asset_ids = self.model.selection_model.get_selected_asset_ids()
         if not selected_asset_ids:
             QMessageBox.information(
                 self.view,
-                "Przenoszenie assetów",
-                "Brak zaznaczonych assetów do przeniesienia.",
+                operation_name,
+                f"No assets selected for {operation_name.lower()}.",
             )
-            return
+            return []
 
-        assets_to_move = self.get_assets_by_ids(selected_asset_ids)
-        logger.debug(f"assets_to_move: {[a.get('name') for a in assets_to_move]}")
-
-        if not assets_to_move:
+        assets_to_process = self._get_assets_by_ids(selected_asset_ids)
+        if not assets_to_process:
             QMessageBox.warning(
                 self.view,
-                "Przenoszenie assetów",
-                "Nie znaleziono pełnych danych dla zaznaczonych assetów.",
+                operation_name,
+                "Could not find full data for the selected assets.",
             )
-            return
+            return []
 
+        return assets_to_process
+
+    def on_move_selected_clicked(self):
+        """Uproszczona metoda z wykorzystaniem centralnej walidacji"""
+        assets_to_move = self._validate_selection("Moving Assets")
+        if not assets_to_move:
+            return
         target_folder = QFileDialog.getExistingDirectory(
             self.view,
-            "Wybierz folder docelowy",
+            "Select target folder",
             self.model.asset_grid_model.get_current_folder(),
         )
         if target_folder:
@@ -65,58 +70,41 @@ class FileOperationController(QObject):
                 target_folder,
             )
             self.model.control_panel_model.set_progress(0)  # Reset progress bar
-            self.view.update_gallery_placeholder("Przenoszenie assetów...")
+            self.view.update_gallery_placeholder("Moving assets...")
 
     def on_delete_selected_clicked(self):
-        """Obsługuje kliknięcie przycisku 'Usuń zaznaczone'."""
-        selected_asset_ids = self.model.selection_model.get_selected_asset_ids()
-        if not selected_asset_ids:
-            QMessageBox.information(
-                self.view,
-                "Usuwanie assetów",
-                "Brak zaznaczonych assetów do usunięcia.",
-            )
+        """Uproszczona metoda z wykorzystaniem centralnej walidacji"""
+        assets_to_delete = self._validate_selection("Deleting Assets")
+        if not assets_to_delete:
             return
-
         reply = QMessageBox.question(
             self.view,
-            "Potwierdzenie usunięcia",
+            "Confirm Deletion",
             (
-                f"Czy na pewno chcesz usunąć {len(selected_asset_ids)} "
-                "zaznaczonych assetów?\nTa operacja jest nieodwracalna!"
+                f"Are you sure you want to delete {len(assets_to_delete)} "
+                "selected assets?\nThis operation is irreversible!"
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
-
         if reply == QMessageBox.StandardButton.Yes:
-            assets_to_delete = self.get_assets_by_ids(selected_asset_ids)
-
-            if not assets_to_delete:
-                QMessageBox.warning(
-                    self.view,
-                    "Usuwanie assetów",
-                    "Nie znaleziono pełnych danych dla zaznaczonych assetów.",
-                )
-                return
-
             self.model.file_operations_model.delete_assets(
                 assets_to_delete,
                 self.model.asset_grid_model.get_current_folder(),
             )
             self.model.control_panel_model.set_progress(0)  # Reset progress bar
-            self.view.update_gallery_placeholder("Usuwanie assetów...")
+            self.view.update_gallery_placeholder("Deleting assets...")
 
     def on_file_operation_progress(self, current: int, total: int, message: str):
-        """Obsługuje postęp operacji na plikach"""
+        """Handles file operation progress"""
         progress = int((current / total) * 100) if total > 0 else 0
         self.model.control_panel_model.set_progress(progress)
         self.view.update_gallery_placeholder(message)
-        # Aktualizuj stan przycisków podczas operacji na plikach
+        # Update button states during file operations
         self.controller.control_panel_controller.update_button_states()
 
     def on_file_operation_completed(self, success_messages: list, error_messages: list):
-        """Obsługuje zakończenie operacji na plikach"""
+        """Handles file operation completion"""
         with measure_operation(
             "file_operation_controller.file_operation_completed",
             {
@@ -124,28 +112,28 @@ class FileOperationController(QObject):
                 "error_count": len(error_messages),
             },
         ):
-            # Wyłącz progress bar
+            # Disable progress bar
             self.model.control_panel_model.set_progress(0)
 
-            # Logowanie wyników operacji (bez wyskakujących okien)
+            # Log operation results (without pop-up windows)
             if success_messages and error_messages:
                 logger.info(
-                    f"Operacja zakończona częściowo - Pomyślnie: "
-                    f"{len(success_messages)}, Błędy: {len(error_messages)}"
+                    f"Operation completed partially - Success: "
+                    f"{len(success_messages)}, Errors: {len(error_messages)}"
                 )
             elif success_messages:
                 logger.info(
-                    f"Operacja zakończona pomyślnie - Przeniesiono: "
-                    f"{len(success_messages)} plików"
+                    f"Operation completed successfully - Moved: "
+                    f"{len(success_messages)} files"
                 )
             elif error_messages:
-                logger.error(f"Operacja zakończona z błędami: {error_messages}")
+                logger.error(f"Operation completed with errors: {error_messages}")
 
-            # Usuń przeniesione/usunięte assety z listy bez ponownego skanowania
+            # Remove moved/deleted assets from the list without rescanning
             if success_messages:
                 logger.debug(f"Success messages: {success_messages}")
 
-                # Usuń assety z modelu danych
+                # Remove assets from the data model
                 current_assets = self.model.asset_grid_model.get_assets()
                 logger.debug(f"Current assets count: {len(current_assets)}")
 
@@ -164,7 +152,7 @@ class FileOperationController(QObject):
                 logger.debug(f"Updated assets count: {len(updated_assets)}")
                 self.model.asset_grid_model._assets = updated_assets
 
-                # Usuń kafelki z widoku bezpośrednio, bez przebudowy całej galerii
+                # Remove tiles from the view directly, without rebuilding the entire gallery
                 asset_tiles = self.controller.asset_grid_controller.get_asset_tiles()
                 logger.debug(f"Active tiles count before removal: {len(asset_tiles)}")
                 for tile in asset_tiles:
@@ -174,7 +162,7 @@ class FileOperationController(QObject):
                     )
                 self.view.remove_asset_tiles(success_messages)
 
-                # Usuń również z listy asset_tiles kontrolera
+                # Also remove from the controller's asset_tiles list
                 updated_tiles = [
                     tile
                     for tile in asset_tiles
@@ -183,13 +171,13 @@ class FileOperationController(QObject):
                 self.controller.asset_grid_controller.asset_tiles = updated_tiles
                 logger.debug(f"Active tiles count after removal: {len(updated_tiles)}")
 
-                # Sprawdź czy po usunięciu assetów galeria jest pusta
+                # Check if the gallery is empty after removing assets
                 if not updated_assets:
                     self.view.update_gallery_placeholder(
-                        "Nie znaleziono assetów w tym folderze."
+                        "No assets found in this folder."
                     )
                 else:
-                    # Ukryj placeholder jeśli były assety
+                    # Hide placeholder if there were assets
                     self.view.update_gallery_placeholder("")
 
                 logger.debug(
@@ -197,10 +185,10 @@ class FileOperationController(QObject):
                     len(success_messages),
                 )
 
-            # Wyczyść zaznaczenie po operacji
+            # Clear selection after the operation
             self.model.selection_model.clear_selection()
 
-            # Aktualizuj stan przycisków po zakończeniu operacji
+            # Update button states after the operation is complete
             self.controller.control_panel_controller.update_button_states()
 
             logger.info(
@@ -210,36 +198,36 @@ class FileOperationController(QObject):
             )
 
     def on_file_operation_error(self, error_msg: str):
-        """Obsługuje błędy operacji na plikach"""
+        """Handles file operation errors"""
         self.model.control_panel_model.set_progress(0)
-        self.view.update_gallery_placeholder(f"Błąd operacji na plikach: {error_msg}")
-        # Aktualizuj stan przycisków po błędzie operacji na plikach
+        self.view.update_gallery_placeholder(f"File operation error: {error_msg}")
+        # Update button states after a file operation error
         self.controller.control_panel_controller.update_button_states()
 
     def on_drag_drop_started(self, asset_ids: list):
-        """Obsługuje rozpoczęcie operacji drag & drop"""
+        """Handles the start of a drag & drop operation"""
         logger.debug(
             "FileOperationController: Drag operation started for assets: %s", asset_ids
         )
-        # Tutaj można dodać wizualny feedback, np. zmianę kursora
-        # Aktualizuj stan przycisków po rozpoczęciu operacji drag & drop
+        # Visual feedback can be added here, e.g., changing the cursor
+        # Update button states after starting a drag & drop operation
         self.controller.control_panel_controller.update_button_states()
 
     def on_drag_drop_possible(self, possible: bool):
-        """Obsługuje sprawdzenie możliwości drop"""
+        """Handles checking if a drop is possible"""
         logger.debug(f"FileOperationController: Drop possible: {possible}")
-        # Tutaj można dodać wizualny feedback, np. podświetlenie celu
-        # Aktualizuj stan przycisków po sprawdzeniu możliwości drop
+        # Visual feedback can be added here, e.g., highlighting the target
+        # Update button states after checking if a drop is possible
         self.controller.control_panel_controller.update_button_states()
 
     def on_drag_drop_completed(self, target_path: str, asset_ids: list):
-        """Obsługuje zakończenie operacji drag & drop"""
+        """Handles the completion of a drag & drop operation"""
         logger.debug(
             "FileOperationController: Drop completed to %s for assets: %s",
             target_path,
             asset_ids,
         )
-        assets_to_move = self.get_assets_by_ids(asset_ids)
+        assets_to_move = self._get_assets_by_ids(asset_ids)
 
         if assets_to_move:
             current_folder = self.model.asset_grid_model.get_current_folder()
@@ -248,7 +236,7 @@ class FileOperationController(QObject):
                 current_folder,
                 target_path,
             )
-            # Usunięto placeholder aby wyeliminować migotanie galerii podczas drag & drop
+            # Removed placeholder to eliminate gallery flickering during drag & drop
         else:
             logger.warning(
                 "FileOperationController: No assets found for drag & drop operation."

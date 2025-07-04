@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class ConfigManagerMV(QObject):
-    """Model dla zarządzania konfiguracją w architekturze M/V"""
+    """Model for configuration management in M/V architecture"""
 
     config_loaded = pyqtSignal(dict)
     config_error = pyqtSignal(str)

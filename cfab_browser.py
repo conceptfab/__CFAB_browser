@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import QApplication, QSplashScreen
 # Import głównego okna
 from core.json_utils import load_from_file
 from core.main_window import MainWindow
+from core.thumbnail_cache import ThumbnailCache
 
 
 def setup_logger():
@@ -85,6 +86,10 @@ def main():
 
         # Ładowanie stylów
         load_styles(app, logger)
+
+        # Inicjalizacja cache miniatur po utworzeniu QApplication
+        global thumbnail_cache
+        thumbnail_cache = ThumbnailCache()
 
         logger.info("Creating MainWindow...")
         window = MainWindow()

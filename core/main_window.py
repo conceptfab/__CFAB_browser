@@ -1,14 +1,13 @@
 import logging
 import sys
 
-from PyQt6.QtGui import QAction, QCloseEvent, QIcon
+from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,
     QMenu,
     QMenuBar,
-    QMessageBox,
     QStatusBar,
     QTabWidget,
     QVBoxLayout,
@@ -42,7 +41,7 @@ class MainWindow(QMainWindow):
         self._setup_logger()
 
         self.setWindowTitle("CFAB Browser")
-        self.resize(800, 600)
+        self.resize(1400, 600)
         self.setWindowIcon(QIcon("core/resources/img/icon.png"))
 
         try:
@@ -121,7 +120,7 @@ class MainWindow(QMainWindow):
             # Sprawdź czy poziom logowania jest poprawny
             if not hasattr(logging, logger_level):
                 logger_level = "INFO"
-                print(f"Warning: Invalid logger level in config. Using INFO.")
+                print("Warning: Invalid logger level in config. Using INFO.")
 
             # Konfiguracja loggera tylko jeśli nie został już skonfigurowany
             if not logging.getLogger().handlers:
@@ -186,6 +185,8 @@ class MainWindow(QMainWindow):
                         self.pairing_tab = tab_instance
                     elif isinstance(tab_instance, ToolsTab):
                         self.tools_tab = tab_instance
+                        # Wymuszenie dezaktywacji przycisków na starcie
+                        self.tools_tab.clear_working_directory()
 
                     self.tabs.addTab(tab_instance, tab_name)
                     successful_tabs += 1
@@ -304,24 +305,51 @@ class MainWindow(QMainWindow):
         self, selected_count=None, filtered_count=None, total_count=None
     ):
         """
-        Aktualizuje liczbę zaznaczonych assetów po prawej stronie paska statusu – liczy tylko te, które są widoczne w galerii (w danym folderze) i mają checkbox na TRUE.
+        Aktualizuje liczbę zaznaczonych assetów po prawej stronie paska statusu
         """
         try:
-            amv_controller = self.amv_tab.get_controller()
-            if amv_controller and hasattr(amv_controller, "asset_tiles"):
-                checked_count = len(
-                    [
-                        tile
-                        for tile in amv_controller.asset_tiles
-                        if hasattr(tile, "is_checked")
-                        and tile.is_checked()
+            if not hasattr(self, "amv_tab") or not self.amv_tab:
+                return
+            # Jeśli selected_count jest przekazany, użyj go
+            if selected_count is not None:
+                checked_count = selected_count
+                self.logger.debug(f"Using provided selected_count: {checked_count}")
+            else:
+                # Oblicz liczbę zaznaczonych na podstawie stanu checkboxów w kafelkach
+                amv_controller = self.amv_tab.get_controller()
+                if not amv_controller or not hasattr(
+                    amv_controller, "asset_grid_controller"
+                ):
+                    return
+                asset_grid_controller = amv_controller.asset_grid_controller
+                if not hasattr(asset_grid_controller, "asset_tiles"):
+                    return
+                checked_count = 0
+                for tile in asset_grid_controller.asset_tiles:
+                    if (
+                        hasattr(tile, "model")
+                        and tile.model
                         and not tile.model.is_special_folder
-                    ]
-                )
-                if hasattr(self, "selected_label") and self.selected_label:
-                    self.selected_label.setText(f"Zaznaczone: {checked_count}")
+                        and hasattr(tile, "is_checked")
+                        and tile.is_checked()
+                    ):
+                        checked_count += 1
+                self.logger.debug(f"Calculated checked_count: {checked_count}")
+            if hasattr(self, "selected_label") and self.selected_label:
+                # Ustaw tekst z dodatkową informacją o widocznych/wszystkich assetach
+                if filtered_count is not None and total_count is not None:
+                    status_text = f"Zaznaczone: {checked_count}"
+                    if filtered_count != total_count:
+                        status_text += f" (widoczne: {filtered_count}/{total_count})"
+                else:
+                    status_text = f"Zaznaczone: {checked_count}"
+                self.selected_label.setText(status_text)
+                self.logger.debug(f"Updated status bar: {status_text}")
         except Exception as e:
             self.logger.error(f"Error updating selection status: {e}")
+            # Fallback - ustaw domyślny tekst
+            if hasattr(self, "selected_label") and self.selected_label:
+                self.selected_label.setText("Zaznaczone: 0")
 
     def show_operation_status(self, operation_name, status="completed"):
         """
@@ -398,59 +426,59 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error setting up log interceptor: {e}")
 
     def _connect_signals(self):
-        """Connect signals between components."""
-        self._connect_amv_signals()
-        self._connect_status_signals()
-        self._connect_tools_signals()
+        """Uproszczona metoda łączenia sygnałów"""
+        signal_connections = [
+            (self._connect_amv_signals, "AMV"),
+            (self._connect_status_signals, "Status"),
+            (self._connect_tools_signals, "Tools"),
+        ]
+
+        for connect_method, component_name in signal_connections:
+            try:
+                connect_method()
+                self.logger.info(f"Successfully connected {component_name} signals.")
+            except Exception as e:
+                self.logger.error(f"Error connecting {component_name} signals: {e}")
 
     def _connect_amv_signals(self):
-        try:
-            amv_controller = self.amv_tab.get_controller()
-            if amv_controller:
-                amv_controller.working_directory_changed.connect(
-                    self.pairing_tab.on_working_directory_changed
-                )
-                amv_controller.working_directory_changed.connect(
-                    self.update_working_directory_status
-                )
-                if self.tools_tab:
-                    self.logger.info(
-                        "Łączę sygnał working_directory_changed z ToolsTab"
-                    )
-                    amv_controller.working_directory_changed.connect(
-                        self.tools_tab.set_working_directory
-                    )
-                    self.logger.info(
-                        "Sygnał working_directory_changed połączony z ToolsTab"
-                    )
-                if hasattr(amv_controller.model, "selection_model"):
-                    amv_controller.model.selection_model.selection_changed.connect(
-                        self._on_selection_changed
-                    )
-                if hasattr(amv_controller.model, "asset_grid_model"):
-                    amv_controller.model.asset_grid_model.assets_changed.connect(
-                        self._on_assets_changed
-                    )
-                self.logger.info("Successfully connected AMV signals.")
-            else:
-                self.logger.error("Could not get AMV controller to connect signals.")
-            self.update_selection_status(0, 0, 0)
-        except Exception as e:
-            self.logger.error(f"Error connecting AMV signals: {e}")
+        """Łączy sygnały AMV Tab"""
+        amv_controller = self.amv_tab.get_controller()
+        if not amv_controller:
+            self.logger.error("Could not get AMV controller to connect signals.")
+            return
+
+        amv_controller.working_directory_changed.connect(
+            self.pairing_tab.on_working_directory_changed
+        )
+        amv_controller.working_directory_changed.connect(
+            self.update_working_directory_status
+        )
+        if self.tools_tab:
+            self.logger.info("Łączę sygnał working_directory_changed z ToolsTab")
+            amv_controller.working_directory_changed.connect(
+                self.tools_tab.set_working_directory
+            )
+            self.logger.info("Sygnał working_directory_changed połączony z ToolsTab")
+        if hasattr(amv_controller.model, "selection_model"):
+            amv_controller.model.selection_model.selection_changed.connect(
+                self._on_selection_changed
+            )
+        if hasattr(amv_controller.model, "asset_grid_model"):
+            amv_controller.model.asset_grid_model.assets_changed.connect(
+                self._on_assets_changed
+            )
+        self.update_selection_status(0, 0, 0)
 
     def _connect_status_signals(self):
-        try:
-            # Przykładowe miejsce na sygnały statusu, do rozbudowy jeśli potrzeba
-            pass
-        except Exception as e:
-            self.logger.error(f"Error connecting status signals: {e}")
+        """Łączy sygnały Status Bar"""
+        # Przykładowe miejsce na sygnały statusu, do rozbudowy jeśli potrzeba
+        pass
 
     def _connect_tools_signals(self):
-        try:
-            if self.tools_tab:
-                self.logger.info("Successfully connected ToolsTab signals.")
-        except Exception as e:
-            self.logger.error(f"Error connecting tools signals: {e}")
+        """Łączy sygnały Tools Tab"""
+        if self.tools_tab:
+            # Sygnały Tools Tab są już połączone w konstruktorze
+            pass
 
     def _on_selection_changed(self, selected_asset_ids):
         """
@@ -458,45 +486,47 @@ class MainWindow(QMainWindow):
         """
         try:
             selected_count = len(selected_asset_ids)
-
+            self.logger.debug(f"Selection changed: {selected_count} items selected")
             # Pobierz całkowitą ilość assetów z modelu (bez specjalnych folderów)
             amv_controller = self.amv_tab.get_controller()
-            if amv_controller and hasattr(amv_controller.model, "asset_grid_model"):
-                assets = amv_controller.model.asset_grid_model.get_assets()
-                # Licz tylko prawdziwe assety (bez specjalnych folderów)
-                filtered_count = (
-                    len(
-                        [
-                            asset
-                            for asset in assets
-                            if asset.get("type") != "special_folder"
-                        ]
-                    )
-                    if assets
-                    else 0
-                )
-
+            if amv_controller and hasattr(amv_controller, "asset_grid_controller"):
+                asset_grid_controller = amv_controller.asset_grid_controller
+                # Licz aktualnie widoczne assety (bez specjalnych folderów)
+                visible_count = 0
+                if hasattr(asset_grid_controller, "asset_tiles"):
+                    for tile in asset_grid_controller.asset_tiles:
+                        if (
+                            hasattr(tile, "model")
+                            and tile.model
+                            and not tile.model.is_special_folder
+                        ):
+                            visible_count += 1
                 # Pobierz oryginalną listę assetów (bez filtrowania)
-                original_assets = getattr(amv_controller, "original_assets", [])
-                total_count = (
-                    len(
-                        [
-                            asset
-                            for asset in original_assets
-                            if asset.get("type") != "special_folder"
-                        ]
+                total_count = 0
+                if hasattr(asset_grid_controller, "get_original_assets"):
+                    original_assets = asset_grid_controller.get_original_assets()
+                    total_count = (
+                        len(
+                            [
+                                asset
+                                for asset in original_assets
+                                if asset.get("type") != "special_folder"
+                            ]
+                        )
+                        if original_assets
+                        else 0
                     )
-                    if original_assets
-                    else filtered_count
+                self.logger.debug(
+                    f"Visible assets: {visible_count}, Total assets: {total_count}"
                 )
             else:
-                filtered_count = 0
+                visible_count = 0
                 total_count = 0
-
-            self.update_selection_status(selected_count, filtered_count, total_count)
-
+            self.update_selection_status(selected_count, visible_count, total_count)
         except Exception as e:
             self.logger.error(f"Error handling selection change: {e}")
+            # Fallback - aktualizuj tylko z selected_count
+            self.update_selection_status(selected_count, 0, 0)
 
     def _on_assets_changed(self, assets):
         """
@@ -541,27 +571,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"Error handling assets change: {e}")
 
-    def get_config(self):
-        """
-        Zwraca aktualną konfigurację aplikacji
-
-        Returns:
-            dict: Konfiguracja aplikacji
-        """
-        return self.config.copy()  # Zwracamy kopię żeby uniknąć modyfikacji
-
-    def get_config_value(self, key, default=None):
-        """
-        Zwraca konkretną wartość z konfiguracji
-
-        Args:
-            key (str): Klucz konfiguracji
-            default: Wartość domyślna jeśli klucz nie istnieje
-
-        Returns:
-            Wartość konfiguracji lub default
-        """
-        return self.config.get(key, default)
+    # Usunięte nieużywane metody get_config() i get_config_value()
 
     def closeEvent(self, event):
         """
