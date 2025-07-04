@@ -81,8 +81,7 @@ class FolderTreeController(QObject):
         model = self.view.folder_tree_view.model()
         item = model.itemFromIndex(index)
         if item:
-            folder_path = item.data(Qt.ItemDataRole.UserRole)
-            self.model.folder_system_model.on_folder_clicked(folder_path)
+            pass  # folder_path = item.data(Qt.ItemDataRole.UserRole)  # Usunięto nieużywaną zmienną
 
     def on_tree_item_expanded(self, index):
         model = self.view.folder_tree_view.model()

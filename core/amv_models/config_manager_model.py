@@ -1,6 +1,6 @@
+import json
 import logging
 import os
-import sys
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
@@ -82,3 +82,14 @@ class ConfigManagerMV(QObject):
             "work_folder8": "",
             "work_folder9": "",
         }
+
+    def save_config(self, config):
+        """Zapisuje konfigurację do pliku config.json"""
+        try:
+            with open(self._config_path, "w", encoding="utf-8") as f:
+                json.dump(config, f, ensure_ascii=False, indent=4)
+            self._config_cache = config
+            self._config_timestamp = os.path.getmtime(self._config_path)
+            logger.info("Konfiguracja została zapisana do pliku.")
+        except Exception as e:
+            logger.error(f"Błąd zapisu konfiguracji: {e}")
