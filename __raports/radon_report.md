@@ -1,6 +1,6 @@
 # 📊 Raport Radon (Złożoność)
 
-**Data generowania:** 2025-07-05 01:19:09
+**Data generowania:** 2025-07-05 01:27:43
 
 ---
 
@@ -40,8 +40,9 @@ core\base_widgets.py
     M 118:4 PanelButtonBase.__init__ - A
     M 122:4 PanelButtonBase._apply_panel_button_styles - A
 core\file_utils.py
-    F 16:0 open_path_in_explorer - A
-    F 56:0 open_file_in_default_app - A
+    F 35:0 open_path_in_explorer - C
+    F 114:0 open_file_in_default_app - C
+    F 16:0 _is_command_available - A
 core\json_utils.py
     F 75:0 load_from_file - B
     F 33:0 loads - A
@@ -69,19 +70,19 @@ core\main_window.py
     M 477:4 MainWindow._connect_tools_signals - A
     M 472:4 MainWindow._connect_status_signals - A
 core\pairing_tab.py
-    M 287:4 PairingTab._update_button_states - C
-    M 319:4 PairingTab._on_create_asset_button_clicked - B
+    M 300:4 PairingTab._update_button_states - C
+    M 239:4 PairingTab._on_archive_clicked - B
+    M 332:4 PairingTab._on_create_asset_button_clicked - B
     M 177:4 PairingTab.load_data - B
     M 225:4 PairingTab._on_archive_checked - B
-    M 239:4 PairingTab._on_archive_clicked - B
     C 86:0 PairingTab - A
-    M 405:4 PairingTab._on_rebuild_assets_clicked - A
-    M 271:4 PairingTab._remove_paired_items_from_ui - A
-    M 262:4 PairingTab._on_preview_clicked - A
-    M 361:4 PairingTab._on_delete_unpaired_images_clicked - A
-    M 383:4 PairingTab._on_delete_unpaired_archives_clicked - A
+    M 418:4 PairingTab._on_rebuild_assets_clicked - A
+    M 284:4 PairingTab._remove_paired_items_from_ui - A
+    M 275:4 PairingTab._on_preview_clicked - A
+    M 374:4 PairingTab._on_delete_unpaired_images_clicked - A
+    M 396:4 PairingTab._on_delete_unpaired_archives_clicked - A
     C 30:0 ArchiveListItem - A
-    M 258:4 PairingTab._on_preview_selected - A
+    M 271:4 PairingTab._on_preview_selected - A
     M 36:4 ArchiveListItem.__init__ - A
     M 41:4 ArchiveListItem.init_ui - A
     M 57:4 ArchiveListItem.contextMenuEvent - A
@@ -93,9 +94,9 @@ core\pairing_tab.py
     M 87:4 PairingTab.__init__ - A
     M 94:4 PairingTab.on_working_directory_changed - A
     M 101:4 PairingTab.init_ui - A
-    M 315:4 PairingTab._update_create_asset_button_state - A
-    M 437:4 PairingTab._on_rebuild_finished - A
-    M 441:4 PairingTab._on_rebuild_error - A
+    M 328:4 PairingTab._update_create_asset_button_state - A
+    M 450:4 PairingTab._on_rebuild_finished - A
+    M 454:4 PairingTab._on_rebuild_error - A
 core\performance_monitor.py
     M 107:4 PerformanceMonitor._log_metrics - B
     M 42:4 PerformanceMetrics.finish - A
@@ -191,14 +192,14 @@ core\tools_tab.py
     M 614:4 FileRenamerWorker._analyze_files - C
     M 122:4 WebPConverterWorker._run_operation - B
     C 722:0 PrefixSuffixRemoverWorker - B
+    M 1230:4 ToolsTab._on_archive_double_clicked - B
     M 297:4 ImageResizerWorker._run_operation - B
     C 113:0 WebPConverterWorker - B
     M 239:4 WebPConverterWorker._convert_to_webp - B
     M 1021:4 ToolsTab.scan_working_directory - B
     M 1127:4 ToolsTab._update_button_states - B
-    M 1230:4 ToolsTab._on_archive_double_clicked - B
-    M 1254:4 ToolsTab._on_preview_double_clicked - B
-    M 1463:4 ToolsTab._show_pairs_dialog - B
+    M 1266:4 ToolsTab._on_preview_double_clicked - B
+    M 1475:4 ToolsTab._show_pairs_dialog - B
     C 288:0 ImageResizerWorker - B
     M 440:4 ImageResizerWorker._calculate_new_size - B
     C 476:0 FileRenamerWorker - B
@@ -206,8 +207,9 @@ core\tools_tab.py
     M 365:4 ImageResizerWorker._find_files_to_resize - A
     M 393:4 ImageResizerWorker._resize_image - A
     M 494:4 FileRenamerWorker._run_operation - A
-    M 1334:4 ToolsTab._on_remove_clicked - A
+    M 1346:4 ToolsTab._on_remove_clicked - A
     M 84:4 BaseWorker.run - A
+    M 685:4 FileRenamerWorker._generate_random_name - A
     C 822:0 ToolsTab - A
     M 843:4 ToolsTab._validate_working_directory - A
     M 1098:4 ToolsTab._get_image_resolution - A
@@ -216,7 +218,7 @@ core\tools_tab.py
     M 695:4 FileRenamerWorker._rename_file - A
     M 892:4 ToolsTab._start_operation_with_confirmation - A
     M 1002:4 ToolsTab.set_working_directory - A
-    M 1301:4 ToolsTab._on_file_renaming_clicked - A
+    M 1313:4 ToolsTab._on_file_renaming_clicked - A
     M 37:4 WorkerManager.handle_progress - A
     M 44:4 WorkerManager.handle_finished - A
     M 65:4 WorkerManager.reset_button_state - A
@@ -224,7 +226,7 @@ core\tools_tab.py
     M 862:4 ToolsTab._handle_worker_lifecycle - A
     M 1078:4 ToolsTab._update_archive_list - A
     M 1086:4 ToolsTab._update_preview_list - A
-    M 1422:4 ToolsTab._start_remove - A
+    M 1434:4 ToolsTab._start_remove - A
     M 58:4 WorkerManager.handle_error - A
     M 79:4 BaseWorker.__init__ - A
     M 98:4 BaseWorker._run_operation - A
@@ -232,7 +234,6 @@ core\tools_tab.py
     M 294:4 ImageResizerWorker.__init__ - A
     M 484:4 FileRenamerWorker.__init__ - A
     M 490:4 FileRenamerWorker.confirm_operation - A
-    M 685:4 FileRenamerWorker._generate_random_name - A
     M 728:4 PrefixSuffixRemoverWorker.__init__ - A
     M 828:4 ToolsTab.__init__ - A
     M 929:4 ToolsTab._setup_ui - A
@@ -243,9 +244,9 @@ core\tools_tab.py
     M 1160:4 ToolsTab._reset_button_state - A
     M 1196:4 ToolsTab._on_webp_conversion_clicked - A
     M 1216:4 ToolsTab._on_rebuild_assets_clicked - A
-    M 1280:4 ToolsTab._on_image_resizing_clicked - A
-    M 1319:4 ToolsTab._start_file_renaming - A
-    M 1516:4 ToolsTab.clear_working_directory - A
+    M 1292:4 ToolsTab._on_image_resizing_clicked - A
+    M 1331:4 ToolsTab._start_file_renaming - A
+    M 1528:4 ToolsTab.clear_working_directory - A
 core\utilities.py
     F 34:0 update_main_window_status - A
     F 11:0 get_file_size_mb - A
@@ -635,8 +636,8 @@ core\workers\thumbnail_loader_worker.py
     C 14:0 ThumbnailLoaderSignals - A
     M 26:4 ThumbnailLoaderWorker.__init__ - A
 
-586 blocks (classes, functions, methods) analyzed.
-Average complexity: A (2.9948805460750854)
+587 blocks (classes, functions, methods) analyzed.
+Average complexity: A (3.0442930153321974)
 ```
 
 ---

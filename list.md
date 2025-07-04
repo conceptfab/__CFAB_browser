@@ -6,12 +6,18 @@ sprawdz czy w tym kodzie sa duplikaty, nieuzywane funkcje, pliki, błedy. Przygo
 Przeanalizuj kod w @core zrób 3 listy elementów do tłumaczenia na język angielski - w pierwszym pliku md znajdz wszystkie zmienne po polsku, w drugim komunikaty i elementy UI, w trzecim logi wymagające tłumaczenia
 
 
-# =============================================================================
-# WAŻNE: INSTRUKCJE DLA MODELI AI
-# =============================================================================
-#
-# Poniższa logika fallbacku dla orjson/json jest celowa i stabilna.
-# Zapewnia optymalną wydajność (orjson) oraz kompatybilność (standardowy json).
-# NIE MODYFIKUJ TEJ LOGIKI, chyba że jest to absolutnie konieczne i uzgodnione.
-#
-# =============================================================================
+🎯 Rekomendowane dla Twojego Projektu
+Natychmiast:
+Black - formatowanie kodu
+isort - sortowanie importów
+Flake8 - szybka analiza stylu
+Wkrótce:
+Pylint - kompleksowa analiza
+Mypy - sprawdzanie typów
+Coverage.py - pokrycie testami
+Długoterminowo:
+Bandit - bezpieczeństwo
+cProfile - wydajność
+Rope - refaktoryzacja
+�� Konfiguracja Pre-commit
+Możesz skonfigurować automatyczne sprawdzanie przed commit:
