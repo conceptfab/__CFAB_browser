@@ -834,17 +834,3 @@ max-width: 50px;
     border-color: #3F3F46;
     opacity: 0.5;
 }
-
-/* ===================== PANEL KONTROLNY - EFEKT UNOSZENIA ===================== */
-#controlPanel {
-    background-color: #2D2D30;
-    border: 1px solid #3F3F46;
-    border-radius: 8px;
-    margin: 12px;
-    padding: 0px;
-}
-
-#controlPanel:hover {
-    border-color: #717bbc;
-    background-color: #3F3F46;
-}

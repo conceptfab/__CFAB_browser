@@ -236,10 +236,9 @@ class AmvView(BaseWidget):
         self._create_scroll_area()
         self._create_control_panel()
         gallery_vertical_layout.addWidget(self.scroll_area)
-        # Panel kontrolny wyśrodkowany z marginesami
+        # Wyśrodkowanie panelu kontrolnego
         gallery_vertical_layout.addWidget(
-            self.control_panel,
-            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom,
+            self.control_panel, alignment=Qt.AlignmentFlag.AlignHCenter
         )
         self.gallery_panel.setLayout(gallery_vertical_layout)
         self.splitter.addWidget(self.gallery_panel)
@@ -307,12 +306,9 @@ class AmvView(BaseWidget):
     def _create_control_panel(self):
         self.control_panel = QFrame()
         self.control_panel.setFixedHeight(32)
-        # Usuwamy stałą szerokość - panel będzie się dopasowywał do zawartości
-        self.control_panel.setObjectName("controlPanel")
+        self.control_panel.setFixedWidth(990)  # Stała szerokość panelu
         control_layout = QHBoxLayout()
-        control_layout.setContentsMargins(
-            20, 6, 20, 6
-        )  # Większe marginesy dla efektu unoszenia
+        control_layout.setContentsMargins(0, 0, 0, 2)
         control_layout.setSpacing(8)
         control_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Wyśrodkowanie
         self.progress_bar = QProgressBar()
