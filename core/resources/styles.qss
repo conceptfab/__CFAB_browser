@@ -728,3 +728,21 @@ max-width: 50px;
     padding: 0 4px;
     qproperty-alignment: AlignCenter;
 }
+
+/* ===================== PRZYCISK TOGGLE PANELU ===================== */
+#panelToggleButton {
+    border: none;
+    background: transparent;
+    padding: 0px;
+    margin: 0px;
+}
+
+#panelToggleButton:hover {
+    background-color: rgba(113, 123, 188, 0.3);
+    border-radius: 2px;
+}
+
+#panelToggleButton:pressed {
+    background-color: rgba(113, 123, 188, 0.5);
+    border-radius: 2px;
+}

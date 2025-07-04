@@ -110,6 +110,7 @@ class AmvView(BaseWidget):
         self.toggle_button.setToolTip("Zamknij panel")
         self.toggle_button.setIcon(self.collapse_icon)
         self.toggle_button.setIconSize(QSize(16, 16))
+        self.toggle_button.setFlat(True)  # Dodaj tylko tę linię
         self.toggle_button.clicked.connect(lambda: self.toggle_panel_requested.emit())
 
         # Centrowanie przycisków Zwiń i Rozwiń
