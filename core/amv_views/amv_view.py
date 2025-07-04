@@ -379,7 +379,11 @@ class AmvView(BaseWidget):
         self.star_checkboxes = []
         for i in range(5):
             star_cb = StarCheckBoxBase("★")
+            star_cb.setObjectName(f"ControlPanelStar_{i+1}")
             star_cb.setProperty("class", "star")
+            # Ustaw identyczne właściwości jak w kafelku
+            star_cb.setFixedSize(12, 12)
+            star_cb.setText("★")
             self.star_checkboxes.append(star_cb)
 
         control_layout.addWidget(self.progress_bar, 3)  # Większy stretch factor

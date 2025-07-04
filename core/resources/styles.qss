@@ -17,6 +17,22 @@ QMainWindow, QDialog, QWidget {
     font-size: 10px;
 }
 
+/* ===================== AMV TAB - GŁÓWNA ZAKŁADKA ===================== */
+QWidget[objectName="amvTab"] {
+    background-color: #1e1e2e;
+    border: 1px solid #717bbc;
+    border-radius: 8px;
+    margin: 4px;
+    padding: 8px;
+    min-width: 1200px;
+    min-height: 600px;
+}
+
+QWidget[objectName="amvTab"]:hover {
+    border-color: #a9b7c6;
+    background-color: #2a2a3a;
+}
+
 QLabel {
     background-color: transparent;
     font-size: 10px;
@@ -100,7 +116,7 @@ QPushButton[class="favorite"]:hover {
 /* ===================== POLA EDYCJI, LISTY, TABELKI ===================== */
 QLineEdit, QTextEdit, QTableWidget, QListWidget, QComboBox, QSpinBox {
     background-color: #313335;
-    border: 1px solid #0026ff;
+    border: 1px solid #3B3D48;
     border-radius: 2px;
     padding: 2px;
     selection-background-color: #214383;
@@ -141,8 +157,9 @@ QTabWidget {
     border: none;
 }
 QTabWidget::pane {
-    /* border: 1px solid #ff0000; */
     background-color: #282935;
+    /* border: 1px solid #ff0000; */
+    border-top: 1px solid #3B3D48;
     top: -1px;
     margin: 0px;
     padding: 2px;
@@ -153,10 +170,7 @@ QTabBar::tab {
     margin-right: 2px;
     /* border-top-left-radius: 2px; */
     /* border-top-right-radius: 2px; */
-    border-bottom: 1px solid #282935;
-    border-top: 1px solid #3b3d48;
-    border-left: 1px solid #3b3d48;
-    border-right: 1px solid #3b3d48;
+    border: 1px solid #3B3D48;
     min-width: 80px;
     max-height: 25px;
     font-size: 10px;
@@ -313,6 +327,38 @@ TileBase:hover, .AssetTileView:hover {
     font-weight: bold;
 }
 #AssetTileStar_1:hover, #AssetTileStar_2:hover, #AssetTileStar_3:hover, #AssetTileStar_4:hover, #AssetTileStar_5:hover {
+    color: #717bbc;
+}
+
+/* ===================== PANEL KONTROLNY - GWIAZDKI ===================== */
+/* Styluje gwiazdki w panelu kontrolnym - identyczne jak w kafelkach */
+#ControlPanelStar_1, #ControlPanelStar_2, #ControlPanelStar_3, #ControlPanelStar_4, #ControlPanelStar_5 {
+    spacing: 0px;
+    color: #848484;
+    font-size: 10.8px;
+    min-width: 12px;
+    min-height: 12px;
+    max-width: 12px;
+    max-height: 12px;
+    background: transparent;
+    margin: 0px;
+    padding: 0px;
+    border: none;
+}
+
+#ControlPanelStar_1::indicator, #ControlPanelStar_2::indicator, #ControlPanelStar_3::indicator, #ControlPanelStar_4::indicator, #ControlPanelStar_5::indicator {
+    width: 0px;
+    height: 0px;
+    border: none;
+    background: transparent;
+}
+
+#ControlPanelStar_1:checked, #ControlPanelStar_2:checked, #ControlPanelStar_3:checked, #ControlPanelStar_4:checked, #ControlPanelStar_5:checked {
+    color: #717bbc;
+    font-weight: bold;
+}
+
+#ControlPanelStar_1:hover, #ControlPanelStar_2:hover, #ControlPanelStar_3:hover, #ControlPanelStar_4:hover, #ControlPanelStar_5:hover {
     color: #717bbc;
 }
 

@@ -30,6 +30,9 @@ class AmvTab(QWidget):
     ):
         super().__init__()
 
+        # Ustaw objectName dla stylowania QSS
+        self.setObjectName("amvTab")
+
         # Wstrzykiwanie zależności z fallback do domyślnych instancji
         self.model = model or AmvModel()
         self.view = view or AmvView()

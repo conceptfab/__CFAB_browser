@@ -78,6 +78,8 @@ class SignalConnector:
         # --- Sygnały gwiazdek z panelu kontrolnego ---
         for i, star_cb in enumerate(self.view.star_checkboxes):
             star_cb.setAutoExclusive(False)
+            # Upewnij się, że mamy właściwy objectName
+            star_cb.setObjectName(f"ControlPanelStar_{i+1}")
             star_cb.clicked.connect(
                 lambda checked, star_index=i: control_panel_controller.on_star_filter_clicked(
                     star_index + 1
