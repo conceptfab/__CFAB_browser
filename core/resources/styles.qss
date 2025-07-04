@@ -735,14 +735,15 @@ max-width: 50px;
     background: transparent;
     padding: 0px;
     margin: 0px;
+    opacity: 0.5;
 }
 
 #panelToggleButton:hover {
-    background-color: rgba(113, 123, 188, 0.3);
-    border-radius: 2px;
+    background: transparent;
+    opacity: 1.0;
 }
 
 #panelToggleButton:pressed {
-    background-color: rgba(113, 123, 188, 0.5);
-    border-radius: 2px;
+    background: transparent;
+    opacity: 1.0;
 }
