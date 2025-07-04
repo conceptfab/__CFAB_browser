@@ -289,7 +289,7 @@ TileBase:hover, .AssetTileView:hover {
 /* Styluje gwiazdki oceny (1-5) w kafelku - identyczne z panelem kontrolnym */
 #AssetTileStar_1, #AssetTileStar_2, #AssetTileStar_3, #AssetTileStar_4, #AssetTileStar_5 {
     spacing: 0px;
-    color: #717bbc;
+    color: #848484;
     font-size: 10.8px;
     min-width: 12px;
     min-height: 12px;
@@ -298,12 +298,18 @@ TileBase:hover, .AssetTileView:hover {
     padding: 0px;
     border: none;
 }
-#AssetTileStar_1:hover, #AssetTileStar_2:hover, #AssetTileStar_3:hover, #AssetTileStar_4:hover, #AssetTileStar_5:hover {
-    color: #717bbc;
+#AssetTileStar_1::indicator, #AssetTileStar_2::indicator, #AssetTileStar_3::indicator, #AssetTileStar_4::indicator, #AssetTileStar_5::indicator {
+    width: 0px;
+    height: 0px;
+    border: none;
+    background: transparent;
 }
 #AssetTileStar_1:checked, #AssetTileStar_2:checked, #AssetTileStar_3:checked, #AssetTileStar_4:checked, #AssetTileStar_5:checked {
     color: #717bbc;
     font-weight: bold;
+}
+#AssetTileStar_1:hover, #AssetTileStar_2:hover, #AssetTileStar_3:hover, #AssetTileStar_4:hover, #AssetTileStar_5:hover {
+    color: #717bbc;
 }
 
 QLabel[class="thumbnail-container"] {
