@@ -1,5 +1,5 @@
 📜 ZASADY REFAKTORYZACJI, POPRAWEK I TESTOWANIA PROJEKTU CFAB_3DHUB
-Ten dokument zawiera kluczowe zasady, których należy bezwzględnie przestrzegać podczas wszelkich prac refaktoryzacyjnych, wprowadzania poprawek oraz testowania w projekcie. Każdy plik \*\_correction.md musi zawierać odniesienie do tego dokumentu.
+Ten dokument zawiera kluczowe zasady, których należy bezwzględnie przestrzegać podczas wszelkich prac refaktoryzacyjnych, wprowadzania poprawek oraz testowania w projekcie. Każdy plik *_correction.md musi zawierać odniesienie do tego dokumentu.
 
 🏛️ FILARY PRAC
 Prace opierają się na trzech kluczowych filarach:
@@ -75,18 +75,8 @@ Zależności: Importy, zależności zewnętrzne i wewnętrzne, brak cyklicznych 
 Testy: Jednostkowe, integracyjne, regresyjne, wydajnościowe.
 Dokumentacja: Aktualność README, API docs, changelog.
 📊 DOKUMENTACJA I KONTROLA POSTĘPU
-PROGRESYWNE UZUPEŁNIANIE: Po każdej analizie pliku NATYCHMIAST aktualizuj pliki wynikowe (code_map.md, _\_correction.md, _\_patch.md).
-OSOBNE PLIKI: Każdy analizowany plik musi mieć swój własny \_correction.md i \_patch.md.
+PROGRESYWNE UZUPEŁNIANIE: Po każdej analizie pliku NATYCHMIAST aktualizuj pliki wynikowe (code_map.md, *_correction.md, *_patch.md).
+OSOBNE PLIKI: Każdy analizowany plik musi mieć swój własny _correction.md i _patch.md.
 KONTROLA POSTĘPU: Po każdym etapie raportuj postęp (X/Y ukończonych, %, następny etap).
 COMMITY: Commity wykonuj dopiero po pozytywnych testach użytkownika, z jasnym komunikatem, np. ETAP X: [NAZWA_PLIKU] - [OPIS] - ZAKOŃCZONY.
 Pamiętaj: Żaden etap nie może być pominięty. Wszystkie etapy muszą być wykonywane sekwencyjnie.
-
-# Poprawki wysokiego priorytetu
-
-## core/amv_views/asset_tile_view.py
-
-- Dodano sprawdzanie self.model przed każdym użyciem w metodach update_ui oraz \_setup_asset_tile_ui, aby zapobiec błędom przy braku modelu.
-- Dodano czyszczenie self.\_cached_pixmap w metodzie release_resources, aby zapobiec wyciekom pamięci.
-- Usunięto nieużywane importy oraz podzielono część długich linii dla zgodności z PEP8.
-
-Zmiany zgodne z zaleceniami z pliku refactor.md (punkt 13).
