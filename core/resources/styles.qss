@@ -775,9 +775,9 @@ max-width: 50px;
 }
 
 #edgePanelButton:pressed {
-    background-color: #007ACC;
+    /* background-color: #007ACC; */
     color: #FFFFFF;
-    border-color: #005A9E;
+    /* border-color: #005A9E; */
     opacity: 1.0;
     transform: translateX(2px);
 }
