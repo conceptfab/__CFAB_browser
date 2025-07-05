@@ -493,8 +493,23 @@ class MainWindow(QMainWindow):
     def _connect_tools_signals(self):
         """Connects Tools Tab signals"""
         if self.tools_tab:
-            # Sygnały Tools Tab są już połączone w konstruktorze
-            pass
+            # Połącz sygnał odświeżania struktury folderów z AMV tab
+            self.tools_tab.folder_structure_changed.connect(
+                self._on_folder_structure_changed
+            )
+            logger.info("Połączono sygnał folder_structure_changed z AMV tab")
+
+    def _on_folder_structure_changed(self, folder_path: str):
+        """Obsługuje zmianę struktury folderów - odświeża drzewo folderów"""
+        try:
+            if self.amv_tab:
+                amv_controller = self.amv_tab.get_controller()
+                if amv_controller and hasattr(amv_controller, 'folder_tree_controller'):
+                    # Wywołaj odświeżenie folderu
+                    amv_controller.folder_tree_controller.on_folder_refresh_requested(folder_path)
+                    logger.info(f"Odświeżono drzewo folderów dla: {folder_path}")
+        except Exception as e:
+            logger.error(f"Błąd podczas odświeżania drzewa folderów: {e}")
 
     def _on_selection_changed(self, selected_asset_ids):
         """Handles selection change and updates the status bar"""

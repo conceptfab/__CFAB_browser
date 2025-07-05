@@ -2029,6 +2029,10 @@ class ToolsTab(QWidget):
                     self.find_duplicates_button, m, "Find Duplicates"
                 )
             )
+            # Dodatkowe połączenie dla odświeżenia drzewa folderów
+            self.duplicate_finder.finished.connect(
+                lambda m: self._handle_duplicates_finished(m)
+            )
             self.duplicate_finder.error_occurred.connect(
                 lambda e: self._handle_worker_error(
                     self.find_duplicates_button, e, "Find Duplicates"
@@ -2046,6 +2050,17 @@ class ToolsTab(QWidget):
             logger.error(f"Błąd podczas rozpoczynania szukania duplikatów: {e}")
             QMessageBox.critical(self, "Error", f"Cannot start finding duplicates: {e}")
             self._reset_button_state(self.find_duplicates_button, "Find Duplicates")
+
+    def _handle_duplicates_finished(self, message: str):
+        """Obsługuje zakończenie operacji znajdowania duplikatów"""
+        try:
+            # Jeśli operacja przeniosła pliki (nie zawiera "No duplicates found" lub "No archive files")
+            if "Moved" in message and "files to __duplicates__" in message:
+                # Emituj sygnał o zmianie struktury folderów
+                self.folder_structure_changed.emit(self.current_working_directory)
+                logger.info(f"Emitowano sygnał folder_structure_changed dla: {self.current_working_directory}")
+        except Exception as e:
+            logger.error(f"Błąd w obsłudze zakończenia znajdowania duplikatów: {e}")
 
     def _show_pairs_dialog(self, pairs):
         """Wyświetla okno z listą par, które będą zmieniane"""
