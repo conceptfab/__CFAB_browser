@@ -1,3 +1,6 @@
+katyczne zmienianie nazwy
+
+
 sprawdz w @core czy w tym kodzie sa duplikaty, nieuzywane funkcje, pliki, błedy. Przygotuj zwarty raport z numerowanymu punktami co model AI ma zrobić by poprawić kod. Pokaż tylko pliki które potrzebuja poprawek. Raport ma być w formacie markdown, zapisz go w folderze projektu.
 
 sprawdz czy w tym kodzie sa duplikaty, nieuzywane funkcje, pliki, błedy. Przygotuj zwarty raport z numerowanymu punktami co model AI ma zrobić by poprawić kod. Pokaż tylko pliki które potrzebuja poprawek. Raport ma być w formacie markdown.

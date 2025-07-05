@@ -393,38 +393,14 @@ class AmvView(QWidget):
         # Placeholder na ikonę 16x16 przed QLineEdit
         self.icon_placeholder = QLabel()
         self.icon_placeholder.setFixedSize(16, 16)
+        self.icon_placeholder.setObjectName("ControlPanelIcon")
         control_layout.addWidget(self.icon_placeholder)
 
         self.text_input = QLineEdit()
+        self.text_input.setObjectName("ControlPanelTextInput")
         self.text_input.setMinimumWidth(120)
         self.text_input.setFixedHeight(14)
         self.text_input.setPlaceholderText("Wpisz tekst...")
-        self.text_input.setStyleSheet(
-            """
-            QLineEdit {
-                background-color: #2D2D30;
-                color: #CCCCCC;
-                border: 1px solid #3F3F46;
-                border-radius: 2px;
-                font-size: 9px;
-                font-weight: bold;
-                padding: 0px 4px;
-                text-align: center;
-                min-width: 120px;
-                max-height: 14px;
-            }
-            QLineEdit:focus {
-                background-color: #3F3F46;
-                border-color: #007ACC;
-                color: #FFFFFF;
-            }
-            QLineEdit:disabled {
-                background-color: #1E1E1E;
-                color: #666666;
-                border-color: #3F3F46;
-            }
-            """
-        )
         control_layout.addWidget(self.text_input, 3)
         # Dodaj gwiazdki między QLineEdit a przyciskami
         self.star_checkboxes = []
@@ -499,6 +475,8 @@ class AmvView(QWidget):
         self.thumbnail_size_slider.setFixedWidth(120)  # SZTYWNA SZEROKOŚĆ
         control_layout.addWidget(self.thumbnail_size_slider, 2)
         self.control_panel.setLayout(control_layout)
+
+        self.text_input.textChanged.connect(lambda: self.parent().controller.control_panel_controller.filter_assets())
 
     def _on_splitter_moved(self, pos, index):
         sizes = self.splitter.sizes()

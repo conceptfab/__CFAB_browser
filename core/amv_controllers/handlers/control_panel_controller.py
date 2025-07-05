@@ -4,6 +4,7 @@ Responsible for handling buttons, filtering, and asset selection.
 """
 
 import logging
+import os
 
 from PyQt6.QtCore import QObject
 
@@ -138,7 +139,7 @@ class ControlPanelController(QObject):
                 for cb in self.view.star_checkboxes:
                     cb.blockSignals(False)
             self.controller.asset_grid_controller.clear_star_filter()
-            self.filter_assets_by_stars(0)
+            self.filter_assets()
             logger.info("Deselected all stars - showing all assets")
         else:
             for cb in self.view.star_checkboxes:
@@ -150,9 +151,26 @@ class ControlPanelController(QObject):
                 for cb in self.view.star_checkboxes:
                     cb.blockSignals(False)
             self.controller.asset_grid_controller.set_star_filter(star_rating)
-            self.filter_assets_by_stars(star_rating)
+            self.filter_assets()
             logger.info(f"Selected {star_rating} stars - filtering")
         logger.info("=== END OF STAR FILTERING ===")
+
+    def filter_assets(self):
+        """Filtruje assety po gwiazdkach i tekście naraz."""
+        min_stars = self.controller.asset_grid_controller.active_star_filter
+        text = self.view.text_input.text().strip().lower() if hasattr(self.view, 'text_input') else ''
+        original_assets = self.controller.asset_grid_controller.get_original_assets()
+        filtered_assets = []
+        for asset in original_assets:
+            if asset.get("type") == "special_folder":
+                filtered_assets.append(asset)
+                continue
+            stars = asset.get("stars") or 0
+            name = asset.get("name", "")
+            name_no_ext = os.path.splitext(name)[0].lower()
+            if (min_stars == 0 or stars >= min_stars) and (not text or text in name_no_ext):
+                filtered_assets.append(asset)
+        self.controller.asset_grid_controller.rebuild_asset_grid(filtered_assets)
 
     def filter_assets_by_stars(self, min_stars: int):
         """Filters assets by rebuilding the grid with the filtered assets."""
