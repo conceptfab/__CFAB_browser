@@ -8,7 +8,9 @@ from typing import Optional
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from .asset_grid_model import AssetGridModel, FolderSystemModel, WorkspaceFoldersModel
+from .asset_grid_model import AssetGridModel
+from .folder_system_model import FolderSystemModel
+from .workspace_folders_model import WorkspaceFoldersModel
 from .config_manager_model import ConfigManagerMV
 from .control_panel_model import ControlPanelModel
 from .drag_drop_model import DragDropModel

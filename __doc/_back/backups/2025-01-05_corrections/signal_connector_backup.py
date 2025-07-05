@@ -88,13 +88,6 @@ class SignalConnector:
                 )
             )
 
-        # --- Text filter signal connection ---
-        # Połącz sygnał filtra tekstowego
-        if hasattr(self.view, 'text_input') and self.view.text_input:
-            self.view.text_input.textChanged.connect(
-                lambda: control_panel_controller.filter_assets()
-            )
-
         # --- AssetGridModel signals for grid rebuild ---
         self.model.asset_grid_model.recalculate_columns_requested.connect(
             asset_grid_controller.on_recalculate_columns_requested

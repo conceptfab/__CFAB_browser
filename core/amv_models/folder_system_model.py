@@ -70,7 +70,7 @@ class FolderSystemModel(QObject):
 
             for item_name in sorted(os.listdir(folder_path)):
                 item_path = os.path.join(folder_path, item_name)
-                if os.path.isdir(item_path):
+                if os.path.isdir(item_path) and not item_name.startswith(".") and not self._is_system_folder(item_name):
                     child_item = QStandardItem(item_name)
                     child_item.setData(item_path, Qt.ItemDataRole.UserRole)
                     child_item.setIcon(self._get_folder_icon())
@@ -84,6 +84,16 @@ class FolderSystemModel(QObject):
             logger.warning("Permission denied accessing folder: %s", folder_path)
         except Exception as e:
             logger.error("Error loading subfolders: %s", str(e))
+
+    def _is_system_folder(self, folder_name: str) -> bool:
+        """Checks if folder is a system folder that should be hidden"""
+        system_folders = {
+            '__pycache__', 'node_modules', '.git', '.svn', '.hg',
+            'cache', '.cache', '.tmp', 'temp', '.temp',
+            'System Volume Information', '$RECYCLE.BIN',
+            '.vscode', '.idea', '.vs'
+        }
+        return folder_name.lower() in system_folders
 
     def expand_folder(self, item: QStandardItem):
         """Expands a folder in the tree"""
@@ -146,7 +156,7 @@ class FolderSystemModel(QObject):
     def _get_folder_icon(self) -> QIcon:
         """Returns the folder icon"""
         try:
-            icon_path = "core/resources/img/folder.png"
+            icon_path = "core/resources/img/folder_icon.png"
             if os.path.exists(icon_path):
                 return QIcon(icon_path)
         except Exception as e:

@@ -58,9 +58,7 @@ class AssetGridController(QObject):
             self.active_star_filter
         )  # Not self.controller.asset_grid_controller.active_star_filter
         if current_star_filter > 0:
-            self.controller.control_panel_controller.filter_assets_by_stars(
-                current_star_filter
-            )
+            self.controller.control_panel_controller.filter_assets()
 
         # Update button states after asset change
         self.controller.control_panel_controller.update_button_states()

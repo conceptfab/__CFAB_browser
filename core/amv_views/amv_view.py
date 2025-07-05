@@ -52,7 +52,7 @@ class AmvView(QWidget):
     def _load_icons(self):
         """Loads icons used in the view."""
         self.collapse_icon = QIcon("core/resources/img/collapse_panel.png")
-        self.expand_icon = QIcon("core/resources/img/expand_panel.png")
+        self.expand_icon = QIcon("core/resources/img/open_panel.png")
 
     def _setup_ui(self):
         layout = QHBoxLayout()

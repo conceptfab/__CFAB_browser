@@ -171,3 +171,54 @@ class ControlPanelController(QObject):
             if (min_stars == 0 or stars >= min_stars) and (not text or text in name_no_ext):
                 filtered_assets.append(asset)
         self.controller.asset_grid_controller.rebuild_asset_grid(filtered_assets)
+
+    def filter_assets_by_stars(self, min_stars: int):
+        """Filters assets by rebuilding the grid with the filtered assets."""
+        try:
+            self._update_star_checkboxes(min_stars)
+            filtered_assets = self._get_filtered_assets(min_stars)
+            self.controller.asset_grid_controller.rebuild_asset_grid(
+                filtered_assets
+            )
+        except Exception as e:
+            logger.error(f"Error while filtering assets: {e}")
+        finally:
+            self.update_button_states()  # Jeden wywołanie na końcu
+
+    def _update_star_checkboxes(self, min_stars: int):
+        """Helper method for updating star checkboxes"""
+        if hasattr(self.view, "star_checkboxes") and self.view.star_checkboxes:
+            for cb in self.view.star_checkboxes:
+                cb.blockSignals(True)
+            try:
+                for i, cb in enumerate(self.view.star_checkboxes):
+                    cb.setChecked(i < min_stars)
+            finally:
+                for cb in self.view.star_checkboxes:
+                    cb.blockSignals(False)
+        self.controller.asset_grid_controller.set_star_filter(min_stars)
+
+    def _get_filtered_assets(self, min_stars: int) -> list:
+        """Helper method for filtering assets"""
+        original_assets = self.controller.asset_grid_controller.get_original_assets()
+        if not original_assets:
+            logger.debug("No original assets to filter.")
+            return []
+
+        if min_stars > 0:
+            # Filter the list, instead of showing/hiding tiles
+            filtered_assets = [
+                asset
+                for asset in original_assets
+                if (asset.get("stars") or 0) >= min_stars
+                or asset.get("type") == "special_folder"
+            ]
+            logger.debug(
+                f"Filtered {len(filtered_assets)} of {len(original_assets)} assets for {min_stars}+ stars."
+            )
+        else:
+            # If the filter is off, use the original list
+            filtered_assets = original_assets
+            logger.debug("Star filter off, showing all assets.")
+
+        return filtered_assets
