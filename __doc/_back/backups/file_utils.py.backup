@@ -73,18 +73,11 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
             )
             try:
                 os.startfile(normalized_path)
-            except FileNotFoundError as e:
-                logger.error(f"Windows Explorer or path not found: {normalized_path} - {e}")
+            except FileNotFoundError:
+                logger.error(f"Windows Explorer or path not found: {normalized_path}")
                 if parent_widget:
                     QMessageBox.warning(
                         parent_widget, "Error", f"Windows Explorer or path not found: {normalized_path}"
-                    )
-                return False
-            except OSError as e:
-                logger.error(f"OS error opening path {normalized_path}: {e}")
-                if parent_widget:
-                    QMessageBox.warning(
-                        parent_widget, "Error", f"System error opening path: {normalized_path}"
                     )
                 return False
         elif sys.platform == "darwin":  # macOS
@@ -99,8 +92,8 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
             subprocess.run(["xdg-open", normalized_path], check=True, timeout=10)
         logger.info(f"Otworzono ścieżkę w eksploratorze: {normalized_path}")
         return True
-    except subprocess.TimeoutExpired as e:
-        logger.error(f"Timeout while opening path {path}: {e}")
+    except subprocess.TimeoutExpired:
+        logger.error(f"Timeout while opening path: {path}")
         if parent_widget:
             QMessageBox.warning(
                 parent_widget, "Error", f"Timeout while opening path: {path}"
@@ -113,18 +106,11 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
                 parent_widget, "Error", f"Process error while opening: {path}"
             )
         return False
-    except (PermissionError, OSError) as e:
-        logger.error(f"System error while opening path {path}: {e}")
-        if parent_widget:
-            QMessageBox.warning(
-                parent_widget, "Error", f"System error opening path: {path}"
-            )
-        return False
     except Exception as e:
-        logger.error(f"Unexpected error while opening path {path}: {e}")
+        logger.error(f"Error while opening path {path}: {e}")
         if parent_widget:
             QMessageBox.warning(
-                parent_widget, "Error", f"Unexpected error opening path: {path}"
+                parent_widget, "Error", f"Cannot open path: {path}"
             )
         return False
 
@@ -154,22 +140,7 @@ def open_file_in_default_app(path: str, parent_widget=None) -> bool:
             return False
 
         if sys.platform == "win32":
-            try:
-                os.startfile(path)
-            except FileNotFoundError as e:
-                logger.error(f"Windows application or file not found: {path} - {e}")
-                if parent_widget:
-                    QMessageBox.warning(
-                        parent_widget, "Error", f"Windows application or file not found: {path}"
-                    )
-                return False
-            except OSError as e:
-                logger.error(f"OS error opening file {path}: {e}")
-                if parent_widget:
-                    QMessageBox.warning(
-                        parent_widget, "Error", f"System error opening file: {path}"
-                    )
-                return False
+            os.startfile(path)
         elif sys.platform == "darwin":  # macOS
             if not _is_command_available("open"):
                 logger.error("Command 'open' is not available")
@@ -182,8 +153,8 @@ def open_file_in_default_app(path: str, parent_widget=None) -> bool:
             subprocess.run(["xdg-open", path], check=True, timeout=10)
         logger.info(f"Otworzono plik w domyślnej aplikacji: {path}")
         return True
-    except subprocess.TimeoutExpired as e:
-        logger.error(f"Timeout while opening file {path}: {e}")
+    except subprocess.TimeoutExpired:
+        logger.error(f"Timeout while opening file: {path}")
         if parent_widget:
             QMessageBox.warning(
                 parent_widget, "Error", f"Timeout while opening file: {path}"
@@ -196,17 +167,10 @@ def open_file_in_default_app(path: str, parent_widget=None) -> bool:
                 parent_widget, "Error", f"Process error while opening file: {path}"
             )
         return False
-    except (PermissionError, OSError) as e:
-        logger.error(f"System error while opening file {path}: {e}")
-        if parent_widget:
-            QMessageBox.warning(
-                parent_widget, "Error", f"System error opening file: {path}"
-            )
-        return False
     except Exception as e:
-        logger.error(f"Unexpected error while opening file {path}: {e}")
+        logger.error(f"Error while opening file {path}: {e}")
         if parent_widget:
             QMessageBox.warning(
-                parent_widget, "Error", f"Unexpected error opening file: {path}"
+                parent_widget, "Error", f"Cannot open file: {path}"
             )
         return False

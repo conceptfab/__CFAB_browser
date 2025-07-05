@@ -61,10 +61,9 @@ class AssetTilePool:
         """
         if tile:
             tile.hide()  # Ukryj widget, zamiast go niszczyć
-            # POPRAWIONO: Nie zmieniaj parent jeśli nie jest to konieczne
-            # Unikamy potencjalnych problemów z pamięcią poprzez niepotrzebne zmiany parent
-            if tile.parent() != self._parent_widget and self._parent_widget:
-                tile.setParent(self._parent_widget)
+            # NAPRAWIONO: Ustaw właściwego rodzica zamiast None
+            if self._parent_widget:
+                tile.setParent(self._parent_widget)  # Ustaw właściwego rodzica
             self._pool.append(tile)
             logger.debug(
                 f"Zwrócono kafelek {tile.asset_id} do puli. "

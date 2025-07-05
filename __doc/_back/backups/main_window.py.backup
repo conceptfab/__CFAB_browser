@@ -24,9 +24,6 @@ from core.json_utils import load_from_file
 from core.pairing_tab import PairingTab
 from core.tools_tab import ToolsTab
 
-# Globalna instancja loggera dla funkcji poza klasą
-logger = logging.getLogger(__name__)
-
 
 class MainWindow(QMainWindow):
 

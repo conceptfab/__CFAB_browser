@@ -485,7 +485,7 @@ class AmvView(QWidget):
         control_layout.addWidget(self.thumbnail_size_slider, 2)
         self.control_panel.setLayout(control_layout)
 
-        # Sygnał zostanie podłączony w signal_connector.py - zgodnie z wzorcem MVC
+        self.text_input.textChanged.connect(lambda: self.parent().controller.control_panel_controller.filter_assets())
 
     def _on_splitter_moved(self, pos, index):
         sizes = self.splitter.sizes()
