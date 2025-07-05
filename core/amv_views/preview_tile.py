@@ -91,7 +91,7 @@ class PreviewTile(QWidget):
         self._scale_cached_pixmap()
 
     def _scale_cached_pixmap(self):
-        """Przeskalowuje cache'owany pixmap do aktualnego rozmiaru"""
+        """Scales the cached pixmap to the current size"""
         if self._cached_pixmap and not self._is_placeholder:
             scaled_pixmap = self._cached_pixmap.scaled(
                 self.thumbnail_size,

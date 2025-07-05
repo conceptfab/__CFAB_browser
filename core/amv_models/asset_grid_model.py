@@ -63,7 +63,7 @@ class AssetGridModel(QObject):
         return self._current_folder_path
 
     def scan_folder(self, folder_path: str):
-        """WCZYTUJE OD NOWA assety w folderze - odświeżenie = wczytanie od nowa!"""
+        """RELOADS assets in the folder - refresh = reload!"""
         import time
 
         start_time = time.time()
@@ -270,7 +270,7 @@ class FolderSystemModel(QObject):
             logger.error(f"Error loading subfolders for {folder_path}: {e}")
 
     def expand_folder(self, item: QStandardItem):
-        """Rozwija element i doładowuje jego dzieci (lazy loading)."""
+        """Expands the item and loads its children (lazy loading)."""
         try:
             if not item or item.rowCount() == 0:
                 return
@@ -308,7 +308,7 @@ class FolderSystemModel(QObject):
         logger.debug(f"Folder clicked: {folder_path}")
 
     def refresh_folder(self, folder_path: str):
-        """Odświeża strukturę określonego folderu."""
+        """Refreshes the structure of the specified folder."""
         try:
             logger.debug(f"Odświeżanie folderu: {folder_path}")
 
@@ -329,7 +329,7 @@ class FolderSystemModel(QObject):
             logger.error(f"Błąd podczas odświeżania folderu {folder_path}: {e}")
 
     def _refresh_folder_recursive(self, item: QStandardItem, target_path: str):
-        """Rekurencyjnie odświeża folder w drzewie."""
+        """Recursively refreshes the folder in the tree."""
         try:
             item_path = item.data(Qt.ItemDataRole.UserRole)
             if item_path == target_path:
@@ -370,11 +370,11 @@ class WorkspaceFoldersModel(QObject):
         logger.debug("WorkspaceFoldersModel initialized")
 
     def load_folders(self):
-        """Ładuje foldery robocze z konfiguracji."""
+        """Loads work folders from configuration."""
         self._config_manager.load_config()
 
     def _load_folders_from_config(self, config: dict):
-        """Ładuje foldery z konfiguracji i emituje sygnał aktualizacji."""
+        """Loads folders from configuration and emits update signal."""
         try:
             self._folders = []
 
@@ -419,5 +419,5 @@ class WorkspaceFoldersModel(QObject):
             self.folders_updated.emit(self._folders)
 
     def get_folders(self):
-        """Zwraca listę folderów roboczych."""
+        """Returns the list of work folders."""
         return self._folders

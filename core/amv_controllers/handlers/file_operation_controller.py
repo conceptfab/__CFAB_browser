@@ -32,7 +32,7 @@ class FileOperationController(QObject):
         return [asset for asset in all_assets if asset.get("name") in asset_ids]
 
     def _validate_selection(self, operation_name: str) -> list:
-        """Wspólna walidacja zaznaczenia dla operacji"""
+        """Common selection validation for operations"""
         selected_asset_ids = self.model.selection_model.get_selected_asset_ids()
         if not selected_asset_ids:
             QMessageBox.information(
@@ -54,7 +54,7 @@ class FileOperationController(QObject):
         return assets_to_process
 
     def on_move_selected_clicked(self):
-        """Uproszczona metoda z wykorzystaniem centralnej walidacji"""
+        """Simplified method using central validation"""
         assets_to_move = self._validate_selection("Moving Assets")
         if not assets_to_move:
             return
@@ -73,7 +73,7 @@ class FileOperationController(QObject):
             self.view.update_gallery_placeholder("Moving assets...")
 
     def on_delete_selected_clicked(self):
-        """Uproszczona metoda z wykorzystaniem centralnej walidacji"""
+        """Simplified method using central validation"""
         assets_to_delete = self._validate_selection("Deleting Assets")
         if not assets_to_delete:
             return
@@ -81,8 +81,7 @@ class FileOperationController(QObject):
             self.view,
             "Confirm Deletion",
             (
-                f"Are you sure you want to delete {len(assets_to_delete)} "
-                "selected assets?\nThis operation is irreversible!"
+                f"Are you sure you want to delete {len(assets_to_delete)} selected assets?\nThis operation is irreversible!"
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,

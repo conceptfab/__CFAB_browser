@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class WorkspaceFoldersModel(QObject):
-    """Model dla folderów roboczych w architekturze M/V"""
+    """Model for workspace folders in M/V architecture"""
 
     folders_updated = pyqtSignal(list)
 

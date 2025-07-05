@@ -1,6 +1,6 @@
 """
-Widoki galerii dla zakładki AMV.
-Zawiera komponenty UI odpowiedzialne za wyświetlanie galerii assetów.
+Gallery views for the AMV tab.
+Contains UI components responsible for displaying the asset gallery.
 """
 
 import logging
@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 class GalleryContainerWidget(QWidget):
     """
-    Kontener galerii z siatką kafelków assetów.
-    Emituje sygnał resized gdy zmienia się rozmiar.
+    Gallery container with a grid of asset tiles.
+    Emits a resized signal when the size changes.
     """
     resized = pyqtSignal(int)
 
@@ -30,8 +30,8 @@ class GalleryContainerWidget(QWidget):
 
 class DropHighlightDelegate(QStyledItemDelegate):
     """
-    Delegat do podświetlania elementów podczas operacji drag & drop.
-    Rysuje niebieskie tło z żółtą ramką dla elementów będących celem drop.
+    Delegate for highlighting items during drag & drop operations.
+    Draws a blue background with a yellow border for drop target items.
     """
     
     def paint(self, painter, option, index):

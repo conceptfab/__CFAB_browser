@@ -1,6 +1,6 @@
 """
-Klasy bazowe dla stylowania opartego na dziedziczeniu.
-Zawiera wspólne style i funkcjonalność dla wszystkich widgetów w aplikacji.
+Base classes for styling based on inheritance.
+Contains common styles and functionality for all widgets in the application.
 """
 
 from PyQt6.QtWidgets import QCheckBox, QFrame, QLabel, QPushButton, QWidget
@@ -17,108 +17,108 @@ FONT_WEIGHT_BOLD = "bold"
 
 
 class BaseFrame(QFrame):
-    """Bazowa klasa dla wszystkich ramek z podstawowym stylowaniem"""
+    """Base class for all frames with basic styling"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_base_styles()
 
     def _apply_base_styles(self):
-        """Aplikuje podstawowe style dla ramek"""
+        """Applies basic styles for frames"""
         pass
 
 
 class BaseLabel(QLabel):
-    """Bazowa klasa dla wszystkich etykiet z podstawowym stylowaniem"""
+    """Base class for all labels with basic styling"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_base_styles()
 
     def _apply_base_styles(self):
-        """Aplikuje podstawowe style dla etykiet"""
+        """Applies basic styles for labels"""
         pass
 
 
 class BaseButton(QPushButton):
-    """Bazowa klasa dla wszystkich przycisków z podstawowym stylowaniem"""
+    """Base class for all buttons with basic styling"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_base_styles()
 
     def _apply_base_styles(self):
-        """Aplikuje podstawowe style dla przycisków"""
+        """Applies basic styles for buttons"""
         pass
 
 
 class BaseCheckBox(QCheckBox):
-    """Bazowa klasa dla wszystkich checkboxów z podstawowym stylowaniem"""
+    """Base class for all checkboxes with basic styling"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_base_styles()
 
     def _apply_base_styles(self):
-        """Aplikuje podstawowe style dla checkboxów"""
+        """Applies basic styles for checkboxes"""
         pass
 
 
 class BaseWidget(QWidget):
-    """Bazowa klasa dla wszystkich widgetów z podstawowym stylowaniem"""
+    """Base class for all widgets with basic styling"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_base_styles()
 
     def _apply_base_styles(self):
-        """Aplikuje podstawowe style dla widgetów"""
+        """Applies basic styles for widgets"""
         pass
 
 
 class TileBase(BaseFrame):
-    """Bazowa klasa dla wszystkich kafelków (tiles)"""
+    """Base class for all tiles"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_tile_styles()
 
     def _apply_tile_styles(self):
-        """Aplikuje style specyficzne dla kafelków"""
+        """Applies tile-specific styles"""
         pass
 
 
 class StarCheckBoxBase(BaseCheckBox):
-    """Bazowa klasa dla checkboxów gwiazdek"""
+    """Base class for star checkboxes"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_star_styles()
 
     def _apply_star_styles(self):
-        """Aplikuje style specyficzne dla checkboxów gwiazdek"""
+        """Applies star checkbox-specific styles"""
         pass
 
 
 class ControlButtonBase(BaseButton):
-    """Bazowa klasa dla przycisków kontrolnych"""
+    """Base class for control buttons"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_control_button_styles()
 
     def _apply_control_button_styles(self):
-        """Aplikuje style specyficzne dla przycisków kontrolnych"""
+        """Applies control button-specific styles"""
         pass
 
 
 class PanelButtonBase(BaseButton):
-    """Bazowa klasa dla przycisków panelowych"""
+    """Base class for panel buttons"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._apply_panel_button_styles()
 
     def _apply_panel_button_styles(self):
-        """Aplikuje style specyficzne dla przycisków panelowych"""
+        """Applies panel button-specific styles"""
         pass

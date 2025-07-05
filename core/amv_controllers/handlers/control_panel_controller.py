@@ -168,7 +168,7 @@ class ControlPanelController(QObject):
             self.update_button_states()  # Jeden wywołanie na końcu
 
     def _update_star_checkboxes(self, min_stars: int):
-        """Pomocnicza metoda do update checkboxów gwiazdek"""
+        """Helper method for updating star checkboxes"""
         if hasattr(self.view, "star_checkboxes") and self.view.star_checkboxes:
             for cb in self.view.star_checkboxes:
                 cb.blockSignals(True)
@@ -181,7 +181,7 @@ class ControlPanelController(QObject):
         self.controller.asset_grid_controller.set_star_filter(min_stars)
 
     def _get_filtered_assets(self, min_stars: int) -> list:
-        """Pomocnicza metoda do filtrowania assetów"""
+        """Helper method for filtering assets"""
         original_assets = self.controller.asset_grid_controller.get_original_assets()
         if not original_assets:
             logger.debug("No original assets to filter.")

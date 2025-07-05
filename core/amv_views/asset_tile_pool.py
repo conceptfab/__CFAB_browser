@@ -1,5 +1,5 @@
 """
-AssetTilePool - Zarządzanie pulą obiektów AssetTileView.
+AssetTilePool - Manages the pool of AssetTileView objects.
 """
 
 import logging
@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 class AssetTilePool:
     """
-    Zarządza pulą obiektów AssetTileView, aby unikać kosztownego tworzenia
-    i niszczenia widgetów. Implementuje wzorzec Object Pooling.
+    Manages the pool of AssetTileView objects to avoid costly creation
+    and destruction of widgets. Implements the Object Pooling pattern.
     """
 
     def __init__(self, selection_model: SelectionModel, parent_widget=None):
@@ -32,7 +32,7 @@ class AssetTilePool:
         total_tiles: int,
     ) -> AssetTileView:
         """
-        Pozyskuje kafelek z puli lub tworzy nowy, jeśli pula jest pusta.
+        Acquires a tile from the pool or creates a new one if the pool is empty.
         """
         if self._pool:
             tile = self._pool.pop()
@@ -57,7 +57,7 @@ class AssetTilePool:
 
     def release(self, tile: AssetTileView):
         """
-        Zwraca kafelek do puli, aby mógł być ponownie użyty.
+        Returns the tile to the pool so it can be reused.
         """
         if tile:
             tile.hide()  # Ukryj widget, zamiast go niszczyć
@@ -72,8 +72,8 @@ class AssetTilePool:
 
     def clear(self):
         """
-        Trwale usuwa wszystkie kafelki z puli.
-        Wywoływane przy zamykaniu aplikacji, aby zwolnić pamięć.
+        Permanently removes all tiles from the pool.
+        Called when closing the application to free memory.
         """
         for tile in self._pool:
             tile.deleteLater()

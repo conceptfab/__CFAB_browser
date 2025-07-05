@@ -37,31 +37,31 @@ SUPPORTED_FORMATS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tga"}
 
 
 class ThumbnailGenerator:
-    """Prosty generator miniaturek obrazów"""
+    """Simple image thumbnail generator"""
 
     def __init__(self, thumbnail_size: int = 256):
         """
-        Inicjalizuje generator miniaturek
+        Initializes the thumbnail generator
 
         Args:
-            thumbnail_size (int): Rozmiar miniaturki (domyślnie 256px)
+            thumbnail_size (int): Thumbnail size (default 256px)
         """
         self.thumbnail_size = thumbnail_size
         self.cache_dir_name = ".cache"
 
     def generate_thumbnail(self, image_path: str) -> Tuple[str, int]:
         """
-        Generuje miniaturkę dla obrazu
+        Generates a thumbnail for an image
 
         Args:
-            image_path (str): Ścieżka do pliku obrazu
+            image_path (str): Path to the image file
 
         Returns:
-            Tuple[str, int]: (ścieżka do pliku, rozmiar miniaturki)
+            Tuple[str, int]: (path to file, thumbnail size)
 
         Raises:
-            FileNotFoundError: Gdy plik nie istnieje
-            ValueError: Gdy plik ma nieprawidłowy format
+            FileNotFoundError: If the file does not exist
+            ValueError: If the file has an invalid format
         """
         # Walidacja
         if not image_path or not isinstance(image_path, str):
@@ -109,7 +109,7 @@ class ThumbnailGenerator:
             raise
 
     def _is_thumbnail_current(self, image_path: Path, thumbnail_path: Path) -> bool:
-        """Sprawdza czy miniaturka jest aktualna"""
+        """Checks if the thumbnail is up to date"""
         if not thumbnail_path.exists():
             return False
 
@@ -122,9 +122,9 @@ class ThumbnailGenerator:
 
     def _resize_to_square(self, img: Image.Image, size: int) -> Image.Image:
         """
-        Przeskalowuje obraz do kwadratu z przycinaniem zgodnie z wymaganiami:
-        - Wysokie obrazy: przycinane od góry (górny lewy róg)
-        - Szerokie obrazy: przycinane od lewej strony (górny lewy róg)
+        Resizes the image to a square with cropping as required:
+        - Tall images: cropped from the TOP (top left corner)
+        - Wide images: cropped from the LEFT (top left corner)
         """
         width, height = img.size
 
@@ -156,7 +156,7 @@ class ThumbnailGenerator:
 
 
 def get_config() -> dict:
-    """Pobiera konfigurację miniaturek"""
+    """Gets thumbnail configuration"""
     config_path = Path(__file__).parent.parent / "config.json"
     try:
         config = load_from_file(config_path)
@@ -173,7 +173,7 @@ _generator = None
 
 
 def get_generator() -> ThumbnailGenerator:
-    """Pobiera globalną instancję generatora"""
+    """Gets the global generator instance"""
     global _generator
     if _generator is None:
         config = get_config()
@@ -183,13 +183,13 @@ def get_generator() -> ThumbnailGenerator:
 
 def generate_thumbnail(image_path: str) -> Tuple[str, int]:
     """
-    Główna funkcja do generowania miniaturek
+    Main function for generating thumbnails
 
     Args:
-        image_path (str): Ścieżka do pliku obrazu
+        image_path (str): Path to the image file
 
     Returns:
-        Tuple[str, int]: (ścieżka do pliku, rozmiar miniaturki)
+        Tuple[str, int]: (path to file, thumbnail size)
     """
     generator = get_generator()
     return generator.generate_thumbnail(image_path)

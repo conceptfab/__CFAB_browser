@@ -36,7 +36,7 @@ class FileOperationsWorker(QThread):
             )
 
     def _move_assets(self):
-        """Przenosi zaznaczone assety do nowego folderu."""
+        """Moves selected assets to a new folder."""
         if not self.assets_data:
             self.operation_completed.emit([], [])
             return
@@ -57,7 +57,7 @@ class FileOperationsWorker(QThread):
             asset_name = asset_data.get("name", "Unknown Asset")
             logger.debug(f"Processing asset {i}: name='{asset_name}'")
             self.operation_progress.emit(
-                i + 1, total_assets, f"Przenoszenie: {asset_name}"
+                i + 1, total_assets, f"Moving: {asset_name}"
             )
             try:
                 result = self._move_single_asset_with_conflict_resolution(
@@ -87,7 +87,7 @@ class FileOperationsWorker(QThread):
         self.operation_completed.emit(success_asset_names, error_messages)
 
     def _generate_unique_asset_name(self, original_name: str) -> str:
-        """Generuje unikalną nazwę assetu dodając suffix _D_01, _D_02, itd."""
+        """Generates a unique asset name by adding suffix _D_01, _D_02, etc."""
         base_name = original_name
         counter = 1
 
@@ -112,8 +112,8 @@ class FileOperationsWorker(QThread):
         self, asset_data: dict, original_name: str
     ) -> dict:
         """
-        Przenosi pojedynczy asset z obsługą konfliktów nazw.
-        Zwraca dict z kluczami: success (bool), message (str), final_name (str)
+        Moves a single asset with name conflict resolution.
+        Returns a dict with keys: success (bool), message (str), final_name (str)
         """
         unique_name = self._generate_unique_asset_name(original_name)
         try:
@@ -184,11 +184,10 @@ class FileOperationsWorker(QThread):
     def _compose_move_message(self, unique_name, original_name):
         if unique_name != original_name:
             return (
-                f"Przeniesiono asset: {original_name} -> {unique_name} "
-                f"(zmieniono nazwę z powodu konfliktu)"
+                f"Moved asset: {original_name} -> {unique_name} (renamed due to conflict)"
             )
         else:
-            return f"Pomyślnie przeniesiono asset: {original_name}"
+            return f"Successfully moved asset: {original_name}"
 
     def _update_asset_file_after_rename(self, original_asset_path, new_asset_path):
         try:
@@ -251,7 +250,7 @@ class FileOperationsWorker(QThread):
             logger.error(f"Błąd podczas oznaczania assetu jako duplikat: {e}")
 
     def _delete_assets(self):
-        """Usuwa zaznaczone assety."""
+        """Deletes selected assets."""
         if not self.assets_data:
             self.operation_completed.emit([], [])
             return
@@ -262,7 +261,9 @@ class FileOperationsWorker(QThread):
 
         for i, asset_data in enumerate(self.assets_data):
             asset_name = asset_data.get("name", "Unknown Asset")
-            self.operation_progress.emit(i + 1, total_assets, f"Usuwanie: {asset_name}")
+            self.operation_progress.emit(
+                i + 1, total_assets, f"Deleting: {asset_name}"
+            )
 
             try:
                 # Pobierz ścieżki do plików assetu
@@ -298,16 +299,7 @@ class FileOperationsWorker(QThread):
         self.operation_completed.emit(success_asset_names, error_messages)
 
     def _get_asset_files_paths(self, asset_data: dict, folder_path: str) -> list:
-        """
-        Zwraca listę ścieżek do wszystkich plików związanych z assetem.
-
-        Args:
-            asset_data (dict): Dane assetu
-            folder_path (str): Ścieżka do folderu zawierającego asset
-
-        Returns:
-            list: Lista ścieżek do plików
-        """
+        """Returns a list of paths to all files related to the asset."""
         asset_name = asset_data.get("name", "")
         files = []
 
@@ -337,9 +329,9 @@ class FileOperationsWorker(QThread):
 
 class FileOperationsModel(QObject):
     """
-    Model dla operacji na plikach (przenoszenie, usuwanie).
+    Model for file operations (moving, deleting).
 
-    Zarządza operacjami na plikach w osobnym wątku, aby nie blokować UI.
+    Manages file operations in a separate thread to avoid blocking the UI.
     """
 
     operation_progress = pyqtSignal(int, int, str)  # current, total, message
@@ -347,14 +339,14 @@ class FileOperationsModel(QObject):
     operation_error = pyqtSignal(str)
 
     def __init__(self):
-        """Inicjalizuje model operacji na plikach."""
+        """Initializes the file operations model."""
         super().__init__()
         self._worker = None
 
     def move_assets(
         self, assets_data: list, source_folder_path: str, target_folder_path: str
     ):
-        """Przenosi assety z folderu źródłowego do docelowego."""
+        """Moves assets from the source folder to the target folder."""
         if self._worker and self._worker.isRunning():
             logger.warning("Operacja już w toku. Zatrzymuję poprzednią operację.")
             self.stop_operation()
@@ -366,7 +358,7 @@ class FileOperationsModel(QObject):
         self._worker.start()
 
     def delete_assets(self, assets_data: list, current_folder_path: str):
-        """Usuwa zaznaczone assety."""
+        """Deletes selected assets."""
         if self._worker and self._worker.isRunning():
             logger.warning("Operacja już w toku. Zatrzymuję poprzednią operację.")
             self.stop_operation()
@@ -378,7 +370,7 @@ class FileOperationsModel(QObject):
         self._worker.start()
 
     def stop_operation(self):
-        """Zatrzymuje bieżącą operację na plikach."""
+        """Stops the current file operation."""
         if self._worker and self._worker.isRunning():
             logger.info("Zatrzymywanie bieżącej operacji...")
             self._worker.terminate()
@@ -387,14 +379,14 @@ class FileOperationsModel(QObject):
             logger.info("Operacja została zatrzymana.")
 
     def _connect_worker_signals(self):
-        """Łączy sygnały workera z sygnałami modelu."""
+        """Connects worker signals to model signals."""
         self._worker.operation_progress.connect(self.operation_progress.emit)
         self._worker.operation_completed.connect(self.operation_completed.emit)
         self._worker.operation_error.connect(self.operation_error.emit)
         self._worker.finished.connect(self._on_worker_finished)
 
     def _on_worker_finished(self):
-        """Obsługa zakończenia pracy workera."""
+        """Handles worker finished event."""
         if self._worker:
             self._worker.deleteLater()
             self._worker = None

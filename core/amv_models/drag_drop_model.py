@@ -25,7 +25,7 @@ class DragDropModel(QObject):
         logger.debug(f"Drag started for assets: {asset_ids}")
 
     def validate_drop(self, target_path: str, current_folder_path: str = None) -> bool:
-        """Waliduje, czy upuszczenie jest możliwe w danym folderze."""
+        """Validates whether dropping is possible in the given folder."""
         logger.debug(
             f"validate_drop called with target_path: '{target_path}', current_folder_path: '{current_folder_path}'"
         )
@@ -59,7 +59,7 @@ class DragDropModel(QObject):
         return True
 
     def complete_drop(self, target_path: str, asset_ids: list = None):
-        """Kończy operację drop i emituje sygnał."""
+        """Completes the drop operation and emits a signal."""
         if asset_ids is None:
             asset_ids = self._dragged_asset_ids
         self.drop_completed.emit(target_path, asset_ids)

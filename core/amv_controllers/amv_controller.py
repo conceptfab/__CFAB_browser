@@ -26,8 +26,8 @@ class AmvController(QObject):
 
     def __init__(self, model, view):
         """
-        Simplified constructor - używa tylko głównych komponentów.
-        Wszystkie sub-modele są dostępne przez model.
+        Simplified constructor - uses only main components.
+        All sub-models are accessible via the model.
         """
         from ..amv_models.amv_model import AmvModel
 
@@ -130,7 +130,9 @@ class AmvController(QObject):
         self.control_panel_controller.update_button_states()
 
     def _handle_file_action(self, path: str, action_type: str):
-        """Wspólna logika dla obsługi kliknięć w pliki"""
+        """
+        Common logic for handling file clicks
+        """
         logger.debug(f"Controller: File action '{action_type}' for: {path}")
         if not path:
             return

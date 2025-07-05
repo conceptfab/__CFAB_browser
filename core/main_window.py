@@ -69,7 +69,7 @@ class MainWindow(QMainWindow):
             raise
 
     def _load_config_safe(self, config_path):
-        """Bezpiecznie ładuje konfigurację z fallback do domyślnych wartości"""
+        """Safely loads configuration with fallback to default values"""
         try:
             config = load_from_file(config_path)
 
@@ -112,7 +112,7 @@ class MainWindow(QMainWindow):
 
     def _setup_logger(self):
         """
-        Konfiguruje logger na podstawie załadowanej konfiguracji
+        Configures logger based on loaded configuration
         """
         try:
             logger_level = self.config.get("logger_level", "INFO")
@@ -140,12 +140,12 @@ class MainWindow(QMainWindow):
 
     def _createMenuBar(self):
         """
-        Tworzy pasek menu z proper error handling
+        Creates menu bar with proper error handling
         """
         try:
             menu_bar = QMenuBar(self)
-            file_menu = QMenu("Plik", self)
-            exit_action = QAction("Wyjście", self)
+            file_menu = QMenu("File", self)
+            exit_action = QAction("Exit", self)
             exit_action.triggered.connect(self.close)
             file_menu.addAction(exit_action)
             menu_bar.addMenu(file_menu)
@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
 
     def _createTabs(self):
         """
-        Tworzy taby aplikacji z comprehensive error handling
+        Creates application tabs with comprehensive error handling
         """
         try:
             self.tabs = QTabWidget()
@@ -166,11 +166,11 @@ class MainWindow(QMainWindow):
             self.pairing_tab = None
             self.tools_tab = None
 
-            # Próbuj utworzyć każdy tab indywidualnie
+            # Try to create each tab individually
             tabs_config = [
-                (AmvTab, "Asset Browser", True),  # True = krytyczny tab (główna)
-                (PairingTab, "Parowanie", False),
-                (ToolsTab, "Narzędzia", False),
+                (AmvTab, "Asset Browser", True),  # True = critical tab (main)
+                (PairingTab, "Pairing", False),
+                (ToolsTab, "Tools", False),
             ]
 
             successful_tabs = 0
@@ -198,9 +198,9 @@ class MainWindow(QMainWindow):
                         # Jeśli krytyczny tab się nie załadował, dodaj placeholder
                         placeholder = QWidget()
                         layout = QVBoxLayout()
-                        layout.addWidget(QLabel(f"Błąd ładowania {tab_name}: {e}"))
+                        layout.addWidget(QLabel(f"Error loading {tab_name}: {e}"))
                         placeholder.setLayout(layout)
-                        self.tabs.addTab(placeholder, f"{tab_name} (Błąd)")
+                        self.tabs.addTab(placeholder, f"{tab_name} (Error)")
                         successful_tabs += 1
 
             if successful_tabs == 0:
@@ -218,26 +218,20 @@ class MainWindow(QMainWindow):
 
     def _createStatusBar(self):
         """
-        Tworzy pasek statusu aplikacji
+        Creates application status bar
         """
         try:
             self.status_bar = QStatusBar(self)
             self.setStatusBar(self.status_bar)
             # Dodaj etykietę po prawej stronie na liczbę zaznaczonych
-            self.selected_label = QLabel("Zaznaczone: 0")
+            self.selected_label = QLabel("Selected: 0")
             self.status_bar.addPermanentWidget(self.selected_label)
             self.logger.debug("Status bar created successfully")
         except Exception as e:
             self.logger.error(f"Error creating status bar: {e}")
 
     def update_status(self, message, timeout=5000):
-        """
-        Aktualizuje pasek statusu z nową wiadomością
-
-        Args:
-            message (str): Wiadomość do wyświetlenia
-            timeout (int): Czas wyświetlania w milisekundach (0 = bez limitu)
-        """
+        """Updates the status bar with a new message"""
         try:
             if hasattr(self, "status_bar") and self.status_bar:
                 self.status_bar.showMessage(message, timeout)
@@ -246,13 +240,7 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error updating status: {e}")
 
     def show_log_info(self, log_level, message):
-        """
-        Wyświetla informacje z logów w pasku statusu w przyjaznej formie
-
-        Args:
-            log_level (str): Poziom logowania (INFO, WARNING, ERROR, DEBUG)
-            message (str): Wiadomość z logów
-        """
+        """Displays log info in the status bar in a user-friendly way"""
         try:
             # Mapowanie poziomów logowania na przyjazne komunikaty
             level_mapping = {
@@ -276,12 +264,7 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error showing log info: {e}")
 
     def update_working_directory_status(self, directory_path):
-        """
-        Aktualizuje pasek statusu z informacją o aktualnym katalogu roboczym
-
-        Args:
-            directory_path (str): Ścieżka do aktualnego katalogu roboczego
-        """
+        """Updates the status bar with information about the current working directory"""
         try:
             if directory_path:
                 # Skróć długą ścieżkę dla lepszej czytelności
@@ -295,7 +278,7 @@ class MainWindow(QMainWindow):
                 else:
                     short_path = directory_path
 
-                status_message = f"📁 Katalog roboczy: {short_path}"
+                status_message = f"📁 Working directory: {short_path}"
                 self.update_status(status_message, timeout=0)  # Bez limitu czasu
                 self.logger.debug(f"Working directory status updated: {directory_path}")
         except Exception as e:
@@ -304,9 +287,7 @@ class MainWindow(QMainWindow):
     def update_selection_status(
         self, selected_count=None, filtered_count=None, total_count=None
     ):
-        """
-        Aktualizuje liczbę zaznaczonych assetów po prawej stronie paska statusu
-        """
+        """Updates the number of selected assets on the right side of the status bar"""
         try:
             if not hasattr(self, "amv_tab") or not self.amv_tab:
                 return
@@ -338,27 +319,21 @@ class MainWindow(QMainWindow):
             if hasattr(self, "selected_label") and self.selected_label:
                 # Ustaw tekst z dodatkową informacją o widocznych/wszystkich assetach
                 if filtered_count is not None and total_count is not None:
-                    status_text = f"Zaznaczone: {checked_count}"
+                    status_text = f"Selected: {checked_count}"
                     if filtered_count != total_count:
-                        status_text += f" (widoczne: {filtered_count}/{total_count})"
+                        status_text += f" (visible: {filtered_count}/{total_count})"
                 else:
-                    status_text = f"Zaznaczone: {checked_count}"
+                    status_text = f"Selected: {checked_count}"
                 self.selected_label.setText(status_text)
                 self.logger.debug(f"Updated status bar: {status_text}")
         except Exception as e:
             self.logger.error(f"Error updating selection status: {e}")
             # Fallback - ustaw domyślny tekst
             if hasattr(self, "selected_label") and self.selected_label:
-                self.selected_label.setText("Zaznaczone: 0")
+                self.selected_label.setText("Selected: 0")
 
     def show_operation_status(self, operation_name, status="completed"):
-        """
-        Wyświetla status operacji w pasku statusu
-
-        Args:
-            operation_name (str): Nazwa operacji
-            status (str): Status operacji (completed, started, failed)
-        """
+        """Displays operation status in the status bar"""
         try:
             status_icons = {
                 "completed": "✅",
@@ -375,9 +350,7 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error showing operation status: {e}")
 
     def setup_log_interceptor(self):
-        """
-        Konfiguruje przechwytywanie logów do wyświetlania w pasku statusu
-        """
+        """Configures log capturing for display in the status bar"""
         try:
             # Dodaj handler do przechwytywania ważnych komunikatów
             class StatusBarHandler(logging.Handler):
@@ -396,7 +369,7 @@ class MainWindow(QMainWindow):
                         logger.debug(f"Exception in status handler: {e}")
 
                 def _should_show_in_status(self, record):
-                    """Sprawdza czy komunikat powinien być wyświetlony w pasku statusu"""
+                    """Checks if the message should be shown in the status bar"""
                     important_messages = [
                         "working directory",
                         "katalog roboczy",
@@ -426,7 +399,7 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error setting up log interceptor: {e}")
 
     def _connect_signals(self):
-        """Uproszczona metoda łączenia sygnałów"""
+        """Simplified method for connecting signals"""
         signal_connections = [
             (self._connect_amv_signals, "AMV"),
             (self._connect_status_signals, "Status"),
@@ -441,7 +414,7 @@ class MainWindow(QMainWindow):
                 self.logger.error(f"Error connecting {component_name} signals: {e}")
 
     def _connect_amv_signals(self):
-        """Łączy sygnały AMV Tab"""
+        """Connects AMV Tab signals"""
         amv_controller = self.amv_tab.get_controller()
         if not amv_controller:
             self.logger.error("Could not get AMV controller to connect signals.")
@@ -470,20 +443,18 @@ class MainWindow(QMainWindow):
         self.update_selection_status(0, 0, 0)
 
     def _connect_status_signals(self):
-        """Łączy sygnały Status Bar"""
+        """Connects Status Bar signals"""
         # Przykładowe miejsce na sygnały statusu, do rozbudowy jeśli potrzeba
         pass
 
     def _connect_tools_signals(self):
-        """Łączy sygnały Tools Tab"""
+        """Connects Tools Tab signals"""
         if self.tools_tab:
             # Sygnały Tools Tab są już połączone w konstruktorze
             pass
 
     def _on_selection_changed(self, selected_asset_ids):
-        """
-        Obsługuje zmianę zaznaczenia i aktualizuje pasek statusu
-        """
+        """Handles selection change and updates the status bar"""
         try:
             selected_count = len(selected_asset_ids)
             self.logger.debug(f"Selection changed: {selected_count} items selected")
@@ -529,9 +500,7 @@ class MainWindow(QMainWindow):
             self.update_selection_status(selected_count, 0, 0)
 
     def _on_assets_changed(self, assets):
-        """
-        Obsługuje zmianę assetów i aktualizuje pasek statusu
-        """
+        """Handles asset change and updates the status bar"""
         try:
             amv_controller = self.amv_tab.get_controller()
             # Liczba widocznych assetów = liczba kafelków w galerii (bez specjalnych folderów)
@@ -574,9 +543,7 @@ class MainWindow(QMainWindow):
     # Usunięte nieużywane metody get_config() i get_config_value()
 
     def closeEvent(self, event):
-        """
-        Obsługuje zamykanie aplikacji - zatrzymuje wszystkie wątki
-        """
+        """Handles application closing - stops all threads"""
         try:
             self.logger.info("Zamykanie aplikacji - zatrzymywanie wątków...")
 

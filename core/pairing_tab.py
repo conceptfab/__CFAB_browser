@@ -76,14 +76,16 @@ class ArchiveListItem(QWidget):
         self.checkbox.setChecked(checked)
 
     def sizeHint(self):
-        """Zwraca zwiększoną wysokość wiersza o 30%"""
+        """Returns row height increased by 30%"""
         base_size = super().sizeHint()
-        # Zwiększ wysokość o 30%
+        # Increase height by 30%
         increased_height = int(base_size.height() * 1.5)
         return QSize(base_size.width(), increased_height)
 
 
 class PairingTab(QWidget):
+    """Tab for pairing archives and previews, asset creation, and cleanup operations"""
+
     def __init__(self):
         super().__init__()
         self.model = PairingModel()
@@ -120,26 +122,26 @@ class PairingTab(QWidget):
         button_column_layout.setSpacing(5)
         button_column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        self.create_asset_button = QPushButton("Utwórz asset")
+        self.create_asset_button = QPushButton("Create asset")
         self.create_asset_button.setFixedSize(250, 30)  # Increased width
         self.create_asset_button.clicked.connect(self._on_create_asset_button_clicked)
         button_column_layout.addWidget(self.create_asset_button)
 
-        self.delete_previews_button = QPushButton("Usuń podglądy bez pary")
+        self.delete_previews_button = QPushButton("Delete unpaired previews")
         self.delete_previews_button.setFixedSize(250, 30)  # Increased width
         self.delete_previews_button.clicked.connect(
             self._on_delete_unpaired_images_clicked
         )
         button_column_layout.addWidget(self.delete_previews_button)
 
-        self.delete_archives_button = QPushButton("Usuń archiwa bez pary")
+        self.delete_archives_button = QPushButton("Delete unpaired archives")
         self.delete_archives_button.setFixedSize(250, 30)  # Increased width
         self.delete_archives_button.clicked.connect(
             self._on_delete_unpaired_archives_clicked
         )
         button_column_layout.addWidget(self.delete_archives_button)
 
-        self.rebuild_assets_button = QPushButton("Przebuduj assety")
+        self.rebuild_assets_button = QPushButton("Rebuild assets")
         self.rebuild_assets_button.setFixedSize(250, 30)  # Increased width
         self.rebuild_assets_button.clicked.connect(self._on_rebuild_assets_clicked)
         button_column_layout.addWidget(self.rebuild_assets_button)
@@ -282,7 +284,7 @@ class PairingTab(QWidget):
         self.preview_window.show_window()
 
     def _remove_paired_items_from_ui(self, archive_name: str, preview_full_path: str):
-        """Usuwa sparowane elementy z UI bez przeładowywania całej listy"""
+        """Removes paired items from UI without reloading the entire list"""
         # Usuń archiwum z listy archiwów
         for i in range(self.archive_list_widget.count()):
             item = self.archive_list_widget.item(i)
@@ -298,7 +300,7 @@ class PairingTab(QWidget):
         print(f"Removed preview from UI: {preview_name}")
 
     def _update_button_states(self):
-        """Aktualizuje stan wszystkich przycisków na podstawie folderu roboczego"""
+        """Updates the state of all buttons based on the working folder"""
         has_working_folder = bool(
             hasattr(self.model, "work_folder")
             and self.model.work_folder
@@ -326,7 +328,7 @@ class PairingTab(QWidget):
             )
 
     def _update_create_asset_button_state(self):
-        """Aktualizuje stan przycisku 'Utwórz asset' - teraz używa _update_button_states()"""
+        """Updates the state of the 'Create asset' button - now uses _update_button_states()"""
         self._update_button_states()
 
     def _on_create_asset_button_clicked(self):
@@ -374,8 +376,8 @@ class PairingTab(QWidget):
     def _on_delete_unpaired_images_clicked(self):
         reply = QMessageBox.question(
             self,
-            "Potwierdzenie",
-            "Czy na pewno chcesz usunąć WSZYSTKIE niesparowane podglądy z listy i z dysku?\nTej operacji nie można cofnąć.",
+            "Confirmation",
+            "Are you sure you want to delete ALL unpaired previews from the list and disk?\nThis operation cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -383,21 +385,21 @@ class PairingTab(QWidget):
             success = self.model.delete_unpaired_images()
             if success:
                 QMessageBox.information(
-                    self, "Sukces", "Pomyślnie usunięto niesparowane podglądy."
+                    self, "Success", "Successfully deleted unpaired previews."
                 )
             else:
                 QMessageBox.warning(
                     self,
-                    "Błąd",
-                    "Wystąpił błąd podczas usuwania podglądów. Sprawdź logi.",
+                    "Error",
+                    "An error occurred while deleting previews. Check logs.",
                 )
             self.load_data()
 
     def _on_delete_unpaired_archives_clicked(self):
         reply = QMessageBox.question(
             self,
-            "Potwierdzenie",
-            "Czy na pewno chcesz usunąć WSZYSTKIE niesparowane archiwa z listy i z dysku?\nTej operacji nie można cofnąć.",
+            "Confirmation",
+            "Are you sure you want to delete ALL unpaired archives from the list and disk?\nThis operation cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -405,13 +407,13 @@ class PairingTab(QWidget):
             success = self.model.delete_unpaired_archives()
             if success:
                 QMessageBox.information(
-                    self, "Sukces", "Pomyślnie usunięto niesparowane archiwa."
+                    self, "Success", "Successfully deleted unpaired archives."
                 )
             else:
                 QMessageBox.warning(
                     self,
-                    "Błąd",
-                    "Wystąpił błąd podczas usuwania archiwów. Sprawdź logi.",
+                    "Error",
+                    "An error occurred while deleting archives. Check logs.",
                 )
             self.load_data()
 
@@ -423,14 +425,14 @@ class PairingTab(QWidget):
 
         if not work_folder or not os.path.exists(work_folder):
             QMessageBox.warning(
-                self, "Błąd", "Folder roboczy nie jest ustawiony lub nie istnieje."
+                self, "Error", "Working folder is not set or does not exist."
             )
             return
 
         reply = QMessageBox.question(
             self,
-            "Potwierdzenie",
-            f"Czy na pewno chcesz przebudować wszystkie assety w folderze:\n{work_folder}?",
+            "Confirmation",
+            f"Are you sure you want to rebuild all assets in the folder:\n{work_folder}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -443,8 +445,8 @@ class PairingTab(QWidget):
             self.rebuild_thread.start()
             QMessageBox.information(
                 self,
-                "Proces rozpoczęty",
-                f"Rozpoczęto przebudowę assetów w folderze:\n{work_folder}",
+                "Process started",
+                f"Asset rebuild started in folder:\n{work_folder}",
             )
 
     def _on_rebuild_finished(self, message):

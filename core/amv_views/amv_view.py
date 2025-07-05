@@ -1,6 +1,6 @@
 """
-Główny widok dla zakładki AMV.
-Zawiera kompletny interfejs użytkownika z panelem folderów i galerią.
+Main view for the AMV tab.
+Contains the complete user interface with folder panel and gallery.
 """
 
 import logging
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 
 class AmvView(QWidget):
-    """View dla zakładki AMV - prezentacja UI"""
+    """View for the AMV tab - UI presentation"""
 
     splitter_moved = pyqtSignal(list)
     toggle_panel_requested = pyqtSignal()
@@ -49,7 +49,7 @@ class AmvView(QWidget):
         logger.debug("AmvView initialized with dependency injection - ETAP 15")
 
     def _load_icons(self):
-        """Ładuje ikony używane w widoku."""
+        """Loads icons used in the view."""
         self.collapse_icon = QIcon("core/resources/img/collapse_panel.png")
         self.expand_icon = QIcon("core/resources/img/expand_panel.png")
 
@@ -96,13 +96,13 @@ class AmvView(QWidget):
         header_layout.setContentsMargins(12, 8, 12, 8)
 
         # Przyciski Zwiń i Rozwiń - szersze o 80%, bardzo niskie
-        self.collapse_button = QPushButton("Zwiń")
+        self.collapse_button = QPushButton("Collapse")
         self.collapse_button.setObjectName("collapseButton")
         # self.collapse_button.setFixedHeight(16)  # Mała wysokość
         self.collapse_button.setFixedWidth(35)  # Identyczna szerokość
         self.collapse_button.clicked.connect(self._on_collapse_tree_clicked)
 
-        self.expand_button = QPushButton("Rozwiń")
+        self.expand_button = QPushButton("Expand")
         self.expand_button.setObjectName("expandButton")
         # self.expand_button.setFixedHeight(16)  # Mała wysokość
         self.expand_button.setFixedWidth(35)  # Identyczna szerokość
@@ -111,7 +111,7 @@ class AmvView(QWidget):
         self.toggle_button = QPushButton()
         self.toggle_button.setObjectName("panelToggleButton")  # ID dla QSS
         self.toggle_button.setFixedSize(18, 18)
-        self.toggle_button.setToolTip("Zamknij panel")
+        self.toggle_button.setToolTip("Close panel")
         self.toggle_button.setIcon(self.collapse_icon)
         self.toggle_button.setIconSize(QSize(16, 16))
         self.toggle_button.setFlat(True)
@@ -246,7 +246,7 @@ class AmvView(QWidget):
         QTimer.singleShot(500, self._position_control_panel)  # Zwiększone opóźnienie
 
     def _position_control_panel(self):
-        """Pozycjonuje panel kontrolny na dole galerii"""
+        """Positions the control panel at the bottom of the gallery."""
         if hasattr(self, "control_panel") and hasattr(self, "gallery_panel"):
             # POPRAWKA: Użyj scroll_area jako referencji zamiast gallery_panel
             if hasattr(self, "scroll_area"):
@@ -295,11 +295,11 @@ class AmvView(QWidget):
                 self.control_panel.raise_()
 
     def _create_edge_button(self):
-        """Tworzy przycisk przyklejony do lewej krawędzi do otwierania panelu"""
+        """Creates a button attached to the left edge for opening the panel."""
         self.edge_button = QPushButton()
         self.edge_button.setObjectName("edgePanelButton")
         self.edge_button.setFixedSize(18, 18)  # Taki sam rozmiar jak przycisk zamykania
-        self.edge_button.setToolTip("Otwórz panel")
+        self.edge_button.setToolTip("Open panel")
         self.edge_button.setIcon(QIcon("core/resources/img/open_panel.png"))
         self.edge_button.setIconSize(QSize(16, 16))  # Ikona mniejsza niż przycisk
         self.edge_button.setFlat(True)
@@ -485,7 +485,7 @@ class AmvView(QWidget):
             icon = self.collapse_icon if is_panel_open else self.expand_icon
             self.toggle_button.setIcon(icon)
             self.toggle_button.setToolTip(
-                "Zamknij panel" if is_panel_open else "Otwórz panel"
+                "Close panel" if is_panel_open else "Open panel"
             )
 
         # POPRAWKA: Obsługa przycisku krawędzi
@@ -504,7 +504,7 @@ class AmvView(QWidget):
         self.expand_tree_requested.emit()
 
     def remove_asset_tiles(self, asset_ids_to_remove: list):
-        """Usuwa kafelki assetów z widoku galerii na podstawie ich ID."""
+        """Removes asset tiles from the gallery view by their ID."""
         logger.debug(f"Attempting to remove asset tiles: {asset_ids_to_remove}")
         widgets_to_remove = []
         for i in range(self.gallery_layout.count()):
@@ -524,7 +524,7 @@ class AmvView(QWidget):
         logger.info(f"Successfully removed {len(widgets_to_remove)} asset tiles.")
 
     def showEvent(self, event):
-        """Obsługuje pokazanie widoku"""
+        """Handles showing the view"""
         super().showEvent(event)
         # DODAJ: Pozycjonuj panel po pokazaniu widoku
         if hasattr(self, "_position_control_panel"):
@@ -535,7 +535,7 @@ class AmvView(QWidget):
             )  # 100ms opóźnienia po pokazaniu
 
     def resizeEvent(self, event):
-        """Obsługuje zmianę rozmiaru okna"""
+        """Handles window resize event"""
         super().resizeEvent(event)
         # POPRAWKA: Dodaj opóźnienie dla stabilnego pozycjonowania
         if hasattr(self, "_position_control_panel"):

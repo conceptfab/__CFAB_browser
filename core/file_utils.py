@@ -1,6 +1,6 @@
 """
-Moduł utility dla operacji na plikach i ścieżkach.
-Zawiera funkcje używane przez różne komponenty aplikacji.
+Utility module for file and path operations.
+Contains functions used by various application components.
 """
 
 import logging
@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 
 def _is_command_available(command: str) -> bool:
     """
-    Sprawdza czy komenda jest dostępna w systemie.
+    Checks if a command is available in the system.
 
     Args:
-        command (str): Nazwa komendy do sprawdzenia
+        command (str): Name of the command to check
 
     Returns:
-        bool: True jeśli komenda jest dostępna, False w przeciwnym razie
+        bool: True if the command is available, False otherwise
     """
     try:
         subprocess.run(
@@ -34,14 +34,14 @@ def _is_command_available(command: str) -> bool:
 
 def open_path_in_explorer(path: str, parent_widget=None) -> bool:
     """
-    Otwiera ścieżkę w eksploratorze plików systemu.
+    Opens a path in the system file explorer.
 
     Args:
-        path (str): Ścieżka do otwarcia
-        parent_widget: Widget nadrzędny dla wyświetlania komunikatów błędów
+        path (str): Path to open
+        parent_widget: Parent widget for displaying error messages
 
     Returns:
-        bool: True jeśli operacja się powiodła, False w przeciwnym razie
+        bool: True if the operation succeeded, False otherwise
     """
     logger.debug(f"open_path_in_explorer - otrzymana ścieżka: {path}")
     try:
@@ -58,10 +58,10 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
 
         # Sprawdź czy ścieżka istnieje
         if not os.path.exists(normalized_path):
-            logger.error(f"Ścieżka nie istnieje: {normalized_path}")
+            logger.error(f"Path does not exist: {normalized_path}")
             if parent_widget:
                 QMessageBox.warning(
-                    parent_widget, "Błąd", f"Ścieżka nie istnieje: {path}"
+                    parent_widget, "Error", f"Path does not exist: {path}"
                 )
             return False
 
@@ -74,10 +74,10 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
             try:
                 os.startfile(normalized_path)
             except FileNotFoundError:
-                logger.error(f"Nie znaleziono eksploratora Windows lub ścieżki: {normalized_path}")
+                logger.error(f"Windows Explorer or path not found: {normalized_path}")
                 if parent_widget:
                     QMessageBox.warning(
-                        parent_widget, "Błąd", f"Nie znaleziono eksploratora Windows lub ścieżki: {normalized_path}"
+                        parent_widget, "Error", f"Windows Explorer or path not found: {normalized_path}"
                     )
                 return False
         elif sys.platform == "darwin":  # macOS
@@ -93,38 +93,38 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
         logger.info(f"Otworzono ścieżkę w eksploratorze: {normalized_path}")
         return True
     except subprocess.TimeoutExpired:
-        logger.error(f"Timeout podczas otwierania ścieżki: {path}")
+        logger.error(f"Timeout while opening path: {path}")
         if parent_widget:
             QMessageBox.warning(
-                parent_widget, "Błąd", f"Timeout podczas otwierania ścieżki: {path}"
+                parent_widget, "Error", f"Timeout while opening path: {path}"
             )
         return False
     except subprocess.CalledProcessError as e:
-        logger.error(f"Błąd procesu podczas otwierania ścieżki {path}: {e}")
+        logger.error(f"Process error while opening path {path}: {e}")
         if parent_widget:
             QMessageBox.warning(
-                parent_widget, "Błąd", f"Błąd procesu podczas otwierania: {path}"
+                parent_widget, "Error", f"Process error while opening: {path}"
             )
         return False
     except Exception as e:
-        logger.error(f"Błąd podczas otwierania ścieżki {path}: {e}")
+        logger.error(f"Error while opening path {path}: {e}")
         if parent_widget:
             QMessageBox.warning(
-                parent_widget, "Błąd", f"Nie można otworzyć ścieżki: {path}"
+                parent_widget, "Error", f"Cannot open path: {path}"
             )
         return False
 
 
 def open_file_in_default_app(path: str, parent_widget=None) -> bool:
     """
-    Otwiera plik w domyślnej aplikacji systemu.
+    Opens a file in the system's default application.
 
     Args:
-        path (str): Ścieżka do pliku
-        parent_widget: Widget nadrzędny dla wyświetlania komunikatów błędów
+        path (str): Path to the file
+        parent_widget: Parent widget for displaying error messages
 
     Returns:
-        bool: True jeśli operacja się powiodła, False w przeciwnym razie
+        bool: True if the operation succeeded, False otherwise
     """
     try:
         # Walidacja inputu
@@ -134,9 +134,9 @@ def open_file_in_default_app(path: str, parent_widget=None) -> bool:
 
         # Sprawdź czy plik istnieje
         if not os.path.exists(path):
-            logger.error(f"Plik nie istnieje: {path}")
+            logger.error(f"File does not exist: {path}")
             if parent_widget:
-                QMessageBox.warning(parent_widget, "Błąd", f"Plik nie istnieje: {path}")
+                QMessageBox.warning(parent_widget, "Error", f"File does not exist: {path}")
             return False
 
         if sys.platform == "win32":
@@ -154,23 +154,23 @@ def open_file_in_default_app(path: str, parent_widget=None) -> bool:
         logger.info(f"Otworzono plik w domyślnej aplikacji: {path}")
         return True
     except subprocess.TimeoutExpired:
-        logger.error(f"Timeout podczas otwierania pliku: {path}")
+        logger.error(f"Timeout while opening file: {path}")
         if parent_widget:
             QMessageBox.warning(
-                parent_widget, "Błąd", f"Timeout podczas otwierania pliku: {path}"
+                parent_widget, "Error", f"Timeout while opening file: {path}"
             )
         return False
     except subprocess.CalledProcessError as e:
-        logger.error(f"Błąd procesu podczas otwierania pliku {path}: {e}")
+        logger.error(f"Process error while opening file {path}: {e}")
         if parent_widget:
             QMessageBox.warning(
-                parent_widget, "Błąd", f"Błąd procesu podczas otwierania pliku: {path}"
+                parent_widget, "Error", f"Process error while opening file: {path}"
             )
         return False
     except Exception as e:
-        logger.error(f"Błąd podczas otwierania pliku {path}: {e}")
+        logger.error(f"Error while opening file {path}: {e}")
         if parent_widget:
             QMessageBox.warning(
-                parent_widget, "Błąd", f"Nie można otworzyć pliku: {path}"
+                parent_widget, "Error", f"Cannot open file: {path}"
             )
         return False

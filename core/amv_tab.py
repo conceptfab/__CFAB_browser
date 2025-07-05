@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 class AmvTab(QWidget):
     """
-    Główna klasa zakładki AMV
-    Model/View/Controller pattern - ETAP 15 completed with dependency injection
+    Main class of the AMV tab
+    Model/View/Controller pattern - STAGE 15 completed with dependency injection
     """
 
     def __init__(
@@ -46,7 +46,7 @@ class AmvTab(QWidget):
         logger.debug("AmvTab initialized with dependency injection - ETAP 15 completed")
 
     def get_controller(self) -> AmvController:
-        """Zwraca instancję kontrolera dla tej zakładki."""
+        """Returns the controller instance for this tab."""
         return self.controller
 
 

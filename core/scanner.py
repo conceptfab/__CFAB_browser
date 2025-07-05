@@ -18,18 +18,18 @@ FILE_EXTENSIONS = {
 
 class AssetRepository:
     """
-    Implementacja repozytorium assetów.
+    Implementation of the asset repository.
 
-    Enkapsuluje logikę skanowania, tworzenia i ładowania assetów.
-    Implementuje interfejs IAssetRepository.
+    Encapsulates logic for scanning, creating, and loading assets.
+    Implements the IAssetRepository interface.
     """
 
     def __init__(self):
-        """Inicjalizuje repozytorium assetów."""
+        """Initializes the asset repository."""
         pass
 
     def _handle_error(self, operation: str, error: Exception, file_path: str = None):
-        """DODAJ bazową metodę dla obsługi błędów"""
+        """Base method for error handling"""
         error_msg = f"Błąd podczas {operation}"
         if file_path:
             error_msg += f" dla {file_path}"
@@ -39,14 +39,14 @@ class AssetRepository:
 
     def _get_files_by_extensions(self, folder_path: str, extensions: list) -> list:
         """
-        Pomocnicza funkcja do wyszukiwania plików o określonych rozszerzeniach
+        Helper function for finding files with specific extensions
 
         Args:
-            folder_path (str): Ścieżka do folderu
-            extensions (list): Lista rozszerzeń (bez kropki)
+            folder_path (str): Path to the folder
+            extensions (list): List of extensions (without dot)
 
         Returns:
-            list: Lista ścieżek do znalezionych plików
+            list: List of found file paths
         """
         files = []
         ext_set = set(ext.lower() for ext in extensions)
@@ -60,13 +60,13 @@ class AssetRepository:
 
     def _scan_folder_for_files(self, folder_path: str) -> tuple:
         """
-        Skanuje folder w poszukiwaniu plików archiwów i obrazów
+        Scans the folder for archive and image files
 
         Args:
-            folder_path (str): Ścieżka do folderu
+            folder_path (str): Path to the folder
 
         Returns:
-            tuple: (archive_by_name, image_by_name) - słowniki plików według nazw
+            tuple: (archive_by_name, image_by_name) - dictionaries of files by name
         """
         # Znajdź wszystkie pliki archiwum i obrazów
         archive_files = self._get_files_by_extensions(
@@ -105,14 +105,14 @@ class AssetRepository:
     @staticmethod
     def _check_texture_folders_presence(folder_path: str) -> bool:
         """
-        Sprawdza obecność folderów tekstur w folderze roboczym
+        Checks for the presence of texture folders in the working folder
 
         Args:
-            folder_path (str): Ścieżka do folderu roboczego
+            folder_path (str): Path to the working folder
 
         Returns:
-            bool: True jeśli NIE znaleziono folderów tekstur (tekstury są w archiwum),
-                  False jeśli znaleziono foldery tekstur (tekstury są na zewnątrz)
+            bool: True if NO texture folders found (textures are in archive),
+                  False if texture folders found (textures are external)
         """
         if not folder_path or not isinstance(folder_path, str):
             logger.warning(f"Invalid folder_path parameter: {folder_path}")
@@ -145,13 +145,13 @@ class AssetRepository:
 
     @staticmethod
     def _validate_folder_path_static(folder_path: str) -> bool:
-        """Statyczna walidacja ścieżki folderu"""
+        """Static validation of folder path"""
         return bool(folder_path and os.path.exists(folder_path))
 
     def _scan_for_named_folders(
         self, folder_path: str, folder_names: list[str]
     ) -> list:
-        """Skanuje folder w poszukiwaniu podfolderów o zadanych nazwach."""
+        """Scans the folder for subfolders with given names."""
         found_folders = []
         for folder_name in folder_names:
             full_path = os.path.join(folder_path, folder_name)
@@ -167,7 +167,7 @@ class AssetRepository:
         return found_folders
 
     def _scan_for_special_folders(self, folder_path: str) -> list:
-        """Skanuje folder w poszukiwaniu specjalnych folderów (tex, textures, maps)."""
+        """Scans the folder for special folders (tex, textures, maps)."""
         special_folder_names = ["tex", "textures", "maps"]
         return self._scan_for_named_folders(folder_path, special_folder_names)
 
@@ -175,16 +175,16 @@ class AssetRepository:
         self, name: str, archive_path: str, image_path: str, folder_path: str
     ) -> dict | None:
         """
-        Tworzy pojedynczy plik .asset
+        Creates a single .asset file
 
         Args:
-            name (str): Nazwa pliku (bez rozszerzenia)
-            archive_path (str): Ścieżka do pliku archiwum
-            image_path (str): Ścieżka do pliku obrazu
-            folder_path (str): Ścieżka do folderu docelowego
+            name (str): File name (without extension)
+            archive_path (str): Path to archive file
+            image_path (str): Path to image file
+            folder_path (str): Path to target folder
 
         Returns:
-            dict|None: Słownik z danymi assetu lub None przy błędzie
+            dict|None: Asset data dictionary or None on error
         """
         # Walidacja ścieżki folderu na początku
         if not AssetRepository._validate_folder_path_static(folder_path):
