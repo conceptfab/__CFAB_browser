@@ -719,6 +719,268 @@ class FileRenamerWorker(BaseWorker):
             return False
 
 
+class FileShortenerWorker(BaseWorker):
+    """Worker do skracania nazw plików z obsługą duplikatów"""
+
+    # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
+    finished = pyqtSignal(str)  # message
+    pairs_found = pyqtSignal(list)  # lista par do wyświetlenia
+    user_confirmation_needed = pyqtSignal(list)  # czeka na potwierdzenie użytkownika
+
+    def __init__(self, folder_path: str, max_name_length: int):
+        super().__init__(folder_path)
+        self.max_name_length = max_name_length
+        self.user_confirmed = False
+        self.files_info = None
+
+    def confirm_operation(self):
+        """Metoda wywoływana po potwierdzeniu przez użytkownika"""
+        self.user_confirmed = True
+
+    def _run_operation(self):
+        """Główna metoda skracania nazw plików"""
+        try:
+            logger.info(f"Rozpoczęcie skracania nazw w folderze: {self.folder_path}")
+
+            # Znajdź pary i pliki do skrócenia
+            self.files_info = self._analyze_files()
+
+            if not self.files_info["all_files"]:
+                self.finished.emit("Brak plików do przetworzenia")
+                return
+
+            # Wyślij listę par do wyświetlenia i czekaj na potwierdzenie
+            self.user_confirmation_needed.emit(self.files_info["pairs"])
+
+            # Czekaj na potwierdzenie użytkownika
+            while not self.user_confirmed:
+                self.msleep(100)  # Czekaj 100ms
+                if self.isInterruptionRequested():
+                    return
+
+            # Teraz rozpocznij skracanie nazw
+            self._perform_shortening()
+
+        except Exception as e:
+            error_msg = f"Błąd podczas skracania nazw: {e}"
+            logger.error(error_msg)
+            self.error_occurred.emit(error_msg)
+
+    def _perform_shortening(self):
+        """Wykonuje właściwe skracanie nazw"""
+        try:
+            shortened_count = 0
+            error_count = 0
+
+            # Najpierw pary
+            if self.files_info["pairs"]:
+                self.progress_updated.emit(
+                    0, len(self.files_info["pairs"]), "Skracanie nazw par..."
+                )
+                for i, (archive_file, preview_file) in enumerate(
+                    self.files_info["pairs"]
+                ):
+                    try:
+                        # Sprawdź czy nazwa wymaga skrócenia
+                        archive_name = os.path.splitext(os.path.basename(archive_file))[0]
+                        if len(archive_name) > self.max_name_length:
+                            # Wygeneruj skróconą nazwę
+                            shortened_name = archive_name[:self.max_name_length]
+                            # Sprawdź konflikty i dodaj sufiks jeśli potrzeba
+                            unique_name = self._generate_unique_name(shortened_name)
+
+                            # Zmień nazwę pliku archiwum
+                            if self._rename_file(archive_file, unique_name):
+                                shortened_count += 1
+
+                            # Zmień nazwę pliku podglądu
+                            if self._rename_file(preview_file, unique_name):
+                                shortened_count += 1
+
+                            logger.info(f"Skrócono parę: {archive_name} -> {unique_name}")
+                        else:
+                            logger.debug(f"Pominięto parę (nazwa w normie): {archive_name}")
+
+                        self.progress_updated.emit(
+                            i + 1,
+                            len(self.files_info["pairs"]),
+                            f"Skrócono parę: {archive_name[:20]}...",
+                        )
+
+                    except Exception as e:
+                        error_count += 1
+                        logger.error(f"Błąd podczas skracania pary: {e}")
+
+            # Potem pliki bez pary
+            if self.files_info["unpaired"]:
+                self.progress_updated.emit(
+                    0,
+                    len(self.files_info["unpaired"]),
+                    "Skracanie nazw plików bez pary...",
+                )
+                for i, file_path in enumerate(self.files_info["unpaired"]):
+                    try:
+                        filename = os.path.basename(file_path)
+                        name_without_ext = os.path.splitext(filename)[0]
+
+                        if len(name_without_ext) > self.max_name_length:
+                            # Wygeneruj skróconą nazwę
+                            shortened_name = name_without_ext[:self.max_name_length]
+                            # Sprawdź konflikty i dodaj sufiks jeśli potrzeba
+                            unique_name = self._generate_unique_name(shortened_name)
+
+                            if self._rename_file(file_path, unique_name):
+                                shortened_count += 1
+                                logger.info(f"Skrócono nazwę: {filename} -> {unique_name}")
+                        else:
+                            logger.debug(f"Pominięto (nazwa w normie): {filename}")
+
+                        self.progress_updated.emit(
+                            i + 1,
+                            len(self.files_info["unpaired"]),
+                            f"Przetwarzanie: {filename[:20]}...",
+                        )
+
+                    except Exception as e:
+                        error_count += 1
+                        logger.error(f"Błąd podczas skracania {filename}: {e}")
+
+            # Przygotuj komunikat końcowy
+            message = f"Skracanie nazw zakończone: {shortened_count} plików skrócono"
+            if error_count > 0:
+                message += f", {error_count} błędów"
+
+            self.finished.emit(message)
+
+        except Exception as e:
+            error_msg = f"Błąd podczas skracania nazw: {e}"
+            logger.error(error_msg)
+            self.error_occurred.emit(error_msg)
+
+    def _generate_unique_name(self, base_name: str) -> str:
+        """Generuje unikalną nazwę dodając suffix _D_01, _D_02 jeśli potrzeba"""
+        original_name = base_name
+        counter = 1
+
+        while True:
+            # Sprawdź czy plik o tej nazwie już istnieje w folderze
+            test_files = []
+            for ext in ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.sbsar', 
+                       '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']:
+                test_file = os.path.join(self.folder_path, f"{base_name}{ext}")
+                if os.path.exists(test_file):
+                    test_files.append(test_file)
+            
+            if not test_files:
+                return base_name
+
+            # Jeśli istnieje, spróbuj z sufiksem _D_01, _D_02, itd.
+            base_name = f"{original_name}_D_{counter:02d}"
+            counter += 1
+
+            # Zabezpieczenie przed nieskończoną pętlą
+            if counter > 99:
+                logger.warning(f"Osiągnięto maksymalną liczbę prób dla {original_name}")
+                return f"{original_name}_D_{counter}"
+
+    def _analyze_files(self) -> dict:
+        """Analizuje pliki w folderze i znajduje pary"""
+        files_info = {"all_files": [], "pairs": [], "unpaired": []}
+
+        try:
+            # Rozszerzenia plików
+            archive_extensions = {
+                ".zip",
+                ".rar",
+                ".7z",
+                ".tar",
+                ".gz",
+                ".bz2",
+                ".sbsar",
+            }
+            preview_extensions = {
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".gif",
+                ".bmp",
+                ".tiff",
+                ".webp",
+            }
+
+            # Zbierz wszystkie pliki
+            archive_files = []
+            preview_files = []
+
+            for item in os.listdir(self.folder_path):
+                item_path = os.path.join(self.folder_path, item)
+                if os.path.isfile(item_path):
+                    file_ext = os.path.splitext(item)[1].lower()
+                    name_without_ext = os.path.splitext(item)[0]
+
+                    if file_ext in archive_extensions:
+                        archive_files.append((name_without_ext, item_path))
+                    elif file_ext in preview_extensions:
+                        preview_files.append((name_without_ext, item_path))
+
+            # Znajdź pary (pliki o tej samej nazwie bez rozszerzenia)
+            archive_names = {name: path for name, path in archive_files}
+            preview_names = {name: path for name, path in preview_files}
+
+            # Znajdź wspólne nazwy (pary)
+            common_names = set(archive_names.keys()) & set(preview_names.keys())
+
+            for name in common_names:
+                files_info["pairs"].append((archive_names[name], preview_names[name]))
+
+            # Znajdź pliki bez pary
+            all_archive_paths = set(archive_names.values())
+            all_preview_paths = set(preview_names.values())
+            paired_archive_paths = {archive_names[name] for name in common_names}
+            paired_preview_paths = {preview_names[name] for name in common_names}
+
+            unpaired_archives = all_archive_paths - paired_archive_paths
+            unpaired_images = all_preview_paths - paired_preview_paths
+
+            files_info["unpaired"] = list(unpaired_archives | unpaired_images)
+            files_info["all_files"] = list(all_archive_paths | all_preview_paths)
+
+            logger.info(
+                f"Znaleziono {len(files_info['pairs'])} par i {len(files_info['unpaired'])} plików bez pary"
+            )
+            return files_info
+
+        except Exception as e:
+            logger.error(f"Błąd podczas analizy plików: {e}")
+            return files_info
+
+    def _rename_file(self, file_path: str, new_name: str) -> bool:
+        """Zmienia nazwę pliku zachowując rozszerzenie"""
+        try:
+            # Pobierz rozszerzenie
+            file_dir = os.path.dirname(file_path)
+            file_ext = os.path.splitext(file_path)[1]
+
+            # Utwórz nową nazwę z rozszerzeniem
+            new_file_path = os.path.join(file_dir, new_name + file_ext)
+
+            # Sprawdź czy nowa nazwa nie istnieje
+            if os.path.exists(new_file_path):
+                logger.warning(f"Plik o nazwie {new_name + file_ext} już istnieje")
+                return False
+
+            # Zmień nazwę
+            os.rename(file_path, new_file_path)
+            logger.debug(
+                f"Zmieniono nazwę: {os.path.basename(file_path)} -> {new_name + file_ext}"
+            )
+            return True
+
+        except Exception as e:
+            logger.error(f"Błąd podczas zmiany nazwy {file_path}: {e}")
+            return False
+
+
 class PrefixSuffixRemoverWorker(BaseWorker):
     """Worker do usuwania prefixu/suffixu z nazw plików"""
 
@@ -974,7 +1236,12 @@ class ToolsTab(QWidget):
         self.file_renamer_button.clicked.connect(self._on_file_renaming_clicked)
         right_layout.addWidget(self.file_renamer_button)
 
-        # Przycisk 4 - usuwanie prefixu/suffixu z nazw plików
+        # Przycisk 4 - skracanie nazw plików
+        self.file_shortener_button = QPushButton("Skróć nazwy plików")
+        self.file_shortener_button.clicked.connect(self._on_file_shortening_clicked)
+        right_layout.addWidget(self.file_shortener_button)
+
+        # Przycisk 5 - usuwanie prefixu/suffixu z nazw plików
         self.remove_button = QPushButton("Usuń prefix/suffix")
         self.remove_button.clicked.connect(self._on_remove_clicked)
         right_layout.addWidget(self.remove_button)
@@ -1139,6 +1406,8 @@ class ToolsTab(QWidget):
             self.image_resizer_button.setEnabled(has_working_folder)
         if self.file_renamer_button:
             self.file_renamer_button.setEnabled(has_working_folder)
+        if self.file_shortener_button:
+            self.file_shortener_button.setEnabled(has_working_folder)
         if self.remove_button:
             self.remove_button.setEnabled(has_working_folder)
 
@@ -1176,6 +1445,8 @@ class ToolsTab(QWidget):
                 workers_to_stop.append(self.image_resizer)
             if hasattr(self, "file_renamer") and self.file_renamer:
                 workers_to_stop.append(self.file_renamer)
+            if hasattr(self, "file_shortener") and self.file_shortener:
+                workers_to_stop.append(self.file_shortener)
             if hasattr(self, "remove_worker") and self.remove_worker:
                 workers_to_stop.append(self.remove_worker)
 
@@ -1311,7 +1582,7 @@ class ToolsTab(QWidget):
         )
 
     def _on_file_renaming_clicked(self):
-        """Obsługuje kliknięcie przycisku skracania nazw plików"""
+        """Obsługuje kliknięcie przycisku randomizowania nazw plików"""
         if not self._validate_working_directory():
             return
 
@@ -1329,8 +1600,8 @@ class ToolsTab(QWidget):
             self._start_file_renaming(max_name_length)
 
     def _start_file_renaming(self, max_name_length: int):
-        """Rozpoczyna skracanie nazw plików"""
-        # Utwórz worker do skracania nazw
+        """Rozpoczyna randomizowanie nazw plików"""
+        # Utwórz worker do randomizowania nazw
         self.file_renamer = FileRenamerWorker(
             self.current_working_directory, max_name_length
         )
@@ -1340,7 +1611,40 @@ class ToolsTab(QWidget):
 
         # Użyj wspólnej metody obsługi workerów
         self._handle_worker_lifecycle(
-            self.file_renamer, self.file_renamer_button, "Skróć nazwy plików"
+            self.file_renamer, self.file_renamer_button, "Randomizuj nazwy plików"
+        )
+
+    def _on_file_shortening_clicked(self):
+        """Obsługuje kliknięcie przycisku skracania nazw plików"""
+        if not self._validate_working_directory():
+            return
+
+        max_name_length, ok = QInputDialog.getInt(
+            self,
+            "Limit znaków",
+            "Podaj maksymalną długość nazw plików (bez rozszerzenia):",
+            16,  # Domyślny limit
+            1,  # Minimalny limit
+            256,  # Maksymalny limit
+            1,  # Krok zmiany
+        )
+
+        if ok:
+            self._start_file_shortening(max_name_length)
+
+    def _start_file_shortening(self, max_name_length: int):
+        """Rozpoczyna skracanie nazw plików"""
+        # Utwórz worker do skracania nazw
+        self.file_shortener = FileShortenerWorker(
+            self.current_working_directory, max_name_length
+        )
+
+        # Dodatkowe połączenie sygnału dla potwierdzenia użytkownika
+        self.file_shortener.user_confirmation_needed.connect(self._show_pairs_dialog_shortener)
+
+        # Użyj wspólnej metody obsługi workerów
+        self._handle_worker_lifecycle(
+            self.file_shortener, self.file_shortener_button, "Skróć nazwy plików"
         )
 
     def _on_remove_clicked(self):
@@ -1524,6 +1828,59 @@ class ToolsTab(QWidget):
         else:
             # Użytkownik potwierdził - kontynuuj operację
             self.file_renamer.confirm_operation()
+
+    def _show_pairs_dialog_shortener(self, pairs):
+        """Wyświetla okno z listą par, które będą skracane"""
+        if not pairs:
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Pary plików do skrócenia nazw")
+        dialog.setModal(True)
+        dialog.resize(600, 400)
+
+        layout = QVBoxLayout(dialog)
+
+        # Nagłówek
+        header_label = QLabel(f"Znaleziono {len(pairs)} par plików do przetworzenia:")
+        header_label.setProperty("class", "dialog-header")
+        layout.addWidget(header_label)
+
+        # Lista par
+        list_widget = QListWidget()
+        for archive_path, preview_path in pairs:
+            archive_name = os.path.basename(archive_path)
+            preview_name = os.path.basename(preview_path)
+            item_text = f"📦 {archive_name}\n   🖼️ {preview_name}"
+            list_widget.addItem(item_text)
+
+        layout.addWidget(list_widget)
+
+        # Przyciski
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton("Kontynuuj")
+        cancel_button = QPushButton("Anuluj")
+
+        ok_button.clicked.connect(dialog.accept)
+        cancel_button.clicked.connect(dialog.reject)
+
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        layout.addLayout(button_layout)
+
+        # Wyświetl okno
+        result = dialog.exec()
+
+        # Jeśli użytkownik anulował, zatrzymaj worker
+        if result == QDialog.DialogCode.Rejected:
+            if hasattr(self, "file_shortener") and self.file_shortener:
+                self.file_shortener.quit()
+                if not self.file_shortener.wait(3000):
+                    self.file_shortener.terminate()
+                    self.file_shortener.wait(2000)
+        else:
+            # Użytkownik potwierdził - kontynuuj operację
+            self.file_shortener.confirm_operation()
 
     def clear_working_directory(self):
         """Czyści folder roboczy, dezaktywuje przyciski i czyści listy"""
