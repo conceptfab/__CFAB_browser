@@ -1,84 +1,85 @@
-Raport z problemów w kodzie CFAB Browser
-Duplikaty i nieużywane elementy
-1. Duplikacja klasy FolderSystemModel
-Pliki: core/amv_models/asset_grid_model.py i core/amv_models/folder_system_model.py
-python# W asset_grid_model.py (linie 113-310) - usuń tę duplikowaną klasę
-class FolderSystemModel(QObject):
-    # ... cała implementacja jest zduplikowana
-Rozwiązanie: Usuń klasę FolderSystemModel z pliku asset_grid_model.py i dodaj import:
-pythonfrom .folder_system_model import FolderSystemModel
-2. Nieużywane importy w folder_tree_view.py
-Plik: core/amv_views/folder_tree_view.py
-python# Linia 13 - nieużywany import
-from core.file_utils import open_path_in_explorer
-Rozwiązanie: Usuń import, funkcja jest już dostępna przez callback.
-3. Nieużywane pola klasy w asset_tile_view.py
-Plik: core/amv_views/asset_tile_view.py
-python# Linia 72 - nieużywane pole
-self._cached_pixmap = None
-Rozwiązanie: Usuń pole i wszystkie odwołania do niego.
-Błędy logiczne
-4. Niespójność w metodzie filter_assets
+Raport analizy kodu CFAB Browser
+1. Duplikaty i nieużywane funkcje
 Plik: core/amv_controllers/handlers/control_panel_controller.py
-python# Linie 124-135 - problem z dostępem do text_input
-text = self.view.text_input.text().strip().lower() if hasattr(self.view, 'text_input') else ''
-Rozwiązanie: Sprawdź czy pole text_input istnieje w view lub dodaj obsługę błędu.
-5. Potencjalny problem z None w asset_grid_controller.py
-Plik: core/amv_controllers/handlers/asset_grid_controller.py
-python# Linia 85 - sprawdzenie None powinno być na początku
-def on_assets_changed(self, assets):
-    if not assets:  # ADD check for None
-        self.set_original_assets([])
-        return
-Rozwiązanie: Dodaj bardziej szczegółowe sprawdzenie:
-pythonif assets is None or len(assets) == 0:
-Problemy z wydajnością
-6. Brak ograniczenia cache w ThumbnailCache
-Plik: core/thumbnail_cache.py
-python# Linie 63-78 - metoda put może doprowadzić do OOM
-def put(self, path: str, pixmap: QPixmap):
-    # Brak sprawdzenia czy pixmap nie jest zbyt duży
-Rozwiązanie: Dodaj sprawdzenie maksymalnego rozmiaru pojedynczego obiektu:
-pythonMAX_SINGLE_ITEM_SIZE = 50 * 1024 * 1024  # 50MB
-if pixmap_size > MAX_SINGLE_ITEM_SIZE:
-    logger.warning(f"Pixmap too large: {pixmap_size}")
-    return
-7. Niepotrzebne wielokrotne wywołania update_button_states
-Plik: core/amv_controllers/handlers/control_panel_controller.py
-python# Metody wywołują update_button_states() wielokrotnie
-# Linie: 182, 204, w filter_assets_by_stars()
-Rozwiązanie: Połącz wywołania lub użyj debouncing pattern.
-Problemy z zarządzaniem pamięcią
-8. Brak wywołania deleteLater() w asset_tile_pool.py
+Problem: Duplikacja metody filter_assets() - funkcjonalność filtrowania implementowana w kilku miejscach.
+python# Linie 150-170: Metoda filter_assets() powinna być scentralizowana
+def filter_assets(self):
+    # Kod duplikowany w kilku miejscach
+Plik: core/amv_models/amv_model.py
+Problem: Nieużywane gettery/settery
+python# Linie 95-105: Nieużywane metody
+def set_thumbnail_size(self, size: int) -> None:
+def set_work_folder(self, folder_path: str) -> None:
+2. Błędy architektury MVC
+Plik: core/amv_controllers/handlers/signal_connector.py
+Problem: Bezpośrednie odwołania do widoku z kontrolera
+python# Linia 89: Naruszenie wzorca MVC
+self.view.text_input.textChanged.connect(
+    lambda: control_panel_controller.filter_assets()
+)
+Plik: core/amv_views/amv_view.py
+Problem: Logika biznesowa w widoku
+python# Linia 685: Filtrowanie powinno być w kontrolerze
+self.text_input.textChanged.connect(lambda: self.parent().controller.control_panel_controller.filter_assets())
+3. Problemy z zarządzaniem pamięcią
 Plik: core/amv_views/asset_tile_pool.py
-python# Linia 82 - metoda clear nie wywołuje deleteLater()
-def clear(self):
-    for tile in self._pool:
-        tile.deleteLater()  # Może być problem z timing
-Rozwiązanie: Dodaj sprawdzenie stanu obiektu przed deleteLater().
-Problemy bezpieczeństwa
-9. Brak walidacji ścieżek w file_utils.py
-Plik: core/file_utils.py
-python# Linie 145-150 - słaba walidacja path traversal
-if ".." in folder_path or "\\.." in folder_path or "/.." in folder_path:
-Rozwiązanie: Użyj os.path.abspath() i os.path.commonpath() dla lepszej walidacji.
-Nieefektywne operacje
-10. Powolne operacje I/O w głównym wątku
-Plik: core/amv_models/asset_tile_model.py
-python# Linia 73 - operacja zapisu w głównym wątku
-def _save_to_file(self):
-    save_to_file(self.data, self.asset_file_path, indent=True)
-Rozwiązanie: Przenieś do worker thread lub użyj queue do asynchronicznego zapisu.
-Problemy z obsługą błędów
-11. Brak obsługi wyjątków w scanner.py
+Problem: Nieprawidłowe zarządzanie cyklem życia obiektów w puli
+python# Linie 65-75: Potencjalny memory leak
+def release(self, tile: AssetTileView):
+    if tile:
+        tile.hide()
+        if self._parent_widget:
+            tile.setParent(self._parent_widget)  # Może powodować wycieki
+Plik: core/thumbnail_cache.py
+Problem: Brak sprawdzania rozmiaru pojedynczych elementów
+python# Linia 95: Dodać sprawdzenie max_single_item_size
+def put(self, path: str, pixmap: QPixmap):
+    pixmap_size = pixmap.toImage().sizeInBytes()
+    # Brak sprawdzenia max_single_item_size
+4. Błędy obsługi wyjątków
 Plik: core/scanner.py
-python# Linie 150-160 - metody mogą rzucać nieobsłużone wyjątki
-def _check_texture_folders_presence(folder_path: str) -> bool:
-    # Brak try-catch dla os.listdir()
-Rozwiązanie: Dodaj obsługę PermissionError i FileNotFoundError.
-Łączna liczba problemów: 11
-Priorytety napraw:
+Problem: Zbyt ogólna obsługa wyjątków
+python# Linie 180-190: Należy rozdzielić typy wyjątków
+except Exception as e:
+    # Zbyt ogólne - powinno być podzielone na konkretne typy
+Plik: core/file_utils.py
+Problem: Niekonsystentna obsługa wyjątków
+python# Linie 85-95: Różne metody obsługi dla podobnych operacji
+def open_path_in_explorer(path: str, parent_widget=None) -> bool:
+def open_file_in_default_app(path: str, parent_widget=None) -> bool:
+5. Problemy wydajnościowe
+Plik: core/amv_controllers/handlers/asset_grid_controller.py
+Problem: Nadmierne przebudowywanie siatki
+python# Linie 120-140: Optymalizacja rebuild_asset_grid
+def rebuild_asset_grid(self, assets: list):
+    # Niepotrzebne operacje podczas małych zmian
+Plik: core/amv_models/asset_grid_model.py
+Problem: Nadmierne wywołania scan_folder
+python# Linia 85: Może być wywoływane zbyt często
+def scan_folder(self, folder_path: str):
+6. Niebezpieczne operacje na plikach
+Plik: core/tools_tab.py
+Problem: Brak walidacji ścieżek w operacjach na plikach
+python# Linie 350-400: WebPConverterWorker - brak sprawdzenia uprawnień
+def _convert_to_webp(self, input_path: str, output_path: str) -> bool:
+7. Inconsistentne logowanie
+Wiele plików
+Problem: Różne poziomy logowania dla podobnych operacji
 
-Krytyczne: Punkty 1, 4, 5, 9 (duplikacje, błędy logiczne, bezpieczeństwo)
-Wysokie: Punkty 6, 10, 11 (wydajność, pamięć, błędy)
-Średnie: Punkty 2, 3, 7, 8 (czyszczenie kodu, optymalizacje)
+core/amv_controllers/ - różne formaty logów
+core/workers/ - niekonsystentne poziomy
+
+Konkretne działania do wykonania:
+
+Scentralizować filtrowanie w AssetGridController
+Usunąć nieużywane metody z AmvModel
+Przenieść logikę biznesową z widoków do kontrolerów
+Naprawić zarządzanie pamięcią w AssetTilePool
+Dodać sprawdzenie rozmiaru w ThumbnailCache.put()
+Specjalizować obsługę wyjątków w scanner.py
+Zunifikować obsługę wyjątków w file_utils.py
+Zoptymalizować przebudowę siatki assetów
+Dodać walidację ścieżek w tools_tab.py
+Zunifikować format logowania we wszystkich modułach
+
+Implementacja tych poprawek znacząco poprawi stabilność, wydajność i czytelność kodu.
