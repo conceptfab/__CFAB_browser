@@ -70,7 +70,11 @@ class AssetGridController(QObject):
         Intelligently synchronizes the grid with the new asset list, minimizing
         UI operations to eliminate flickering and loading errors.
         """
-        assets.sort(key=lambda x: x.get("name", "").lower())
+        # Najpierw wyodrębnij kafel folderu (is_special_folder), resztę sortuj alfabetycznie
+        folder_tile = [a for a in assets if a.get("type") == "special_folder"]
+        other_tiles = [a for a in assets if a.get("type") != "special_folder"]
+        other_tiles.sort(key=lambda x: x.get("name", "").lower())
+        assets = folder_tile + other_tiles
         with measure_operation(
             "asset_grid_controller.rebuild_asset_grid", {"assets_count": len(assets)}
         ):
