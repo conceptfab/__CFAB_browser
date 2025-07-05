@@ -6,8 +6,6 @@ from PIL import Image, ImageFile
 
 from core.json_utils import load_from_file
 
-# Usunięte nieużywane importy PyQt6
-
 
 # =============================================================================
 # WAŻNE: INSTRUKCJE DLA MODELI AI

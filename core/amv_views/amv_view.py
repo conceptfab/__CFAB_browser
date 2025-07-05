@@ -511,11 +511,11 @@ class AmvView(QWidget):
                 self.edge_button.show()  # Pokaż przycisk krawędzi gdy panel jest zamknięty
 
     def _on_collapse_tree_clicked(self):
-        logger.info("Żądanie zwinięcia drzewa folderów")
+        logger.debug("Żądanie zwinięcia drzewa folderów")
         self.collapse_tree_requested.emit()
 
     def _on_expand_tree_clicked(self):
-        logger.info("Żądanie rozwinięcia drzewa folderów")
+        logger.debug("Żądanie rozwinięcia drzewa folderów")
         self.expand_tree_requested.emit()
 
     def remove_asset_tiles(self, asset_ids_to_remove: list):
@@ -536,7 +536,7 @@ class AmvView(QWidget):
         self.gallery_layout.update()
         self.gallery_container_widget.update()
         self.gallery_container_widget.repaint()
-        logger.info(f"Successfully removed {len(widgets_to_remove)} asset tiles.")
+        logger.debug(f"Successfully removed {len(widgets_to_remove)} asset tiles.")
 
     def showEvent(self, event):
         """Handles showing the view"""

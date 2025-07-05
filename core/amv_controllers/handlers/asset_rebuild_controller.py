@@ -47,11 +47,12 @@ class AssetRebuildController(QObject):
         logger.debug(f"Rebuild finished: {message}")
         self.model.control_panel_model.set_progress(100)
 
-        # ODŚWIEŻ FOLDER po przebudowie assetów
+        # WYDAJNOŚĆ: Odśwież tylko assety, nie całą strukturę folderu
         current_folder = self.model.asset_grid_model.get_current_folder()
         if current_folder:
-            self.controller.folder_tree_controller.on_folder_refresh_requested(current_folder)
-            logger.info(f"ODŚWIEŻONO FOLDER po przebudowie: {current_folder}")
+            # Zamiast pełnego odświeżania folderu, odśwież tylko assety
+            self.model.asset_grid_model.scan_folder(current_folder)
+            logger.info(f"ODŚWIEŻONO ASSETY po przebudowie: {current_folder}")
         else:
             # Update button states if there is no working folder
             self.controller.control_panel_controller.update_button_states()

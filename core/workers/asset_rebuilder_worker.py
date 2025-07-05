@@ -70,7 +70,7 @@ class AssetRebuilderWorker(QThread):
                 file_path = os.path.join(self.folder_path, asset_file)
                 os.remove(file_path)
                 logger.debug("Usunięto plik asset: %s", asset_file)
-            logger.info("Usunięto %d plików .asset", len(asset_files))
+            logger.debug("Usunięto %d plików .asset", len(asset_files))
         except Exception as e:
             logger.error(f"Błąd usuwania plików .asset: {e}")
             raise
@@ -85,9 +85,9 @@ class AssetRebuilderWorker(QThread):
             # BEZWZGLĘDNIE usuń folder .cache - nie ważne co zawiera
             if os.path.exists(cache_folder):
                 shutil.rmtree(cache_folder, ignore_errors=True)
-                logger.info("BEZWZGLĘDNIE usunięto folder .cache: %s", cache_folder)
+                logger.debug("BEZWZGLĘDNIE usunięto folder .cache: %s", cache_folder)
             else:
-                logger.info("Folder .cache nie istniał - i tak go usunęliśmy")
+                logger.debug("Folder .cache nie istniał - i tak go usunęliśmy")
         except Exception as e:
             logger.error(f"Błąd usuwania folderu .cache: {e}")
             # Nawet jeśli błąd - kontynuuj, folder cache ma być usunięty
@@ -109,7 +109,7 @@ class AssetRebuilderWorker(QThread):
             created_assets = asset_repository.find_and_create_assets(
                 self.folder_path, progress_callback
             )
-            logger.info("Scanner utworzył %d nowych assetów", len(created_assets))
+            logger.debug("Scanner utworzył %d nowych assetów", len(created_assets))
 
         except Exception as e:
             logger.error(f"Błąd uruchamiania scanner-a: {e}")
