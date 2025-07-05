@@ -12,7 +12,12 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QVBoxLayout,
     QWidget,
+    QProgressBar,
+    QHBoxLayout,
+    QSpacerItem,
+    QSizePolicy,
 )
+from PyQt6.QtCore import Qt
 
 from core.amv_tab import AmvTab
 from core.json_utils import load_from_file
@@ -48,11 +53,11 @@ class MainWindow(QMainWindow):
             self.logger.info("Creating menu bar...")
             self._createMenuBar()
 
-            self.logger.info("Creating tabs...")
-            self._createTabs()
-
             self.logger.info("Creating status bar...")
             self._createStatusBar()
+
+            self.logger.info("Creating tabs...")
+            self._createTabs()
 
             self.logger.info("Setting up log interceptor...")
             self.setup_log_interceptor()
@@ -177,7 +182,10 @@ class MainWindow(QMainWindow):
 
             for tab_class, tab_name, is_critical in tabs_config:
                 try:
-                    tab_instance = tab_class()
+                    if tab_class is AmvTab:
+                        tab_instance = AmvTab(main_window=self)
+                    else:
+                        tab_instance = tab_class()
 
                     if isinstance(tab_instance, AmvTab):
                         self.amv_tab = tab_instance
@@ -223,24 +231,59 @@ class MainWindow(QMainWindow):
         try:
             self.status_bar = QStatusBar(self)
             self.setStatusBar(self.status_bar)
-            # Dodaj etykietę po prawej stronie na liczbę zaznaczonych
+
+            # Kontener z trzema kolumnami
+            status_container = QWidget()
+            status_layout = QHBoxLayout()
+            status_layout.setContentsMargins(0, 0, 0, 0)
+            status_layout.setSpacing(0)
+
+            # Lewa kolumna: komunikaty
+            self.status_message_label = QLabel("")
+            self.status_message_label.setMinimumWidth(200)
+            self.status_message_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            status_layout.addWidget(self.status_message_label, 2)
+
+            # Środek: progress bar wyśrodkowany
+            center_widget = QWidget()
+            center_layout = QHBoxLayout()
+            center_layout.setContentsMargins(0, 0, 0, 0)
+            center_layout.setSpacing(0)
+            center_layout.addStretch(1)
+            self.status_progress_bar = QProgressBar()
+            self.status_progress_bar.setFixedHeight(12)
+            self.status_progress_bar.setMinimumWidth(300)
+            self.status_progress_bar.setMaximumWidth(360)
+            self.status_progress_bar.setValue(0)
+            self.status_progress_bar.setVisible(True)
+            center_layout.addWidget(self.status_progress_bar)
+            center_layout.addStretch(1)
+            center_widget.setLayout(center_layout)
+            status_layout.addWidget(center_widget, 1)
+
+            # Prawa kolumna: liczba zaznaczonych kafli
             self.selected_label = QLabel("Selected: 0")
-            self.status_bar.addPermanentWidget(self.selected_label)
+            self.selected_label.setMinimumWidth(100)
+            self.selected_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            status_layout.addWidget(self.selected_label, 2)
+
+            status_container.setLayout(status_layout)
+            self.status_bar.addWidget(status_container, 1)
             self.logger.debug("Status bar created successfully")
         except Exception as e:
             self.logger.error(f"Error creating status bar: {e}")
 
     def update_status(self, message, timeout=5000):
-        """Updates the status bar with a new message"""
+        """Updates the status message label with a new message"""
         try:
-            if hasattr(self, "status_bar") and self.status_bar:
-                self.status_bar.showMessage(message, timeout)
+            if hasattr(self, "status_message_label") and self.status_message_label:
+                self.status_message_label.setText(message)
                 self.logger.debug(f"Status updated: {message}")
         except Exception as e:
             self.logger.error(f"Error updating status: {e}")
 
     def show_log_info(self, log_level, message):
-        """Displays log info in the status bar in a user-friendly way"""
+        """Displays log info in the status message label in a user-friendly way"""
         try:
             # Mapowanie poziomów logowania na przyjazne komunikaty
             level_mapping = {

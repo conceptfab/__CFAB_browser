@@ -24,7 +24,7 @@ class AmvController(QObject):
     # Sygnał emitowany przy zmianie folderu roboczego
     working_directory_changed = pyqtSignal(str)
 
-    def __init__(self, model, view):
+    def __init__(self, model, view, main_window=None):
         """
         Simplified constructor - uses only main components.
         All sub-models are accessible via the model.
@@ -34,6 +34,7 @@ class AmvController(QObject):
         super().__init__()
         self.model: AmvModel = model
         self.view = view
+        self.main_window = main_window
 
         self.asset_rebuilder = None  # Worker dla przebudowy assetów
 
@@ -68,7 +69,7 @@ class AmvController(QObject):
     def _connect_signals(self):
         from .handlers.signal_connector import SignalConnector
 
-        self.signal_connector = SignalConnector(self.model, self.view, self)
+        self.signal_connector = SignalConnector(self.model, self.view, self, self.main_window)
         self.signal_connector.connect_all()
 
     def _on_splitter_state_changed(self, is_open: bool):

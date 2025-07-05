@@ -27,6 +27,7 @@ class AmvTab(QWidget):
         model: Optional[AmvModel] = None,
         view: Optional[AmvView] = None,
         controller: Optional[AmvController] = None,
+        main_window=None,
     ):
         super().__init__()
 
@@ -36,7 +37,7 @@ class AmvTab(QWidget):
         # Wstrzykiwanie zależności z fallback do domyślnych instancji
         self.model = model or AmvModel()
         self.view = view or AmvView()
-        self.controller = controller or AmvController(self.model, self.view)
+        self.controller = controller or AmvController(self.model, self.view, main_window)
 
         self.model.initialize_state()
         layout = QVBoxLayout()

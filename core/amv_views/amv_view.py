@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QProgressBar,
     QPushButton,
     QScrollArea,
@@ -388,13 +389,39 @@ class AmvView(QWidget):
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(8, 4, 8, 4)  # Marginesy wewnętrzne
         control_layout.setSpacing(8)
-        control_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setFixedHeight(12)  # Chudszy progress bar
-        self.progress_bar.setMinimumWidth(100)  # Minimalna szerokość
-        self.progress_bar.setMaximumWidth(120)  # Maksymalna szerokość
-        self.progress_bar.setValue(0)
-        self.progress_bar.setVisible(True)  # Upewniamy się, że jest widoczny
+        control_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        # ZAMIANA: zamiast progress bar - QLineEdit o tych samych wymiarach
+        self.text_input = QLineEdit()
+        self.text_input.setMinimumWidth(120)
+        self.text_input.setFixedHeight(14)
+        self.text_input.setPlaceholderText("Wpisz tekst...")
+        self.text_input.setStyleSheet(
+            """
+            QLineEdit {
+                background-color: #2D2D30;
+                color: #CCCCCC;
+                border: 1px solid #3F3F46;
+                border-radius: 2px;
+                font-size: 9px;
+                font-weight: bold;
+                padding: 0px 4px;
+                text-align: center;
+                min-width: 120px;
+                max-height: 14px;
+            }
+            QLineEdit:focus {
+                background-color: #3F3F46;
+                border-color: #007ACC;
+                color: #FFFFFF;
+            }
+            QLineEdit:disabled {
+                background-color: #1E1E1E;
+                color: #666666;
+                border-color: #3F3F46;
+            }
+            """
+        )
+        control_layout.addWidget(self.text_input, 3)  # Ten sam stretch factor
         self.thumbnail_size_slider = QSlider(Qt.Orientation.Horizontal)
         self.thumbnail_size_slider.setFixedHeight(12)  # Chudszy slider
         self.thumbnail_size_slider.setMinimum(50)
@@ -464,7 +491,7 @@ class AmvView(QWidget):
             star_cb.setText("★")
             self.star_checkboxes.append(star_cb)
 
-        control_layout.addWidget(self.progress_bar, 3)  # Większy stretch factor
+        control_layout.addWidget(self.text_input, 3)  # Ten sam stretch factor
         for button in self.selection_buttons:
             control_layout.addWidget(button)
         for star_cb in self.star_checkboxes:
