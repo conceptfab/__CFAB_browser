@@ -6,7 +6,7 @@ Responsible for handling buttons, filtering, and asset selection.
 import logging
 import os
 
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QObject, QTimer
 
 from core.utilities import update_main_window_status
 
@@ -21,6 +21,11 @@ class ControlPanelController(QObject):
         self.model = model
         self.view = view
         self.controller = controller
+        
+        # Debouncing timer for update_button_states
+        self._update_button_states_timer = QTimer()
+        self._update_button_states_timer.setSingleShot(True)
+        self._update_button_states_timer.timeout.connect(self._perform_update_button_states)
 
     def setup(self):
         """Initializes the control panel"""
@@ -84,7 +89,12 @@ class ControlPanelController(QObject):
         self.update_button_states()
 
     def update_button_states(self):
-        """Updates the state of all control buttons."""
+        """Updates the state of all control buttons with debouncing."""
+        # Use debouncing to prevent excessive updates
+        self._update_button_states_timer.start(50)  # 50ms delay
+        
+    def _perform_update_button_states(self):
+        """Performs the actual button state update."""
         selected_count = len(self.model.selection_model.get_selected_asset_ids())
 
         # Count only visible assets (excluding special folders)

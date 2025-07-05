@@ -36,6 +36,7 @@ class ThumbnailCache:
         """
         if not hasattr(self, "_initialized"):  # Zapobiega ponownej inicjalizacji
             self.max_size_bytes = max_size_mb * 1024 * 1024
+            self.max_single_item_size = 50 * 1024 * 1024  # 50MB max per item
             self.current_size_bytes = 0
             self.cache = OrderedDict()
             self._initialized = True
@@ -71,6 +72,11 @@ class ThumbnailCache:
             return  # Już w cache
 
         pixmap_size = pixmap.toImage().sizeInBytes()
+        
+        # Check if single item is too large
+        if pixmap_size > self.max_single_item_size:
+            logger.warning(f"Pixmap too large for cache: {pixmap_size / (1024*1024):.1f} MB > {self.max_single_item_size / (1024*1024):.1f} MB")
+            return
 
         # Sprawdź, czy jest wystarczająco miejsca
         while self.current_size_bytes + pixmap_size > self.max_size_bytes:

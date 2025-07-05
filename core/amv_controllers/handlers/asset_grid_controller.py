@@ -47,7 +47,7 @@ class AssetGridController(QObject):
 
     def on_assets_changed(self, assets):
         """Handles asset list changes"""
-        if not assets:  # ADD check for None
+        if assets is None or len(assets) == 0:  # More specific check for None
             self.set_original_assets([])
             return
         self.set_original_assets(assets)

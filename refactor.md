@@ -1,86 +1,84 @@
-Raport analizy kodu CFAB Browser
-1. Duplikaty kodu
-1.1 Duplikacja modelu FolderSystemModel
-Pliki:
-
-core/amv_models/asset_grid_model.py (linie 192-353)
-core/amv_models/folder_system_model.py (cały plik)
-
-Problem: Klasa FolderSystemModel jest zdefiniowana w dwóch miejscach
-Rozwiązanie: Usuń duplikat z asset_grid_model.py i importuj z folder_system_model.py
-1.2 Duplikacja modelu WorkspaceFoldersModel
-Pliki:
-
-core/amv_models/asset_grid_model.py (linie 356-481)
-core/amv_models/workspace_folders_model.py (cały plik)
-
-Problem: Klasa WorkspaceFoldersModel jest zdefiniowana w dwóch miejscach
-Rozwiązanie: Usuń duplikat z asset_grid_model.py i importuj z workspace_folders_model.py
-2. Nieużywane funkcje
-2.1 W pliku core/amv_controllers/handlers/control_panel_controller.py
-python# Linia 170: Nieużywana funkcja
-def filter_assets_by_stars(self, min_stars: int):
-    # Ta funkcja jest wywoływana tylko w asset_grid_controller.py linia 42
-    # ale można użyć filter_assets() zamiast tego
-Rozwiązanie: Usuń filter_assets_by_stars() i używaj filter_assets() wszędzie
-3. Błędy logiczne
-3.1 Problem z obsługą tekstu w filtrze
+Raport z problemów w kodzie CFAB Browser
+Duplikaty i nieużywane elementy
+1. Duplikacja klasy FolderSystemModel
+Pliki: core/amv_models/asset_grid_model.py i core/amv_models/folder_system_model.py
+python# W asset_grid_model.py (linie 113-310) - usuń tę duplikowaną klasę
+class FolderSystemModel(QObject):
+    # ... cała implementacja jest zduplikowana
+Rozwiązanie: Usuń klasę FolderSystemModel z pliku asset_grid_model.py i dodaj import:
+pythonfrom .folder_system_model import FolderSystemModel
+2. Nieużywane importy w folder_tree_view.py
+Plik: core/amv_views/folder_tree_view.py
+python# Linia 13 - nieużywany import
+from core.file_utils import open_path_in_explorer
+Rozwiązanie: Usuń import, funkcja jest już dostępna przez callback.
+3. Nieużywane pola klasy w asset_tile_view.py
+Plik: core/amv_views/asset_tile_view.py
+python# Linia 72 - nieużywane pole
+self._cached_pixmap = None
+Rozwiązanie: Usuń pole i wszystkie odwołania do niego.
+Błędy logiczne
+4. Niespójność w metodzie filter_assets
 Plik: core/amv_controllers/handlers/control_panel_controller.py
-python# Linia 169 - brak obsługi self.view.text_input
-def filter_assets(self):
-    """Filtruje assety po gwiazdkach i tekście naraz."""
-    min_stars = self.controller.asset_grid_controller.active_star_filter
-    text = self.view.text_input.text().strip().lower() if hasattr(self.view, 'text_input') else ''
-    # Reszta kodu...
-Problem: Filtr tekstowy nie jest podłączony do sygnału
-Rozwiązanie: W signal_connector.py dodaj połączenie sygnału textChanged
-4. Niepotrzebne importy
-4.1 W pliku core/amv_models/amv_model.py
-python# Linia 7: Niepotrzebny import Optional - używany tylko w type hints
-from typing import Optional
-4.2 W pliku core/thumbnail.py
-python# Linia 10: Komentarz o usuniętych importach PyQt6 - usuń go
-# Usunięte nieużywane importy PyQt6
-5. Nieużywane pliki
-5.1 Plik core/base_widgets.py
-Problem: Ten plik definiuje bazowe klasy dla stylowania, ale nigdzie nie jest używany
-Rozwiązanie: Usuń plik lub zaimplementuj dziedziczenie w widgetach
-6. Problemy z wydajnością
-6.1 Wielokrotne skanowanie folderów
-Plik: core/amv_controllers/handlers/asset_rebuild_controller.py
-python# Linia 65-71: Po przebudowie assetów następuje pełne odświeżenie
-def on_rebuild_finished(self, message: str):
-    # ...
-    self.controller.folder_tree_controller.on_folder_refresh_requested(current_folder)
-    # To powoduje pełne przeskanowanie folderu
-Rozwiązanie: Zamiast pełnego skanowania, odśwież tylko widok z istniejących danych
-7. Błędy w logowaniu
-7.1 Niespójne poziomy logowania
-Pliki: Wiele plików używa logger.info() dla debugowania
-Rozwiązanie: Zmień na logger.debug() dla informacji debugowych
-8. Kod do refaktoryzacji
-8.1 W pliku core/amv_models/asset_grid_model.py
-python# Zmiana w linii 10
-from core.amv_models.folder_system_model import FolderSystemModel
-from core.amv_models.workspace_folders_model import WorkspaceFoldersModel
+python# Linie 124-135 - problem z dostępem do text_input
+text = self.view.text_input.text().strip().lower() if hasattr(self.view, 'text_input') else ''
+Rozwiązanie: Sprawdź czy pole text_input istnieje w view lub dodaj obsługę błędu.
+5. Potencjalny problem z None w asset_grid_controller.py
+Plik: core/amv_controllers/handlers/asset_grid_controller.py
+python# Linia 85 - sprawdzenie None powinno być na początku
+def on_assets_changed(self, assets):
+    if not assets:  # ADD check for None
+        self.set_original_assets([])
+        return
+Rozwiązanie: Dodaj bardziej szczegółowe sprawdzenie:
+pythonif assets is None or len(assets) == 0:
+Problemy z wydajnością
+6. Brak ograniczenia cache w ThumbnailCache
+Plik: core/thumbnail_cache.py
+python# Linie 63-78 - metoda put może doprowadzić do OOM
+def put(self, path: str, pixmap: QPixmap):
+    # Brak sprawdzenia czy pixmap nie jest zbyt duży
+Rozwiązanie: Dodaj sprawdzenie maksymalnego rozmiaru pojedynczego obiektu:
+pythonMAX_SINGLE_ITEM_SIZE = 50 * 1024 * 1024  # 50MB
+if pixmap_size > MAX_SINGLE_ITEM_SIZE:
+    logger.warning(f"Pixmap too large: {pixmap_size}")
+    return
+7. Niepotrzebne wielokrotne wywołania update_button_states
+Plik: core/amv_controllers/handlers/control_panel_controller.py
+python# Metody wywołują update_button_states() wielokrotnie
+# Linie: 182, 204, w filter_assets_by_stars()
+Rozwiązanie: Połącz wywołania lub użyj debouncing pattern.
+Problemy z zarządzaniem pamięcią
+8. Brak wywołania deleteLater() w asset_tile_pool.py
+Plik: core/amv_views/asset_tile_pool.py
+python# Linia 82 - metoda clear nie wywołuje deleteLater()
+def clear(self):
+    for tile in self._pool:
+        tile.deleteLater()  # Może być problem z timing
+Rozwiązanie: Dodaj sprawdzenie stanu obiektu przed deleteLater().
+Problemy bezpieczeństwa
+9. Brak walidacji ścieżek w file_utils.py
+Plik: core/file_utils.py
+python# Linie 145-150 - słaba walidacja path traversal
+if ".." in folder_path or "\\.." in folder_path or "/.." in folder_path:
+Rozwiązanie: Użyj os.path.abspath() i os.path.commonpath() dla lepszej walidacji.
+Nieefektywne operacje
+10. Powolne operacje I/O w głównym wątku
+Plik: core/amv_models/asset_tile_model.py
+python# Linia 73 - operacja zapisu w głównym wątku
+def _save_to_file(self):
+    save_to_file(self.data, self.asset_file_path, indent=True)
+Rozwiązanie: Przenieś do worker thread lub użyj queue do asynchronicznego zapisu.
+Problemy z obsługą błędów
+11. Brak obsługi wyjątków w scanner.py
+Plik: core/scanner.py
+python# Linie 150-160 - metody mogą rzucać nieobsłużone wyjątki
+def _check_texture_folders_presence(folder_path: str) -> bool:
+    # Brak try-catch dla os.listdir()
+Rozwiązanie: Dodaj obsługę PermissionError i FileNotFoundError.
+Łączna liczba problemów: 11
+Priorytety napraw:
 
-# Usuń linie 192-481 (duplikaty klas)
-8.2 W pliku core/amv_controllers/handlers/signal_connector.py
-python# Dodaj po linii 76
-# Połącz sygnał filtra tekstowego
-self.view.text_input.textChanged.connect(
-    lambda: control_panel_controller.filter_assets()
-)
-8.3 W pliku core/amv_controllers/handlers/control_panel_controller.py
-python# Usuń funkcję filter_assets_by_stars (linie 196-210)
-# Użyj filter_assets() wszędzie
-9. Podsumowanie
-Pliki wymagające poprawek:
-
-core/amv_models/asset_grid_model.py - usuń duplikaty klas
-core/amv_controllers/handlers/control_panel_controller.py - usuń nieużywaną funkcję
-core/amv_controllers/handlers/signal_connector.py - dodaj brakujące połączenie sygnału
-core/base_widgets.py - rozważ usunięcie
-core/amv_controllers/handlers/asset_rebuild_controller.py - optymalizacja odświeżania
-
-Priorytet: Wysokie dla punktów 1-3, średnie dla pozostałych.
+Krytyczne: Punkty 1, 4, 5, 9 (duplikacje, błędy logiczne, bezpieczeństwo)
+Wysokie: Punkty 6, 10, 11 (wydajność, pamięć, błędy)
+Średnie: Punkty 2, 3, 7, 8 (czyszczenie kodu, optymalizacje)

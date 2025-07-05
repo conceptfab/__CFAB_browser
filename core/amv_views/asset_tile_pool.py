@@ -76,6 +76,14 @@ class AssetTilePool:
         Called when closing the application to free memory.
         """
         for tile in self._pool:
-            tile.deleteLater()
+            # Check object state before calling deleteLater
+            if tile and not tile.isHidden():
+                tile.hide()
+            if tile and hasattr(tile, 'deleteLater'):
+                try:
+                    tile.deleteLater()
+                except RuntimeError:
+                    # Object already deleted
+                    pass
         self._pool.clear()
         logger.info("Pula kafelków została wyczyszczona.")
