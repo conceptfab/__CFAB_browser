@@ -390,7 +390,11 @@ class AmvView(QWidget):
         control_layout.setContentsMargins(8, 4, 8, 4)  # Marginesy wewnętrzne
         control_layout.setSpacing(8)
         control_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        # ZAMIANA: zamiast progress bar - QLineEdit o tych samych wymiarach
+        # Placeholder na ikonę 16x16 przed QLineEdit
+        self.icon_placeholder = QLabel()
+        self.icon_placeholder.setFixedSize(16, 16)
+        control_layout.addWidget(self.icon_placeholder)
+
         self.text_input = QLineEdit()
         self.text_input.setMinimumWidth(120)
         self.text_input.setFixedHeight(14)
@@ -421,13 +425,18 @@ class AmvView(QWidget):
             }
             """
         )
-        control_layout.addWidget(self.text_input, 3)  # Ten sam stretch factor
-        self.thumbnail_size_slider = QSlider(Qt.Orientation.Horizontal)
-        self.thumbnail_size_slider.setFixedHeight(12)  # Chudszy slider
-        self.thumbnail_size_slider.setMinimum(50)
-        self.thumbnail_size_slider.setMaximum(256)
-        self.thumbnail_size_slider.setValue(256)
-        self.thumbnail_size_slider.setFixedWidth(120)  # SZTYWNA SZEROKOŚĆ
+        control_layout.addWidget(self.text_input, 3)
+        # Dodaj gwiazdki między QLineEdit a przyciskami
+        self.star_checkboxes = []
+        for i in range(5):
+            star_cb = QCheckBox("★")
+            star_cb.setObjectName(f"ControlPanelStar_{i+1}")
+            star_cb.setProperty("class", "star")
+            # Ustaw identyczne właściwości jak w kafelku
+            star_cb.setFixedSize(12, 12)
+            star_cb.setText("★")
+            self.star_checkboxes.append(star_cb)
+            control_layout.addWidget(star_cb)
         self.selection_buttons = []
         # Styl kompaktowy jak na przyciskach Zwiń/Rozwiń
         button_style = """
@@ -480,22 +489,14 @@ class AmvView(QWidget):
         self.deselect_all_button.setEnabled(False)  # Wyłączony domyślnie
         self.selection_buttons.append(self.deselect_all_button)
 
-        # 5 gwiazdek po przycisku "Odznacz wszystkie"
-        self.star_checkboxes = []
-        for i in range(5):
-            star_cb = QCheckBox("★")
-            star_cb.setObjectName(f"ControlPanelStar_{i+1}")
-            star_cb.setProperty("class", "star")
-            # Ustaw identyczne właściwości jak w kafelku
-            star_cb.setFixedSize(12, 12)
-            star_cb.setText("★")
-            self.star_checkboxes.append(star_cb)
-
-        control_layout.addWidget(self.text_input, 3)  # Ten sam stretch factor
         for button in self.selection_buttons:
             control_layout.addWidget(button)
-        for star_cb in self.star_checkboxes:
-            control_layout.addWidget(star_cb)
+        self.thumbnail_size_slider = QSlider(Qt.Orientation.Horizontal)
+        self.thumbnail_size_slider.setFixedHeight(12)  # Chudszy slider
+        self.thumbnail_size_slider.setMinimum(50)
+        self.thumbnail_size_slider.setMaximum(256)
+        self.thumbnail_size_slider.setValue(256)
+        self.thumbnail_size_slider.setFixedWidth(120)  # SZTYWNA SZEROKOŚĆ
         control_layout.addWidget(self.thumbnail_size_slider, 2)
         self.control_panel.setLayout(control_layout)
 
