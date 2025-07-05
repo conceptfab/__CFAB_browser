@@ -68,14 +68,18 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
         # Bezpieczne wywołania subprocess z walidacją
         if sys.platform == "win32":
             logger.debug(
-                f"open_path_in_explorer - uruchamiam explorer z ścieżką: "
+                f"open_path_in_explorer - uruchamiam os.startfile z ścieżką: "
                 f"{normalized_path}"
             )
-            # Sprawdź czy explorer jest dostępny
-            if not _is_command_available("explorer"):
-                logger.error("Komenda 'explorer' nie jest dostępna")
+            try:
+                os.startfile(normalized_path)
+            except FileNotFoundError:
+                logger.error(f"Nie znaleziono eksploratora Windows lub ścieżki: {normalized_path}")
+                if parent_widget:
+                    QMessageBox.warning(
+                        parent_widget, "Błąd", f"Nie znaleziono eksploratora Windows lub ścieżki: {normalized_path}"
+                    )
                 return False
-            subprocess.run(["explorer", normalized_path], check=True, timeout=10)
         elif sys.platform == "darwin":  # macOS
             if not _is_command_available("open"):
                 logger.error("Komenda 'open' nie jest dostępna")
