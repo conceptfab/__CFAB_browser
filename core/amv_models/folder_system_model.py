@@ -68,7 +68,7 @@ class FolderSystemModel(QObject):
             if not os.path.exists(folder_path):
                 return
 
-            for item_name in sorted(os.listdir(folder_path)):
+            for item_name in sorted(os.listdir(folder_path), key=str.lower):
                 item_path = os.path.join(folder_path, item_name)
                 if os.path.isdir(item_path) and not item_name.startswith(".") and not self._is_system_folder(item_name):
                     child_item = QStandardItem(item_name)

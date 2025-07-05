@@ -474,7 +474,7 @@ class ImageResizerWorker(BaseWorker):
 
 
 class FileRenamerWorker(BaseWorker):
-    """Worker do skracania nazw plików"""
+    """Worker do randomizowania nazw plików"""
 
     # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
     finished = pyqtSignal(str)  # message
@@ -492,9 +492,9 @@ class FileRenamerWorker(BaseWorker):
         self.user_confirmed = True
 
     def _run_operation(self):
-        """Główna metoda skracania nazw plików"""
+        """Główna metoda randomizowania nazw plików"""
         try:
-            logger.info(f"Rozpoczęcie skracania nazw w folderze: {self.folder_path}")
+            logger.info(f"Rozpoczęcie randomizowania nazw w folderze: {self.folder_path}")
 
             # Znajdź pary i pliki do skrócenia
             self.files_info = self._analyze_files()
@@ -512,16 +512,16 @@ class FileRenamerWorker(BaseWorker):
                 if self.isInterruptionRequested():
                     return
 
-            # Teraz rozpocznij skracanie nazw
+            # Teraz rozpocznij randomizowanie nazw
             self._perform_renaming()
 
         except Exception as e:
-            error_msg = f"Błąd podczas skracania nazw: {e}"
+            error_msg = f"Błąd podczas randomizowania nazw: {e}"
             logger.error(error_msg)
             self.error_occurred.emit(error_msg)
 
     def _perform_renaming(self):
-        """Wykonuje właściwe skracanie nazw"""
+        """Wykonuje właściwe randomizowanie nazw"""
         try:
             renamed_count = 0
             error_count = 0
@@ -529,7 +529,7 @@ class FileRenamerWorker(BaseWorker):
             # Najpierw pary
             if self.files_info["pairs"]:
                 self.progress_updated.emit(
-                    0, len(self.files_info["pairs"]), "Skracanie nazw par..."
+                    0, len(self.files_info["pairs"]), "Randomizowanie nazw par..."
                 )
                 for i, (archive_file, preview_file) in enumerate(
                     self.files_info["pairs"]
@@ -551,7 +551,7 @@ class FileRenamerWorker(BaseWorker):
                             if self._rename_file(preview_file, new_name):
                                 renamed_count += 1
 
-                            logger.info(f"Skrócono parę: {new_name}")
+                            logger.info(f"Randomizowano parę: {new_name}")
                         else:
                             logger.debug(
                                 f"Pominięto parę (nazwa w normie): {archive_name}"
@@ -560,19 +560,19 @@ class FileRenamerWorker(BaseWorker):
                         self.progress_updated.emit(
                             i + 1,
                             len(self.files_info["pairs"]),
-                            f"Skrócono parę: {new_name if len(archive_name) > self.max_name_length else archive_name}",
+                            f"Randomizowano parę: {new_name if len(archive_name) > self.max_name_length else archive_name}",
                         )
 
                     except Exception as e:
                         error_count += 1
-                        logger.error(f"Błąd podczas skracania pary: {e}")
+                        logger.error(f"Błąd podczas randomizowania pary: {e}")
 
             # Potem pliki bez pary
             if self.files_info["unpaired"]:
                 self.progress_updated.emit(
                     0,
                     len(self.files_info["unpaired"]),
-                    "Skracanie nazw plików bez pary...",
+                    "Randomizowanie nazw plików bez pary...",
                 )
                 for i, file_path in enumerate(self.files_info["unpaired"]):
                     try:
@@ -585,7 +585,7 @@ class FileRenamerWorker(BaseWorker):
 
                             if self._rename_file(file_path, new_name):
                                 renamed_count += 1
-                                logger.info(f"Skrócono nazwę: {filename} -> {new_name}")
+                                logger.info(f"Randomizowano nazwę: {filename} -> {new_name}")
                         else:
                             logger.debug(f"Pominięto (nazwa w normie): {filename}")
 
@@ -597,10 +597,10 @@ class FileRenamerWorker(BaseWorker):
 
                     except Exception as e:
                         error_count += 1
-                        logger.error(f"Błąd podczas skracania {filename}: {e}")
+                        logger.error(f"Błąd podczas randomizowania {filename}: {e}")
 
             # Przygotuj komunikat końcowy
-            message = f"Skracanie nazw zakończone: {renamed_count} plików skrócono"
+            message = f"Randomizowanie nazw zakończone: {renamed_count} plików randomizowano"
             if error_count > 0:
                 message += f", {error_count} błędów"
 
@@ -969,8 +969,8 @@ class ToolsTab(QWidget):
         self.image_resizer_button.clicked.connect(self._on_image_resizing_clicked)
         right_layout.addWidget(self.image_resizer_button)
 
-        # Przycisk 3 - skracanie nazw plików
-        self.file_renamer_button = QPushButton("Skróć nazwy plików")
+        # Przycisk 3 - randomizowanie nazw plików
+        self.file_renamer_button = QPushButton("Randomizuj nazwy plików")
         self.file_renamer_button.clicked.connect(self._on_file_renaming_clicked)
         right_layout.addWidget(self.file_renamer_button)
 
