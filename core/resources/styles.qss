@@ -895,14 +895,11 @@ max-width: 50px;
 
 /* ===================== PANEL KONTROLNY - IKONA ===================== */
 QLabel#ControlPanelIcon {
-    border: none !important;
-    background: transparent !important;
-    outline: none !important;
-    box-shadow: none !important;
-    min-width: 16px;
-    min-height: 16px;
-    max-width: 16px;
-    max-height: 16px;
+    /* border: 0px;
+    min-width: 22px;
+    min-height: 22px;
+    max-width: 22px;
+    max-height: 22px;
     margin: 0 4px 0 0;
-    padding: 0;
+    padding: 0; */
 }

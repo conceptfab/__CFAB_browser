@@ -392,7 +392,7 @@ class AmvView(QWidget):
         control_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         # Placeholder na ikonę 16x16 przed QLineEdit
         self.icon_placeholder = QLabel()
-        self.icon_placeholder.setFixedSize(16, 16)
+        self.icon_placeholder.setFixedSize(22, 22)
         self.icon_placeholder.setObjectName("ControlPanelIcon")
         self.icon_placeholder.setPixmap(QPixmap("core/resources/img/search.png").scaled(16, 16))
         self.icon_placeholder.setFocusPolicy(Qt.FocusPolicy.NoFocus)
