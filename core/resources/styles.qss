@@ -894,8 +894,11 @@ max-width: 50px;
 }
 
 /* ===================== PANEL KONTROLNY - IKONA ===================== */
-#ControlPanelIcon {
-    background: transparent;
+QLabel#ControlPanelIcon {
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+    box-shadow: none !important;
     min-width: 16px;
     min-height: 16px;
     max-width: 16px;

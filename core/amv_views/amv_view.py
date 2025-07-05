@@ -8,7 +8,7 @@ import os
 from typing import Optional
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -394,6 +394,8 @@ class AmvView(QWidget):
         self.icon_placeholder = QLabel()
         self.icon_placeholder.setFixedSize(16, 16)
         self.icon_placeholder.setObjectName("ControlPanelIcon")
+        self.icon_placeholder.setPixmap(QPixmap("core/resources/img/search.png").scaled(16, 16))
+        self.icon_placeholder.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         control_layout.addWidget(self.icon_placeholder)
 
         self.text_input = QLineEdit()
