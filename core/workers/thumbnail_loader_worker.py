@@ -32,12 +32,12 @@ class ThumbnailLoaderWorker(QRunnable):
         """Ładuje miniaturę z dysku."""
         try:
             if not os.path.exists(self.path):
-                raise FileNotFoundError(f"Plik miniatury nie istnieje: {self.path}")
+                raise FileNotFoundError(f"Thumbnail file does not exist: {self.path}")
 
             pixmap = QPixmap(self.path)
 
             if pixmap.isNull():
-                raise IOError(f"Nie można załadować QPixmap z pliku: {self.path}")
+                raise IOError(f"Cannot load QPixmap from file: {self.path}")
 
             self.signals.finished.emit(self.path, pixmap)
             logger.debug(f"Pomyślnie załadowano miniaturę: {self.path}")

@@ -58,7 +58,7 @@ class WorkerManager:
     def handle_error(button, error_message, original_text, parent_instance):
         """Wspólna logika obsługi błędów"""
         logger.error(f"Błąd operacji: {error_message}")
-        parent_instance.show_error_message.emit("Błąd", error_message)
+        parent_instance.show_error_message.emit("Error", error_message)
         WorkerManager.reset_button_state(button, original_text, parent_instance)
 
     @staticmethod
@@ -1116,7 +1116,7 @@ class ToolsTab(QWidget):
                 f"Folder roboczy nie jest ustawiony lub nie istnieje: {self.current_working_directory}"
             )
             QMessageBox.warning(
-                self, "Błąd", "Folder roboczy nie jest ustawiony lub nie istnieje."
+                self, "Error", "Working folder is not set or does not exist."
             )
             return False
         return True
@@ -1148,7 +1148,7 @@ class ToolsTab(QWidget):
 
         except Exception as e:
             logger.error(f"Błąd podczas rozpoczynania operacji: {e}")
-            QMessageBox.critical(self, "Błąd", f"Nie można rozpocząć operacji: {e}")
+            QMessageBox.critical(self, "Error", f"Cannot start operation: {e}")
             self._reset_button_state(button, original_text)
 
     def _start_operation_with_confirmation(
@@ -1160,8 +1160,8 @@ class ToolsTab(QWidget):
 
         reply = QMessageBox.question(
             self,
-            f"Potwierdzenie {operation_name.lower()}",
-            f"Czy na pewno chcesz {operation_name.lower()} w folderze:\n{self.current_working_directory}?\n\n{description}",
+            f"Confirm {operation_name.lower()}",
+            f"Are you sure you want to {operation_name.lower()} in folder:\n{self.current_working_directory}?\n\n{description}",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -1196,7 +1196,7 @@ class ToolsTab(QWidget):
         # Lewa kolumna - skalowana
         left_column = QWidget()
         left_layout = QVBoxLayout()
-        left_layout.addWidget(QLabel("Pliki"))
+        left_layout.addWidget(QLabel("Files"))
 
         # Podział kolumny "Pliki" na dwa widoki listy
         files_layout = QHBoxLayout()
@@ -1219,30 +1219,30 @@ class ToolsTab(QWidget):
         # Prawa kolumna - stała szerokość 175px
         right_column = QWidget()
         right_layout = QVBoxLayout()
-        right_layout.addWidget(QLabel("Narzędzia"))
+        right_layout.addWidget(QLabel("Tools"))
 
         # Przycisk 1 - konwersja na WebP
-        self.webp_button = QPushButton("Konwertuj na WebP")
+        self.webp_button = QPushButton("Convert to WebP")
         self.webp_button.clicked.connect(self._on_webp_conversion_clicked)
         right_layout.addWidget(self.webp_button)
 
         # Przycisk 2 - zmniejszanie obrazów
-        self.image_resizer_button = QPushButton("Zmniejsz obrazy")
+        self.image_resizer_button = QPushButton("Resize Images")
         self.image_resizer_button.clicked.connect(self._on_image_resizing_clicked)
         right_layout.addWidget(self.image_resizer_button)
 
         # Przycisk 3 - randomizowanie nazw plików
-        self.file_renamer_button = QPushButton("Randomizuj nazwy plików")
+        self.file_renamer_button = QPushButton("Randomize File Names")
         self.file_renamer_button.clicked.connect(self._on_file_renaming_clicked)
         right_layout.addWidget(self.file_renamer_button)
 
         # Przycisk 4 - skracanie nazw plików
-        self.file_shortener_button = QPushButton("Skróć nazwy plików")
+        self.file_shortener_button = QPushButton("Shorten File Names")
         self.file_shortener_button.clicked.connect(self._on_file_shortening_clicked)
         right_layout.addWidget(self.file_shortener_button)
 
         # Przycisk 5 - usuwanie prefixu/suffixu z nazw plików
-        self.remove_button = QPushButton("Usuń prefix/suffix")
+        self.remove_button = QPushButton("Remove prefix/suffix")
         self.remove_button.clicked.connect(self._on_remove_clicked)
         right_layout.addWidget(self.remove_button)
 
@@ -1253,7 +1253,7 @@ class ToolsTab(QWidget):
             )
         )
         # 5 przycisk na dole - przebudowa assetów
-        self.rebuild_button = QPushButton("Przebuduj assety")
+        self.rebuild_button = QPushButton("Rebuild Assets")
         self.rebuild_button.clicked.connect(self._on_rebuild_assets_clicked)
         right_layout.addWidget(self.rebuild_button)
         right_column.setLayout(right_layout)
@@ -1340,7 +1340,7 @@ class ToolsTab(QWidget):
 
         except Exception as e:
             logger.error(f"Błąd podczas skanowania folderu {directory_path}: {e}")
-            QMessageBox.warning(self, "Błąd", f"Nie można skanować folderu: {e}")
+            QMessageBox.warning(self, "Error", f"Cannot scan folder: {e}")
 
     def _update_archive_list(self, archive_files: list):
         """Aktualizuje listę plików archiwum"""
@@ -1384,7 +1384,7 @@ class ToolsTab(QWidget):
             return "brak Pillow"
         except Exception as e:
             logger.debug(f"Nie można odczytać rozdzielczości {file_name}: {e}")
-            return "błąd odczytu"
+            return "read error"
 
     def clear_lists(self):
         """Czyści obie listy"""
@@ -1472,14 +1472,14 @@ class ToolsTab(QWidget):
         logger.debug(f"Przycisk WebP enabled: {self.webp_button.isEnabled()}")
 
         description = (
-            "Ta operacja:\n"
-            "• Skonwertuje pliki JPG, PNG, GIF, BMP, TIFF na WebP\n"
-            "• Pominie już istniejące pliki WebP\n"
-            "• Usunie oryginalne pliki po udanej konwersji\n"
-            "• Zoptymalizuje rozmiar plików"
+            "This operation:\n"
+            "• Converts JPG, PNG, GIF, BMP, TIFF files to WebP\n"
+            "• Skips existing WebP files\n"
+            "• Removes original files after successful conversion\n"
+            "• Optimizes file size"
         )
         self._start_operation_with_confirmation(
-            "konwersji na WebP",
+            "WebP conversion",
             description,
             lambda: WebPConverterWorker(self.current_working_directory),
         )
@@ -1487,13 +1487,13 @@ class ToolsTab(QWidget):
     def _on_rebuild_assets_clicked(self):
         """Obsługuje kliknięcie przycisku przebudowy assetów"""
         description = (
-            "Ta operacja:\n"
-            "• Usunie wszystkie pliki .asset\n"
-            "• Usunie folder .cache\n"
-            "• Utworzy nowe assety na podstawie plików archiwum"
+            "This operation:\n"
+            "• Removes all .asset files\n"
+            "• Removes .cache folder\n"
+            "• Creates new assets based on archive files"
         )
         self._start_operation_with_confirmation(
-            "przebudowy assetów",
+            "asset rebuild",
             description,
             lambda: AssetRebuilderWorker(self.current_working_directory),
         )
@@ -1518,18 +1518,18 @@ class ToolsTab(QWidget):
             except subprocess.TimeoutExpired:
                 logger.error(f"Timeout podczas otwierania archiwum: {full_path}")
                 QMessageBox.warning(
-                    self, "Błąd", f"Timeout podczas otwierania archiwum"
+                    self, "Error", f"Timeout while opening archive"
                 )
             except subprocess.CalledProcessError as e:
                 logger.error(
                     f"Błąd procesu podczas otwierania archiwum {full_path}: {e}"
                 )
                 QMessageBox.warning(
-                    self, "Błąd", f"Błąd procesu podczas otwierania archiwum"
+                    self, "Error", f"Process error while opening archive"
                 )
             except Exception as e:
                 logger.error(f"Błąd podczas otwierania archiwum {full_path}: {e}")
-                QMessageBox.warning(self, "Błąd", f"Nie można otworzyć archiwum: {e}")
+                QMessageBox.warning(self, "Error", f"Cannot open archive: {e}")
         else:
             logger.warning(f"Plik nie istnieje: {full_path}")
             QMessageBox.warning(self, "Błąd", f"Plik nie istnieje: {file_name}")
@@ -1570,13 +1570,13 @@ class ToolsTab(QWidget):
         )
 
         description = (
-            "Ta operacja:\n"
-            "• Zmniejszy obrazy o określonych zasadach skalowania\n"
-            "• Pominie obrazy, które nie wymagają zmniejszenia\n"
-            "• Zoptymalizuje rozmiar plików"
+            "This operation:\n"
+            "• Resizes images according to specific scaling rules\n"
+            "• Skips images that don't need resizing\n"
+            "• Optimizes file size"
         )
         self._start_operation_with_confirmation(
-            "zmniejszania obrazów",
+            "image resizing",
             description,
             lambda: ImageResizerWorker(self.current_working_directory),
         )
@@ -1611,7 +1611,7 @@ class ToolsTab(QWidget):
 
         # Użyj wspólnej metody obsługi workerów
         self._handle_worker_lifecycle(
-            self.file_renamer, self.file_renamer_button, "Randomizuj nazwy plików"
+            self.file_renamer, self.file_renamer_button, "Randomize File Names"
         )
 
     def _on_file_shortening_clicked(self):
@@ -1644,7 +1644,7 @@ class ToolsTab(QWidget):
 
         # Użyj wspólnej metody obsługi workerów
         self._handle_worker_lifecycle(
-            self.file_shortener, self.file_shortener_button, "Skróć nazwy plików"
+            self.file_shortener, self.file_shortener_button, "Shorten File Names"
         )
 
     def _on_remove_clicked(self):
@@ -1755,12 +1755,12 @@ class ToolsTab(QWidget):
             )
             self.remove_worker.finished.connect(
                 lambda m: self._handle_worker_finished(
-                    self.remove_button, m, "Usuń prefix/suffix"
+                    self.remove_button, m, "Remove prefix/suffix"
                 )
             )
             self.remove_worker.error_occurred.connect(
                 lambda e: self._handle_worker_error(
-                    self.remove_button, e, "Usuń prefix/suffix"
+                    self.remove_button, e, "Remove prefix/suffix"
                 )
             )
 
@@ -1774,7 +1774,7 @@ class ToolsTab(QWidget):
         except Exception as e:
             logger.error(f"Błąd podczas rozpoczynania usuwania: {e}")
             QMessageBox.critical(self, "Błąd", f"Nie można rozpocząć usuwania: {e}")
-            self._reset_button_state(self.remove_button, "Usuń prefix/suffix")
+            self._reset_button_state(self.remove_button, "Remove prefix/suffix")
 
     def _show_pairs_dialog(self, pairs):
         """Wyświetla okno z listą par, które będą zmieniane"""

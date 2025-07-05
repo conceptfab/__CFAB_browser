@@ -588,7 +588,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         """Handles application closing - stops all threads"""
         try:
-            self.logger.info("Zamykanie aplikacji - zatrzymywanie wątków...")
+            self.logger.info("Closing application - stopping threads...")
 
             # Lista wszystkich wątków do zatrzymania
             threads_to_stop = []
@@ -646,7 +646,7 @@ class MainWindow(QMainWindow):
             for thread in threads_to_stop:
                 if thread and thread.isRunning():
                     self.logger.info(
-                        f"Zatrzymywanie wątku: {thread.__class__.__name__}"
+                        f"Stopping thread: {thread.__class__.__name__}"
                     )
                     # Użyj nowej metody stop() jeśli jest dostępna
                     if hasattr(thread, "stop"):
@@ -656,15 +656,15 @@ class MainWindow(QMainWindow):
                         thread.quit()
                         if not thread.wait(5000):
                             self.logger.warning(
-                                f"Wymuszenie zamknięcia wątku: {thread.__class__.__name__}"
+                                f"Forcing thread termination: {thread.__class__.__name__}"
                             )
                             thread.terminate()
                             thread.wait(2000)
 
-            self.logger.info("Wszystkie wątki zostały zatrzymane")
+            self.logger.info("All threads have been stopped")
 
         except Exception as e:
-            self.logger.error(f"Błąd podczas zatrzymywania wątków: {e}")
+            self.logger.error(f"Error while stopping threads: {e}")
 
         # Zaakceptuj zdarzenie zamknięcia
         event.accept()

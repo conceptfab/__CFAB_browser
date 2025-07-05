@@ -37,22 +37,22 @@ class AssetRebuilderWorker(QThread):
             )
 
             # Krok 1: Usuwanie plików .asset
-            self.progress_updated.emit(0, 100, "Usuwanie starych plików .asset...")
+            self.progress_updated.emit(0, 100, "Removing old .asset files...")
             self._remove_asset_files()
 
             # Krok 2: Usuwanie folderu .cache
-            self.progress_updated.emit(20, 100, "Usuwanie folderu .cache...")
+            self.progress_updated.emit(20, 100, "Removing .cache folder...")
             self._remove_cache_folder()
 
             # Krok 3: Uruchamianie scanner.py
             self.progress_updated.emit(
-                40, 100, "Skanowanie i tworzenie nowych assetów..."
+                40, 100, "Scanning and creating new assets..."
             )
             self._run_scanner()
 
-            self.progress_updated.emit(100, 100, "Przebudowa zakończona!")
+            self.progress_updated.emit(100, 100, "Rebuild finished!")
             self.finished.emit(
-                f"Pomyślnie przebudowano assety w folderze: {self.folder_path}"
+                f"Successfully rebuilt assets in folder: {self.folder_path}"
             )
 
         except Exception as e:

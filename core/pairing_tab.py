@@ -57,7 +57,7 @@ class ArchiveListItem(QWidget):
     def contextMenuEvent(self, event):
         """Create context menu for right-click."""
         menu = QMenu(self)
-        open_action = QAction("Otwórz w programie domyślnym", self)
+        open_action = QAction("Open in default program", self)
         open_action.triggered.connect(self._handle_open)
         menu.addAction(open_action)
         menu.exec(event.globalPos())
@@ -450,8 +450,8 @@ class PairingTab(QWidget):
             )
 
     def _on_rebuild_finished(self, message):
-        QMessageBox.information(self, "Sukces", message)
+        QMessageBox.information(self, "Success", message)
         self.load_data()  # Refresh data as assets might have changed
 
     def _on_rebuild_error(self, error_message):
-        QMessageBox.critical(self, "Błąd przebudowy", error_message)
+        QMessageBox.critical(self, "Rebuild Error", error_message)

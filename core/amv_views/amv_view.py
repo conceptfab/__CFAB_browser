@@ -346,7 +346,7 @@ class AmvView(QWidget):
 
         self.placeholder_widget = QWidget()
         placeholder_layout = QVBoxLayout(self.placeholder_widget)
-        self.placeholder_label = QLabel("Panel galerii\n(Oczekiwanie na wybór folderu)")
+        self.placeholder_label = QLabel("Gallery Panel\n(Waiting for folder selection)")
         self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         placeholder_layout.addWidget(self.placeholder_label)
 
@@ -409,7 +409,7 @@ class AmvView(QWidget):
         self.text_input.setObjectName("ControlPanelTextInput")
         self.text_input.setMinimumWidth(120)
         self.text_input.setFixedHeight(14)
-        self.text_input.setPlaceholderText("Wpisz tekst...")
+        self.text_input.setPlaceholderText("Enter text...")
         control_layout.addWidget(self.text_input, 3)
         # Dodaj gwiazdki między QLineEdit a przyciskami
         self.star_checkboxes = []
@@ -454,22 +454,22 @@ class AmvView(QWidget):
                 border-color: #3F3F46;
             }
         """
-        self.select_all_button = QPushButton("Zaznacz wszystkie")
+        self.select_all_button = QPushButton("Select All")
         self.select_all_button.setObjectName("selectAllButton")
         self.select_all_button.setEnabled(False)  # Wyłączony domyślnie
         self.selection_buttons.append(self.select_all_button)
 
-        self.move_selected_button = QPushButton("Przenieś zaznaczone")
+        self.move_selected_button = QPushButton("Move Selected")
         self.move_selected_button.setObjectName("moveSelectedButton")
         self.move_selected_button.setEnabled(False)  # Wyłączony domyślnie
         self.selection_buttons.append(self.move_selected_button)
 
-        self.delete_selected_button = QPushButton("Usuń zaznaczone")
+        self.delete_selected_button = QPushButton("Delete Selected")
         self.delete_selected_button.setObjectName("deleteSelectedButton")
         self.delete_selected_button.setEnabled(False)  # Wyłączony domyślnie
         self.selection_buttons.append(self.delete_selected_button)
 
-        self.deselect_all_button = QPushButton("Odznacz wszystkie")
+        self.deselect_all_button = QPushButton("Deselect All")
         self.deselect_all_button.setObjectName("deselectAllButton")
         self.deselect_all_button.setEnabled(False)  # Wyłączony domyślnie
         self.selection_buttons.append(self.deselect_all_button)

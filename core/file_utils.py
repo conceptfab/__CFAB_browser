@@ -47,7 +47,7 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
     try:
         # Walidacja inputu
         if not path or not isinstance(path, str):
-            logger.error("Nieprawidłowa ścieżka: pusta lub nie string")
+            logger.error("Invalid path: empty or not a string")
             return False
 
         # Normalizuj ścieżkę - napraw mieszane ukośniki
@@ -82,12 +82,12 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
                 return False
         elif sys.platform == "darwin":  # macOS
             if not _is_command_available("open"):
-                logger.error("Komenda 'open' nie jest dostępna")
+                logger.error("Command 'open' is not available")
                 return False
             subprocess.run(["open", normalized_path], check=True, timeout=10)
         else:  # Linux
             if not _is_command_available("xdg-open"):
-                logger.error("Komenda 'xdg-open' nie jest dostępna")
+                logger.error("Command 'xdg-open' is not available")
                 return False
             subprocess.run(["xdg-open", normalized_path], check=True, timeout=10)
         logger.info(f"Otworzono ścieżkę w eksploratorze: {normalized_path}")
@@ -129,7 +129,7 @@ def open_file_in_default_app(path: str, parent_widget=None) -> bool:
     try:
         # Walidacja inputu
         if not path or not isinstance(path, str):
-            logger.error("Nieprawidłowa ścieżka: pusta lub nie string")
+            logger.error("Invalid path: empty or not a string")
             return False
 
         # Sprawdź czy plik istnieje
@@ -143,12 +143,12 @@ def open_file_in_default_app(path: str, parent_widget=None) -> bool:
             os.startfile(path)
         elif sys.platform == "darwin":  # macOS
             if not _is_command_available("open"):
-                logger.error("Komenda 'open' nie jest dostępna")
+                logger.error("Command 'open' is not available")
                 return False
             subprocess.run(["open", path], check=True, timeout=10)
         else:  # Linux
             if not _is_command_available("xdg-open"):
-                logger.error("Komenda 'xdg-open' nie jest dostępna")
+                logger.error("Command 'xdg-open' is not available")
                 return False
             subprocess.run(["xdg-open", path], check=True, timeout=10)
         logger.info(f"Otworzono plik w domyślnej aplikacji: {path}")
