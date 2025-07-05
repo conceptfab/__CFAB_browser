@@ -895,11 +895,26 @@ max-width: 50px;
 
 /* ===================== PANEL KONTROLNY - IKONA ===================== */
 QLabel#ControlPanelIcon {
-    /* border: 0px;
+    border: none;
+    background: transparent;
     min-width: 22px;
     min-height: 22px;
     max-width: 22px;
     max-height: 22px;
     margin: 0 4px 0 0;
-    padding: 0; */
+    padding: 0;
+}
+
+
+/* =============================================================================
+   KONIEC ARKUSZA STYLÓW
+   ============================================================================= */
+
+/* WYMUSZENIE: Brak ramki dla ikony panelu kontrolnego */
+*[objectName="ControlPanelIcon"] {
+    border: none !important;
+    background: none !important;
+    outline: none !important;
+    border-width: 0px !important;
+    border-style: none !important;
 }
