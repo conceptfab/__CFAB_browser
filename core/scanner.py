@@ -15,6 +15,8 @@ FILE_EXTENSIONS = {
     "images": ["png", "jpg", "jpeg", "webp"],
 }
 
+# Rust Scanner Configuration
+USE_RUST_SCANNER = True  # Set to False to use Python scanner
 
 class AssetRepository:
     """
@@ -24,9 +26,27 @@ class AssetRepository:
     Implements the IAssetRepository interface.
     """
 
-    def __init__(self):
+    def __init__(self, use_rust: bool = USE_RUST_SCANNER):
         """Initializes the asset repository."""
-        pass
+        self.use_rust = use_rust
+        self._rust_scanner = None
+        
+        if self.use_rust:
+            try:
+                from core.rust_scanner import RustAssetRepository
+                self._rust_scanner = RustAssetRepository()
+                logger.info("Using Rust scanner for enhanced performance")
+            except ImportError as e:
+                logger.warning(f"Could not load Rust scanner: {e}")
+                logger.info("Falling back to Python scanner")
+                self.use_rust = False
+            except Exception as e:
+                logger.error(f"Error initializing Rust scanner: {e}")
+                logger.info("Falling back to Python scanner")
+                self.use_rust = False
+        
+        if not self.use_rust:
+            logger.info("Using Python scanner")
 
     @staticmethod
     def _validate_folder_path_static(folder_path: str) -> bool:
@@ -649,6 +669,28 @@ class AssetRepository:
         Returns:
             list: List of dictionaries representing found assets
         """
+        # Use Rust scanner if available
+        if self.use_rust and self._rust_scanner:
+            try:
+                logger.debug("Using Rust scanner for find_and_create_assets")
+                rust_assets = self._rust_scanner.find_and_create_assets(
+                    folder_path, progress_callback, use_async_thumbnails
+                )
+                
+                # Post-process: Create thumbnails for Rust-created assets
+                logger.debug("Post-processing: Creating thumbnails for Rust assets")
+                for asset in rust_assets:
+                    if isinstance(asset, dict) and asset.get('name') and asset.get('image_path'):
+                        asset_file_path = os.path.join(folder_path, f"{asset['name']}.asset")
+                        self.create_thumbnail_for_asset(asset_file_path, asset['image_path'])
+                
+                return rust_assets
+            except Exception as e:
+                logger.error(f"Rust scanner failed: {e}")
+                logger.info("Falling back to Python scanner")
+                # Continue with Python implementation below
+        
+        # Python implementation (original or fallback)
         with measure_operation(
             "scanner.find_and_create_assets",
             {"folder_path": folder_path, "use_async_thumbnails": use_async_thumbnails},
@@ -845,6 +887,17 @@ class AssetRepository:
         Returns:
             list: List of dictionaries representing loaded assets
         """
+        # Use Rust scanner if available
+        if self.use_rust and self._rust_scanner:
+            try:
+                logger.debug("Using Rust scanner for load_existing_assets")
+                return self._rust_scanner.load_existing_assets(folder_path)
+            except Exception as e:
+                logger.error(f"Rust scanner failed: {e}")
+                logger.info("Falling back to Python scanner")
+                # Continue with Python implementation below
+        
+        # Python implementation (original or fallback)
         # Folder path validation at the beginning
         if not AssetRepository._validate_folder_path_static(folder_path):
             logger.error(f"Invalid folder path: {folder_path}")

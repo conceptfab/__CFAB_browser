@@ -155,7 +155,6 @@ def check_python_packages():
     
     required_packages = [
         "maturin",
-        "pyo3-stub-gen",
         "wheel",
         "setuptools",
     ]
@@ -341,7 +340,7 @@ def generate_installation_commands():
     print("# Pamiętaj o instalacji komponentu C++ build tools\n")
     
     print("# Instalacja pakietów Python:")
-    print("pip install maturin pyo3-stub-gen wheel setuptools pytest\n")
+    print("pip install maturin wheel setuptools pytest\n")
     
     print("# Dodanie Rust do PATH (PowerShell):")
     print("$env:PATH += \";$env:USERPROFILE\\.cargo\\bin\"\n")

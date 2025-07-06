@@ -1,0 +1,71 @@
+use serde::{Deserialize, Serialize};
+
+/// Struktura reprezentująca asset
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Asset {
+    pub name: String,
+    pub archive_path: String,
+    pub image_path: String,
+    pub folder_path: String,
+    pub archive_size_mb: f64,
+    pub texture_in_archive: bool,
+    pub thumbnail_path: Option<String>,
+}
+
+/// Struktura reprezentująca folder specjalny
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpecialFolder {
+    pub folder_type: String,
+    pub name: String,
+    pub folder_path: String,
+}
+
+/// Wynik skanowania
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScanResult {
+    pub assets: Vec<Asset>,
+    pub special_folders: Vec<SpecialFolder>,
+    pub unpaired_files: UnpairedFiles,
+}
+
+/// Niesparowane pliki
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UnpairedFiles {
+    pub archives: Vec<String>,
+    pub images: Vec<String>,
+}
+
+/// Konfiguracja rozszerzeń plików
+#[derive(Debug, Clone)]
+pub struct FileExtensions {
+    pub archives: std::collections::HashSet<String>,
+    pub images: std::collections::HashSet<String>,
+}
+
+impl Default for FileExtensions {
+    fn default() -> Self {
+        Self {
+            archives: ["zip", "rar", "sbsar", "7z"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            images: ["png", "jpg", "jpeg", "webp"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+        }
+    }
+}
+
+/// Błędy scanera
+#[derive(thiserror::Error, Debug)]
+pub enum ScannerError {
+    #[error("Folder nie istnieje: {0}")]
+    FolderNotFound(String),
+    #[error("Brak uprawnień do folderu: {0}")]
+    PermissionDenied(String),
+    #[error("Błąd I/O: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Błąd JSON: {0}")]
+    JsonError(#[from] serde_json::Error),
+} 
