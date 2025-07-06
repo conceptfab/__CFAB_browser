@@ -18,6 +18,21 @@ Zgodnie z preferencjami użytkownika, wszystkie 3 krytyczne poprawki zostały wy
 | 2   | `FolderClickRules.decide_action`       | ✅ **ZAKOŃCZONA** | C → **A**           | 80 linii → 20 linii |
 | 3   | `AssetRepository._create_single_asset` | ✅ **ZAKOŃCZONA** | C → **A**           | 90 linii → 25 linii |
 
+### 🟡 STATUS ŚREDNICH POPRAWEK (Ocena B)
+
+Zgodnie z preferencjami użytkownika, kontynuowano z poprawkami średniej złożoności:
+
+| ID  | Plik                        | Funkcja                                           | Status            | Redukcja Złożoności | Skuteczność         |
+| --- | --------------------------- | ------------------------------------------------- | ----------------- | ------------------- | ------------------- |
+| 4   | `core/scanner.py`           | `AssetRepository._check_texture_folders_presence` | ✅ **ZAKOŃCZONA** | B → **A**           | 45 linii → 15 linii |
+| 5   | `core/scanner.py`           | `AssetRepository.create_thumbnail_for_asset`      | ✅ **ZAKOŃCZONA** | B → **A**           | 50 linii → 20 linii |
+| 6   | `core/scanner.py`           | `AssetRepository._get_files_by_extensions`        | ✅ **ZAKOŃCZONA** | B → **A**           | 15 linii → 10 linii |
+| 7   | `core/scanner.py`           | `AssetRepository._create_unpair_files_json`       | ✅ **ZAKOŃCZONA** | B → **A**           | 35 linii → 15 linii |
+| 8   | `core/selection_counter.py` | `SelectionCounter.count_selected_assets`          | ✅ **ZAKOŃCZONA** | B → **A**           | 20 linii → 5 linii  |
+| 9   | `core/selection_counter.py` | `SelectionCounter.count_visible_assets`           | ✅ **ZAKOŃCZONA** | B → **A**           | 20 linii → 5 linii  |
+| 10  | `core/thread_manager.py`    | `ThreadManager._stop_single_thread`               | ✅ **ZAKOŃCZONA** | B → **A**           | 40 linii → 15 linii |
+| 11  | `core/thread_manager.py`    | `ThreadManager.emergency_stop_all`                | ✅ **ZAKOŃCZONA** | B → **A**           | 25 linii → 10 linii |
+
 ### 🔧 ZASTOSOWANE WZORCE PROJEKTOWE
 
 1. **Strategy Pattern** - dla logiki decyzyjnej w `FolderClickRules`

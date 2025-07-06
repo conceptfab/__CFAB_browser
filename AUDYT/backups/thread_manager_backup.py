@@ -183,51 +183,9 @@ class ThreadManager:
             
             return running_count
     
-    def _try_graceful_thread_stop(self, thread: QThread, thread_name: str, thread_id: int) -> None:
-        """
-        Attempts graceful thread shutdown.
-        
-        Args:
-            thread (QThread): Thread to stop
-            thread_name (str): Name of the thread for logging
-            thread_id (int): ID of the thread for logging
-        """
-        logger.debug(f"Stopping thread: {thread_name} ({thread_id})")
-        
-        # Try graceful stop first (new method)
-        if hasattr(thread, 'stop'):
-            thread.stop()
-        else:
-            # Fallback to quit for older threads
-            thread.quit()
-
-    def _try_force_thread_termination(self, thread: QThread, thread_name: str) -> bool:
-        """
-        Attempts to force terminate thread as last resort.
-        
-        Args:
-            thread (QThread): Thread to terminate
-            thread_name (str): Name of the thread for logging
-            
-        Returns:
-            bool: True if terminated successfully, False otherwise
-        """
-        logger.warning(f"Forcing termination of thread: {thread_name}")
-        thread.terminate()
-        
-        if thread.wait(2000):  # Give 2 seconds for termination
-            logger.debug(f"Thread terminated: {thread_name}")
-            return True
-        else:
-            logger.error(f"Thread failed to terminate: {thread_name}")
-            return False
-
     def _stop_single_thread(self, thread: QThread, timeout_ms: int) -> bool:
         """
         Stop a single thread with timeout and fallback to termination.
-        
-        This method now uses specialized helper functions for better maintainability
-        and follows the Single Responsibility Principle.
         
         Args:
             thread (QThread): Thread to stop
@@ -236,7 +194,6 @@ class ThreadManager:
         Returns:
             bool: True if stopped gracefully, False if terminated
         """
-        # Early return for invalid or already stopped threads
         if not thread or not thread.isRunning():
             return True
             
@@ -244,25 +201,41 @@ class ThreadManager:
         thread_id = id(thread)
         
         try:
-            # Step 1: Try graceful shutdown
-            self._try_graceful_thread_stop(thread, thread_name, thread_id)
+            logger.debug(f"Stopping thread: {thread_name} ({thread_id})")
             
-            # Step 2: Wait for graceful shutdown
+            # Try graceful stop first (new method)
+            if hasattr(thread, 'stop'):
+                thread.stop()
+            else:
+                # Fallback to quit for older threads
+                thread.quit()
+            
+            # Wait for graceful shutdown
             if thread.wait(timeout_ms):
                 logger.debug(f"Thread stopped gracefully: {thread_name}")
                 return True
-            
-            # Step 3: Force termination as last resort
-            return self._try_force_thread_termination(thread, thread_name)
+            else:
+                # Force termination as last resort
+                logger.warning(f"Forcing termination of thread: {thread_name}")
+                thread.terminate()
+                if thread.wait(2000):  # Give 2 seconds for termination
+                    logger.debug(f"Thread terminated: {thread_name}")
+                else:
+                    logger.error(f"Thread failed to terminate: {thread_name}")
+                return False
                 
         except Exception as e:
             logger.error(f"Error stopping thread {thread_name}: {e}")
             return False
     
-    def _emergency_stop_threads(self) -> None:
+    def emergency_stop_all(self) -> None:
         """
-        Emergency termination of all individual threads.
+        Emergency stop - immediately terminate all threads.
+        
+        This should only be used as a last resort when graceful shutdown fails.
         """
+        logger.warning("Emergency stop - terminating all threads immediately")
+        
         for thread in self.active_threads:
             if thread and thread.isRunning():
                 try:
@@ -270,45 +243,16 @@ class ThreadManager:
                     thread.wait(1000)  # Short wait
                 except Exception as e:
                     logger.error(f"Error in emergency stop for {thread.__class__.__name__}: {e}")
-
-    def _emergency_stop_thread_pools(self) -> None:
-        """
-        Emergency shutdown of all thread pools.
-        """
+        
         for pool in self.thread_pools:
             try:
                 pool.clear()
                 pool.waitForDone(1000)
             except Exception as e:
                 logger.error(f"Error in emergency stop for thread pool: {e}")
-
-    def _emergency_cleanup_registries(self) -> None:
-        """
-        Clean up thread registries after emergency stop.
-        """
+        
         self.active_threads.clear()
         self.thread_pools.clear()
-
-    def emergency_stop_all(self) -> None:
-        """
-        Emergency stop - immediately terminate all threads.
-        
-        This method now uses specialized helper functions for better maintainability
-        and follows the Single Responsibility Principle.
-        
-        This should only be used as a last resort when graceful shutdown fails.
-        """
-        logger.warning("Emergency stop - terminating all threads immediately")
-        
-        # Step 1: Emergency stop individual threads
-        self._emergency_stop_threads()
-        
-        # Step 2: Emergency stop thread pools
-        self._emergency_stop_thread_pools()
-        
-        # Step 3: Clean up registries
-        self._emergency_cleanup_registries()
-        
         logger.warning("Emergency stop completed")
     
     def get_status_report(self) -> str:
