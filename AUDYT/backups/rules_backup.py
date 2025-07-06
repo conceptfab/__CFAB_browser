@@ -288,134 +288,6 @@ class DefaultCaseStrategy(DecisionStrategy):
         }
 
 
-# === DECISION ENGINE ===
-
-
-class DecisionRule:
-    """
-    Base class for decision rules using Chain of Responsibility pattern
-    """
-    
-    def __init__(self, strategy_class):
-        self.strategy_class = strategy_class
-        self.next_rule = None
-    
-    def set_next(self, rule):
-        """Set the next rule in the chain"""
-        self.next_rule = rule
-        return rule
-    
-    def matches(self, content: Dict) -> bool:
-        """Check if this rule matches the content"""
-        raise NotImplementedError("Subclasses must implement matches()")
-    
-    def handle(self, folder_path: str, content: Dict) -> Dict:
-        """Handle the decision or pass to next rule"""
-        if self.matches(content):
-            return self.strategy_class.execute(folder_path, content)
-        elif self.next_rule:
-            return self.next_rule.handle(folder_path, content)
-        else:
-            return DefaultCaseStrategy.execute(folder_path, content)
-
-
-class Condition1Rule(DecisionRule):
-    """Rule: Archive/preview files exist, but NO asset files"""
-    
-    def __init__(self):
-        super().__init__(Condition1Strategy)
-    
-    def matches(self, content: Dict) -> bool:
-        return (content["preview_archive_count"] > 0 and 
-                content["asset_count"] == 0)
-
-
-class Condition2aRule(DecisionRule):
-    """Rule: Both archive/preview and asset files exist, but no cache"""
-    
-    def __init__(self):
-        super().__init__(Condition2aStrategy)
-    
-    def matches(self, content: Dict) -> bool:
-        return (content["preview_archive_count"] > 0 and 
-                content["asset_count"] > 0 and
-                not content["cache_exists"])
-
-
-class Condition2bRule(DecisionRule):
-    """Rule: Both files exist, cache exists, but thumbnail count mismatch"""
-    
-    def __init__(self):
-        super().__init__(Condition2bStrategy)
-    
-    def matches(self, content: Dict) -> bool:
-        return (content["preview_archive_count"] > 0 and 
-                content["asset_count"] > 0 and
-                content["cache_exists"] and
-                content["cache_thumb_count"] != content["asset_count"])
-
-
-class Condition2cRule(DecisionRule):
-    """Rule: Both files exist, cache exists, thumbnail count matches"""
-    
-    def __init__(self):
-        super().__init__(Condition2cStrategy)
-    
-    def matches(self, content: Dict) -> bool:
-        return (content["preview_archive_count"] > 0 and 
-                content["asset_count"] > 0 and
-                content["cache_exists"] and
-                content["cache_thumb_count"] == content["asset_count"])
-
-
-class AdditionalCaseRule(DecisionRule):
-    """Rule: Only asset files exist (no archives/previews)"""
-    
-    def __init__(self):
-        super().__init__(AdditionalCaseStrategy)
-    
-    def matches(self, content: Dict) -> bool:
-        return (content["asset_count"] > 0 and 
-                content["preview_archive_count"] == 0)
-
-
-class DecisionEngine:
-    """
-    Decision engine that manages the chain of decision rules
-    """
-    
-    def __init__(self):
-        """Initialize the decision chain"""
-        self.first_rule = self._build_decision_chain()
-    
-    def _build_decision_chain(self) -> DecisionRule:
-        """Build the chain of responsibility for decision rules"""
-        # Create rules in order of specificity (most specific first)
-        condition1 = Condition1Rule()
-        condition2a = Condition2aRule()
-        condition2b = Condition2bRule()
-        condition2c = Condition2cRule()
-        additional = AdditionalCaseRule()
-        
-        # Chain them together
-        condition1.set_next(condition2a).set_next(condition2b).set_next(condition2c).set_next(additional)
-        
-        return condition1
-    
-    def decide(self, folder_path: str, content: Dict) -> Dict:
-        """
-        Make a decision based on folder content
-        
-        Args:
-            folder_path (str): Path to folder
-            content (Dict): Folder analysis content
-            
-        Returns:
-            Dict: Decision result
-        """
-        return self.first_rule.handle(folder_path, content)
-
-
 class FolderClickRules:
     """
     Class containing decision logic for folder clicks
@@ -449,9 +321,6 @@ class FolderClickRules:
     # Cache dla wyników analizy folderów
     _folder_analysis_cache: Dict[str, Dict] = {}
     _cache_timestamps: Dict[str, float] = {}
-    
-    # Decision engine instance
-    _decision_engine: DecisionEngine = None
 
     @staticmethod
     def _validate_folder_path(folder_path: str) -> Optional[str]:
@@ -734,20 +603,26 @@ class FolderClickRules:
         )
 
     @staticmethod
-    def _get_decision_engine() -> DecisionEngine:
-        """Get or create the decision engine instance"""
-        if FolderClickRules._decision_engine is None:
-            FolderClickRules._decision_engine = DecisionEngine()
-        return FolderClickRules._decision_engine
-
-    @staticmethod
     def decide_action(folder_path: str) -> dict:
         """
         Decides on the action to take based on folder contents
 
-        Uses Chain of Responsibility pattern to determine the appropriate action
-        based on folder analysis. This method is much simpler and more maintainable
-        than the previous nested if-elif-else implementation.
+        Method implements a decision algorithm based on the following
+        conditions:
+
+        CONDITION 1: Folder contains archive/preview files, but NO asset files
+        → Run scanner (necessary processing of archives into asset files)
+
+        CONDITION 2: Folder contains both archive/preview files and asset files
+        - 2a: No .cache folder → Run scanner (generating thumbnails)
+        - 2b: .cache exists, but number of thumbnails ≠ number of asset files
+        → Run scanner
+        - 2c: .cache exists and number of thumbnails = number of asset files
+        → Display gallery
+
+        ADDITIONAL CASE: Folder contains only asset files (without archives)
+        - No .cache or mismatched number of thumbnails → Run scanner
+        - All ready → Display gallery
 
         Args:
             folder_path (str): Path to the folder to analyze
@@ -774,21 +649,69 @@ class FolderClickRules:
             # Step 1: Analyze folder contents
             content = FolderClickRules.analyze_folder_content(folder_path)
 
-            # Step 2: Handle analysis errors
+            # Check if there was an error during analysis
             if "error" in content:
-                logger.error(f"FOLDER ANALYSIS ERROR: {folder_path} - {content['error']}")
+                logger.error(
+                    f"FOLDER ANALYSIS ERROR: {folder_path} - {content['error']}"
+                )
                 return {
                     "action": "error",
                     "message": content["error"],
                     "condition": "error",
                 }
 
-            # Step 3: Log diagnostic information
+            # Step 2: Extract key information
+            asset_count = content["asset_count"]
+            preview_archive_count = content["preview_archive_count"]
+            cache_exists = content["cache_exists"]
+            cache_thumb_count = content["cache_thumb_count"]
+
+            # Log diagnostic information
             FolderClickRules._log_folder_analysis(folder_path, content)
 
-            # Step 4: Use Decision Engine to make the decision
-            decision_engine = FolderClickRules._get_decision_engine()
-            return decision_engine.decide(folder_path, content)
+            # CONDITION 1: Folder contains archive/preview files, but NO asset files
+            # → Scanner must process archives into asset files
+            if preview_archive_count > 0 and asset_count == 0:
+                return Condition1Strategy.execute(folder_path, content)
+
+            # CONDITION 2: Folder contains both archive/preview files and asset files
+            elif preview_archive_count > 0 and asset_count > 0:
+
+                # Subcondition 2a: No .cache folder
+                # → Scanner must generate thumbnails
+                if not cache_exists:
+                    return Condition2aStrategy.execute(folder_path, content)
+
+                # Subcondition 2b: .cache exists, but number of thumbnails ≠ number of
+                # asset files → Scanner must supplement missing thumbnails
+                elif cache_thumb_count != asset_count:
+                    return Condition2bStrategy.execute(folder_path, content)
+
+                # Subcondition 2c: .cache exists and number of thumbnails = number of
+                # asset files → All ready, can display gallery
+                else:
+                    return Condition2cStrategy.execute(folder_path, content)
+
+            # ADDITIONAL CASE: Folder contains only asset files (without archives)
+            # → Check if cache is complete
+            elif asset_count > 0 and preview_archive_count == 0:
+
+                # No .cache folder → Run scanner
+                if not cache_exists:
+                    return AdditionalCaseStrategy.execute(folder_path, content)
+
+                # Mismatched number of thumbnails → Run scanner
+                elif cache_thumb_count != asset_count:
+                    return AdditionalCaseStrategy.execute(folder_path, content)
+
+                # All ready → Display gallery
+                else:
+                    return AdditionalCaseStrategy.execute(folder_path, content)
+
+            # DEFAULT CASE: Folder does not contain appropriate files
+            # → Do nothing
+            else:
+                return DefaultCaseStrategy.execute(folder_path, content)
 
         except Exception as e:
             error_msg = f"Error deciding action for folder {folder_path}: {e}"

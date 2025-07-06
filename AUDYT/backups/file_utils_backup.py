@@ -289,113 +289,7 @@ def open_file_in_default_app(path: str, parent_widget=None) -> bool:
         return False
 
 
-def _validate_file_action_input(path: str, parent_widget=None) -> tuple[bool, str]:
-    """
-    Validates input for file actions.
-    
-    Args:
-        path (str): Path to validate
-        parent_widget: Parent widget for displaying error messages
-        
-    Returns:
-        tuple[bool, str]: (is_valid, error_message)
-    """
-    if not path:
-        return False, "Empty path provided"
-    
-    if not os.path.exists(path):
-        error_msg = f"Path does not exist: {path}"
-        if parent_widget:
-            from PyQt6.QtWidgets import QMessageBox
-            QMessageBox.warning(parent_widget, "Error", error_msg)
-        return False, error_msg
-    
-    return True, ""
-
-
-def _manage_preview_window(parent_widget, path: str) -> bool:
-    """
-    Manages preview window lifecycle (close existing, create new).
-    
-    Args:
-        parent_widget: Parent widget to store preview window reference
-        path (str): Path to file for preview
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    try:
-        from core.preview_window import PreviewWindow
-        
-        # Close existing preview window if any
-        if hasattr(parent_widget, 'current_preview_window') and parent_widget.current_preview_window:
-            parent_widget.current_preview_window.close()
-            parent_widget.current_preview_window.deleteLater()
-            parent_widget.current_preview_window = None
-        
-        # Create new preview window
-        preview_window = PreviewWindow(path, parent_widget)
-        if hasattr(parent_widget, '__dict__'):
-            parent_widget.current_preview_window = preview_window
-        preview_window.show_window()
-        return True
-    except Exception as e:
-        logger.error(f"Error managing preview window for {path}: {e}")
-        return False
-
-
-def _handle_folder_action(path: str, parent_widget=None) -> bool:
-    """
-    Handles folder actions (open in explorer).
-    
-    Args:
-        path (str): Path to folder
-        parent_widget: Parent widget for displaying error messages
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    success = open_path_in_explorer(path, parent_widget)
-    if success:
-        logger.info(f"Opened folder in explorer: {path}")
-    return success
-
-
-def _handle_file_thumbnail_action(path: str, parent_widget=None) -> bool:
-    """
-    Handles thumbnail click actions (open preview window).
-    
-    Args:
-        path (str): Path to file
-        parent_widget: Parent widget for displaying error messages and preview windows
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    success = _manage_preview_window(parent_widget, path)
-    if success:
-        logger.info(f"Opened preview in dedicated window: {path}")
-    return success
-
-
-def _handle_file_filename_action(path: str, parent_widget=None) -> bool:
-    """
-    Handles filename click actions (open file in default application).
-    
-    Args:
-        path (str): Path to file
-        parent_widget: Parent widget for displaying error messages
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    success = open_file_in_default_app(path, parent_widget)
-    if success:
-        logger.info(f"Opened file in external application: {path}")
-    return success
-
-
-def handle_file_action(path: str, action_type: str, parent_widget=None) -> bool:
+def handle_file_action(path: str, action_type: str, parent_widget=None):
     """
     Consolidated file action handler for common file operations.
     
@@ -409,30 +303,58 @@ def handle_file_action(path: str, action_type: str, parent_widget=None) -> bool:
     """
     logger.debug(f"handle_file_action: '{action_type}' for: {path}")
     
-    # Step 1: Validate input
-    is_valid, error_msg = _validate_file_action_input(path, parent_widget)
-    if not is_valid:
-        logger.warning(f"handle_file_action: {error_msg}")
+    if not path:
+        logger.warning("handle_file_action: Empty path provided")
         return False
-    
+
+    if not os.path.exists(path):
+        logger.warning(f"handle_file_action: Path does not exist: {path}")
+        if parent_widget:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(parent_widget, "Error", f"Path does not exist: {path}")
+        return False
+
     try:
-        # Step 2: Handle based on path type
         if os.path.isdir(path):
-            return _handle_folder_action(path, parent_widget)
-        
-        # Step 3: Handle file actions based on action_type
-        action_handlers = {
-            "thumbnail": _handle_file_thumbnail_action,
-            "filename": _handle_file_filename_action,
-        }
-        
-        handler = action_handlers.get(action_type)
-        if handler:
-            return handler(path, parent_widget)
+            # Open folder in explorer
+            success = open_path_in_explorer(path, parent_widget)
+            if success:
+                logger.info(f"Opened folder in explorer: {path}")
+            return success
         else:
-            logger.warning(f"Unknown action type: {action_type}")
-            return False
-            
+            # Handle file actions
+            if action_type == "thumbnail":
+                # Open preview window
+                try:
+                    from core.preview_window import PreviewWindow
+                    
+                    # Close existing preview window if any
+                    if hasattr(parent_widget, 'current_preview_window') and parent_widget.current_preview_window:
+                        parent_widget.current_preview_window.close()
+                        parent_widget.current_preview_window.deleteLater()
+                        parent_widget.current_preview_window = None
+                    
+                    # Create new preview window
+                    preview_window = PreviewWindow(path, parent_widget)
+                    if hasattr(parent_widget, '__dict__'):
+                        parent_widget.current_preview_window = preview_window
+                    preview_window.show_window()
+                    logger.info(f"Opened preview in dedicated window: {path}")
+                    return True
+                except Exception as e:
+                    logger.error(f"Error opening preview window for {path}: {e}")
+                    return False
+                    
+            elif action_type == "filename":
+                # Open file in default application
+                success = open_file_in_default_app(path, parent_widget)
+                if success:
+                    logger.info(f"Opened file in external application: {path}")
+                return success
+            else:
+                logger.warning(f"Unknown action type: {action_type}")
+                return False
+                
     except Exception as e:
         logger.error(f"Error in handle_file_action for {path}: {e}")
         if parent_widget:

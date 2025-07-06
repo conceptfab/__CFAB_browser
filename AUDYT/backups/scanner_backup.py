@@ -185,154 +185,11 @@ class AssetRepository:
         special_folder_names = ["tex", "textures", "maps"]
         return self._scan_for_named_folders(folder_path, special_folder_names)
 
-    def _validate_asset_creation_inputs(self, name: str, archive_path: str, image_path: str, folder_path: str) -> tuple[bool, str]:
-        """
-        Validates inputs for asset creation.
-        
-        Args:
-            name (str): Asset name
-            archive_path (str): Path to archive file
-            image_path (str): Path to image file  
-            folder_path (str): Target folder path
-            
-        Returns:
-            tuple[bool, str]: (is_valid, error_message)
-        """
-        if not name:
-            return False, "Asset name cannot be empty"
-        
-        if not AssetRepository._validate_folder_path_static(folder_path):
-            return False, f"Invalid folder path: {folder_path}"
-            
-        if not archive_path or not os.path.exists(archive_path):
-            return False, f"Archive file does not exist: {archive_path}"
-            
-        if not image_path or not os.path.exists(image_path):
-            return False, f"Image file does not exist: {image_path}"
-            
-        return True, ""
-
-    def _load_existing_asset_data(self, asset_file_path: str) -> dict | None:
-        """
-        Loads existing asset data if .asset file exists.
-        
-        Args:
-            asset_file_path (str): Path to .asset file
-            
-        Returns:
-            dict|None: Existing asset data or None
-        """
-        if os.path.exists(asset_file_path):
-            try:
-                existing_data = load_from_file(asset_file_path)
-                logger.debug(f"Found existing .asset file: {os.path.basename(asset_file_path)}")
-                return existing_data
-            except Exception as e:
-                logger.warning(f"Error loading existing asset data: {e}")
-                return None
-        return None
-
-    def _create_base_asset_data(self, name: str, archive_path: str, image_path: str, folder_path: str) -> dict:
-        """
-        Creates base asset data structure.
-        
-        Args:
-            name (str): Asset name
-            archive_path (str): Path to archive file
-            image_path (str): Path to image file
-            folder_path (str): Target folder path
-            
-        Returns:
-            dict: Base asset data
-        """
-        archive_size_mb = self._get_file_size_mb(archive_path)
-        textures_in_archive = self._check_texture_folders_presence(folder_path)
-        
-        return {
-            "type": "asset",
-            "name": name,
-            "archive": os.path.basename(archive_path),
-            "preview": os.path.basename(image_path),
-            "size_mb": archive_size_mb,
-            "thumbnail": None,
-            "stars": None,
-            "color": None,
-            "textures_in_the_archive": textures_in_archive,
-            "meta": {},
-        }
-
-    def _preserve_user_data(self, asset_data: dict, existing_asset_data: dict, name: str) -> None:
-        """
-        Preserves user data from existing asset (stars, color, thumbnail, meta).
-        
-        Args:
-            asset_data (dict): New asset data to update
-            existing_asset_data (dict): Existing asset data
-            name (str): Asset name for logging
-        """
-        if not existing_asset_data:
-            return
-        
-        # Preserve stars
-        if existing_asset_data.get("stars") is not None:
-            asset_data["stars"] = existing_asset_data["stars"]
-            logger.debug(f"Preserved stars: {existing_asset_data['stars']} for {name}")
-        
-        # Preserve color
-        if existing_asset_data.get("color") is not None:
-            asset_data["color"] = existing_asset_data["color"]
-            logger.debug(f"Preserved color: {existing_asset_data['color']} for {name}")
-        
-        # Preserve thumbnail
-        if existing_asset_data.get("thumbnail") is not None:
-            asset_data["thumbnail"] = existing_asset_data["thumbnail"]
-            logger.debug(f"Preserved thumbnail: {existing_asset_data['thumbnail']} for {name}")
-        
-        # Preserve meta data
-        if "meta" in existing_asset_data:
-            asset_data["meta"] = existing_asset_data["meta"]
-
-    def _save_asset_with_error_handling(self, asset_data: dict, asset_file_path: str, name: str) -> bool:
-        """
-        Saves asset data to file with comprehensive error handling.
-        
-        Args:
-            asset_data (dict): Asset data to save
-            asset_file_path (str): Path to save the file
-            name (str): Asset name for logging
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            save_to_file(asset_data, asset_file_path)
-            logger.debug(f"Created .asset file: {name}.asset")
-            return True
-        except FileNotFoundError as e:
-            logger.error(f"File not found while creating asset {name}: {e}")
-            return False
-        except PermissionError as e:
-            logger.error(f"Permission denied while creating asset {name}: {e}")
-            return False
-        except OSError as e:
-            logger.error(f"System error while creating asset {name}: {e}")
-            return False
-        except (ValueError, TypeError) as e:
-            logger.error(f"Data error while creating asset {name}: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Unexpected error while creating asset {name}: {e}")
-            return False
-
     def _create_single_asset(
         self, name: str, archive_path: str, image_path: str, folder_path: str
     ) -> dict | None:
         """
-        Creates a single .asset file using specialized helper functions.
-
-        This method is now much simpler and more maintainable than the previous
-        monolithic implementation. It uses the Single Responsibility Principle
-        by delegating specific tasks to specialized helper functions.
+        Creates a single .asset file
 
         Args:
             name (str): File name (without extension)
@@ -343,28 +200,94 @@ class AssetRepository:
         Returns:
             dict|None: Asset data dictionary or None on error
         """
-        # Step 1: Validate all inputs
-        is_valid, error_msg = self._validate_asset_creation_inputs(name, archive_path, image_path, folder_path)
-        if not is_valid:
-            logger.error(error_msg)
+        # Folder path validation at the beginning
+        if not AssetRepository._validate_folder_path_static(folder_path):
+            logger.error(f"Invalid folder path: {folder_path}")
             return None
-
-        # Step 2: Prepare file path
         asset_file_path = os.path.join(folder_path, f"{name}.asset")
 
-        # Step 3: Load existing asset data (if any)
-        existing_asset_data = self._load_existing_asset_data(asset_file_path)
+        try:
+            # Check if .asset file already exists
+            existing_asset_data = None
+            if os.path.exists(asset_file_path):
+                existing_asset_data = load_from_file(asset_file_path)
+                logger.debug(f"Found existing .asset file: {name}.asset")
 
-        # Step 4: Create base asset data structure
-        asset_data = self._create_base_asset_data(name, archive_path, image_path, folder_path)
+            # Get archive file size in MB
+            archive_size_mb = self._get_file_size_mb(archive_path)
 
-        # Step 5: Preserve user data from existing asset
-        self._preserve_user_data(asset_data, existing_asset_data, name)
+            # Check for texture folder presence
+            textures_in_archive = self._check_texture_folders_presence(folder_path)
 
-        # Step 6: Save asset file with comprehensive error handling
-        if self._save_asset_with_error_handling(asset_data, asset_file_path, name):
+            # Create new asset data
+            asset_data = {
+                "type": "asset",  # Added type
+                "name": name,
+                "archive": os.path.basename(archive_path),
+                "preview": os.path.basename(image_path),
+                "size_mb": archive_size_mb,
+                "thumbnail": None,
+                "stars": None,
+                "color": None,
+                "textures_in_the_archive": textures_in_archive,
+                "meta": {},
+            }
+
+            # If previous file exists, preserve important user data
+            if existing_asset_data:
+                # Preserve stars, color and other user data
+                if (
+                    "stars" in existing_asset_data
+                    and existing_asset_data["stars"] is not None
+                ):
+                    asset_data["stars"] = existing_asset_data["stars"]
+                    logger.debug(
+                        f"Preserved stars: {existing_asset_data['stars']} for {name}"
+                    )
+
+                if (
+                    "color" in existing_asset_data
+                    and existing_asset_data["color"] is not None
+                ):
+                    asset_data["color"] = existing_asset_data["color"]
+                    logger.debug(
+                        f"Preserved color: {existing_asset_data['color']} for {name}"
+                    )
+
+                # Preserve thumbnail if exists
+                if (
+                    "thumbnail" in existing_asset_data
+                    and existing_asset_data["thumbnail"] is not None
+                ):
+                    asset_data["thumbnail"] = existing_asset_data["thumbnail"]
+                    logger.debug(
+                        f"Preserved thumbnail: {existing_asset_data['thumbnail']} for {name}"
+                    )
+
+                # Preserve meta data
+                if "meta" in existing_asset_data:
+                    asset_data["meta"] = existing_asset_data["meta"]
+
+            # Save .asset file
+            save_to_file(asset_data, asset_file_path)
+            logger.debug(f"Created .asset file: {name}.asset")
+
             return asset_data
-        else:
+
+        except FileNotFoundError as e:
+            logger.error(f"File not found while creating asset {name}: {e}")
+            return None
+        except PermissionError as e:
+            logger.error(f"Permission denied while creating asset {name}: {e}")
+            return None
+        except OSError as e:
+            logger.error(f"System error while creating asset {name}: {e}")
+            return None
+        except (ValueError, TypeError) as e:
+            logger.error(f"Data error while creating asset {name}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error while creating asset {name}: {e}")
             return None
 
     def _get_file_size_mb(self, file_path: str) -> float:
