@@ -50,26 +50,9 @@ class AssetRepository:
         
         return None
 
-    def _has_valid_extension(self, file_path: str, extensions_set: set) -> bool:
-        """
-        Checks if file has a valid extension.
-        
-        Args:
-            file_path (str): Path to the file
-            extensions_set (set): Set of valid extensions (lowercase)
-            
-        Returns:
-            bool: True if file has valid extension, False otherwise
-        """
-        _, ext = os.path.splitext(file_path)
-        return ext and ext[1:].lower() in extensions_set
-
     def _get_files_by_extensions(self, folder_path: str, extensions: list) -> list:
         """
-        Helper function for finding files with specific extensions.
-        
-        This method uses optimized list comprehension and helper functions
-        for better performance and readability.
+        Helper function for finding files with specific extensions
 
         Args:
             folder_path (str): Path to the folder
@@ -78,20 +61,15 @@ class AssetRepository:
         Returns:
             list: List of found file paths
         """
-        try:
-            # Pre-convert extensions to lowercase set for O(1) lookup
-            ext_set = set(ext.lower() for ext in extensions)
-            
-            # Use list comprehension with helper function for cleaner code
-            return [
-                os.path.join(folder_path, entry)
-                for entry in os.listdir(folder_path)
-                if (os.path.isfile(os.path.join(folder_path, entry)) and
-                    self._has_valid_extension(entry, ext_set))
-            ]
-        except (OSError, PermissionError) as e:
-            logger.error(f"Error scanning folder {folder_path}: {e}")
-            return []
+        files = []
+        ext_set = set(ext.lower() for ext in extensions)
+        for entry in os.listdir(folder_path):
+            full_path = os.path.join(folder_path, entry)
+            if os.path.isfile(full_path):
+                _, ext = os.path.splitext(entry)
+                if ext and ext[1:].lower() in ext_set:
+                    files.append(full_path)
+        return files
 
     def _scan_folder_for_files(self, folder_path: str) -> tuple:
         """
@@ -138,53 +116,9 @@ class AssetRepository:
         return archive_by_name, image_by_name
 
     @staticmethod
-    def _validate_texture_check_inputs(folder_path: str) -> tuple[bool, str]:
-        """
-        Validates inputs for texture folder checking.
-        
-        Args:
-            folder_path (str): Path to the working folder
-            
-        Returns:
-            tuple[bool, str]: (is_valid, error_message)
-        """
-        if not folder_path or not isinstance(folder_path, str):
-            return False, f"Invalid folder_path parameter: {folder_path}"
-            
-        if not AssetRepository._validate_folder_path_static(folder_path):
-            return False, f"Folder does not exist: {folder_path}"
-            
-        return True, ""
-
-    @staticmethod
-    def _scan_texture_folders(folder_path: str) -> bool:
-        """
-        Scans for texture folders in the specified path.
-        
-        Args:
-            folder_path (str): Path to scan
-            
-        Returns:
-            bool: True if NO texture folders found, False if found
-        """
-        texture_folder_names = ["tex", "textures", "maps"]
-        
-        for folder_name in texture_folder_names:
-            texture_folder_path = os.path.join(folder_path, folder_name)
-            if os.path.isdir(texture_folder_path):
-                logger.debug(f"Found texture folder: {folder_name}")
-                return False  # Found texture folder - textures are external
-        
-        logger.debug("No texture folders found - textures are in archive")
-        return True  # No texture folders found - textures are in archive
-
-    @staticmethod
     def _check_texture_folders_presence(folder_path: str) -> bool:
         """
-        Checks for the presence of texture folders in the working folder.
-        
-        This method uses specialized helper functions for better maintainability
-        and follows the Single Responsibility Principle.
+        Checks for the presence of texture folders in the working folder
 
         Args:
             folder_path (str): Path to the working folder
@@ -193,21 +127,40 @@ class AssetRepository:
             bool: True if NO texture folders found (textures are in archive),
                   False if texture folders found (textures are external)
         """
-        # Step 1: Validate inputs
-        is_valid, error_msg = AssetRepository._validate_texture_check_inputs(folder_path)
-        if not is_valid:
-            logger.warning(error_msg)
-            return True  # Default to "textures in archive" on error
-        
-        # Step 2: Scan for texture folders with comprehensive error handling
+        if not folder_path or not isinstance(folder_path, str):
+            logger.warning(f"Invalid folder_path parameter: {folder_path}")
+            return True
+        # Folder path validation
+        if not AssetRepository._validate_folder_path_static(folder_path):
+            logger.warning(f"Folder does not exist: {folder_path}")
+            return True
+
+        # List of folder names to check
+        texture_folder_names = ["tex", "textures", "maps"]
+
         try:
-            return AssetRepository._scan_texture_folders(folder_path)
-        except (PermissionError, OSError, FileNotFoundError) as e:
-            logger.error(f"Error checking texture folders in {folder_path}: {e}")
-            return True  # Default to "textures in archive" on error
+            # Check each texture folder
+            for folder_name in texture_folder_names:
+                texture_folder_path = os.path.join(folder_path, folder_name)
+                if os.path.isdir(texture_folder_path):
+                    logger.debug(f"Found texture folder: {folder_name}")
+                    return False  # Found texture folder - textures are external
+
+            logger.debug("No texture folders found - textures are in archive")
+            return True  # No texture folders found - textures are in archive
+
+        except PermissionError:
+            logger.error(f"Permission denied accessing folder: {folder_path}")
+            return True
+        except OSError as e:
+            logger.error(f"OS error checking texture folders in {folder_path}: {e}")
+            return True
+        except FileNotFoundError:
+            logger.error(f"Folder not found: {folder_path}")
+            return True
         except Exception as e:
             logger.error(f"Unexpected error checking texture folders in {folder_path}: {e}")
-            return True  # Default to "textures in archive" on error
+            return True
 
     def _scan_for_named_folders(
         self, folder_path: str, folder_names: list[str]
@@ -418,79 +371,11 @@ class AssetRepository:
         """Gets file size in megabytes"""
         return get_file_size_mb(file_path)
 
-    def _validate_thumbnail_inputs(self, asset_path: str, image_path: str) -> tuple[bool, str]:
-        """
-        Validates inputs for thumbnail creation.
-        
-        Args:
-            asset_path (str): Path to the .asset file
-            image_path (str): Path to the image file
-            
-        Returns:
-            tuple[bool, str]: (is_valid, error_message_or_asset_name)
-        """
-        if not image_path or not os.path.exists(image_path):
-            return False, f"Image file does not exist: {image_path}"
-        
-        if not asset_path:
-            return False, "Asset path cannot be empty"
-        
-        asset_name = os.path.splitext(os.path.basename(asset_path))[0]
-        return True, asset_name
-
-    def _parse_thumbnail_result(self, result, asset_name: str) -> str | None:
-        """
-        Parses the result from generate_thumbnail function.
-        
-        Args:
-            result: Result from generate_thumbnail
-            asset_name (str): Name of the asset for logging
-            
-        Returns:
-            str|None: Thumbnail path or None on error
-        """
-        if isinstance(result, tuple) and len(result) >= 1:
-            thumbnail_path = result[0]  # First element is thumbnail path
-            logger.debug(f"Extracted thumbnail path: {thumbnail_path}")
-            return thumbnail_path
-        else:
-            logger.warning(f"Invalid result from generate_thumbnail for {asset_name}: {result}")
-            return None
-
-    def _update_asset_with_thumbnail(self, asset_path: str, thumbnail_path: str) -> bool:
-        """
-        Updates the .asset file with thumbnail path.
-        
-        Args:
-            asset_path (str): Path to the .asset file
-            thumbnail_path (str): Path to the thumbnail
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            asset_data = load_from_file(asset_path)
-            if asset_data:
-                asset_data["thumbnail"] = thumbnail_path
-                save_to_file(asset_data, asset_path)
-                logger.debug(f"Updated .asset file with thumbnail: {asset_path}")
-                return True
-            else:
-                logger.warning(f"Failed to load asset data from: {asset_path}")
-                return False
-        except Exception as e:
-            logger.error(f"Error updating asset file {asset_path}: {e}")
-            return False
-
     def create_thumbnail_for_asset(
         self, asset_path: str, image_path: str
     ) -> str | None:
         """
-        Creates a thumbnail for an asset using specialized helper functions.
-        
-        This method is now much simpler and more maintainable than the previous
-        implementation. It uses the Single Responsibility Principle by delegating
-        specific tasks to specialized helper functions.
+        Creates a thumbnail for an asset
 
         Args:
             asset_path (str): Path to the .asset file
@@ -499,102 +384,46 @@ class AssetRepository:
         Returns:
             str: Path to the created thumbnail or None on error
         """
-        # Step 1: Validate inputs
-        is_valid, asset_name_or_error = self._validate_thumbnail_inputs(asset_path, image_path)
-        if not is_valid:
-            logger.error(asset_name_or_error)
+        # Image file path validation at the beginning
+        if not image_path or not os.path.exists(image_path):
+            logger.error(f"Image file does not exist: {image_path}")
             return None
-        
-        asset_name = asset_name_or_error
-        
         try:
-            logger.debug(f"Creating thumbnail for asset: {asset_name}, image: {image_path}")
+            asset_name = os.path.splitext(os.path.basename(asset_path))[0]
+            logger.debug(
+                f"Creating thumbnail for asset: {asset_name}, image: {image_path}"
+            )
 
-            # Step 2: Generate thumbnail
+            # Generate thumbnail
             result = generate_thumbnail(image_path)
             logger.debug(f"generate_thumbnail result: {result}")
 
-            # Step 3: Parse thumbnail result
-            thumbnail_path = self._parse_thumbnail_result(result, asset_name)
-            
+            if isinstance(result, tuple) and len(result) >= 1:
+                thumbnail_path = result[0]  # First element is thumbnail path
+                logger.debug(f"Extracted thumbnail path: {thumbnail_path}")
+            else:
+                thumbnail_path = None
+                logger.warning(f"Invalid result from generate_thumbnail: {result}")
+
             if thumbnail_path:
                 logger.debug(f"Created thumbnail: {thumbnail_path}")
 
-                # Step 4: Update .asset file with thumbnail path
-                if self._update_asset_with_thumbnail(asset_path, thumbnail_path):
-                    return thumbnail_path
-                else:
-                    logger.warning(f"Failed to update asset file for: {asset_name}")
-                    return None
+                # Update .asset file with thumbnail path
+                asset_data = load_from_file(asset_path)
+                if asset_data:
+                    asset_data["thumbnail"] = thumbnail_path
+                    save_to_file(asset_data, asset_path)
+                    logger.debug(
+                        f"Updated .asset file with thumbnail: {asset_path}"
+                    )
+
+                return thumbnail_path
             else:
                 logger.warning(f"Failed to create thumbnail for: {asset_name}")
                 return None
 
         except Exception as e:
             return self._handle_error("thumbnail creation", e, asset_path)
-
-    def _find_unpaired_files(self, archive_by_name: dict, image_by_name: dict, common_names: set) -> tuple[list, list]:
-        """
-        Finds unpaired files that don't have matching counterparts.
-        
-        Args:
-            archive_by_name (dict): Dictionary of archive files by name
-            image_by_name (dict): Dictionary of image files by name
-            common_names (set): Set of common names
-            
-        Returns:
-            tuple[list, list]: (unpaired_archives, unpaired_images)
-        """
-        # Find unpaired files (names without extensions)
-        unpaired_archive_names = set(archive_by_name.keys()) - common_names
-        unpaired_image_names = set(image_by_name.keys()) - common_names
-
-        # Get full filenames with extensions
-        unpaired_archives = [
-            os.path.basename(archive_by_name[name])
-            for name in unpaired_archive_names
-        ]
-        unpaired_images = [
-            os.path.basename(image_by_name[name]) 
-            for name in unpaired_image_names
-        ]
-        
-        return unpaired_archives, unpaired_images
-
-    def _create_unpaired_data_structure(self, unpaired_archives: list, unpaired_images: list) -> dict:
-        """
-        Creates data structure for unpaired files.
-        
-        Args:
-            unpaired_archives (list): List of unpaired archive files
-            unpaired_images (list): List of unpaired image files
-            
-        Returns:
-            dict: Data structure ready for JSON serialization
-        """
-        return {
-            "unpaired_archives": unpaired_archives,
-            "unpaired_images": unpaired_images,
-            "total_unpaired_archives": len(unpaired_archives),
-            "total_unpaired_images": len(unpaired_images),
-        }
-
-    def _save_unpaired_files_json(self, folder_path: str, unpaired_data: dict) -> None:
-        """
-        Saves unpaired files data to JSON file.
-        
-        Args:
-            folder_path (str): Path to the folder
-            unpaired_data (dict): Data to save
-        """
-        unpaired_file_path = os.path.join(folder_path, "unpair_files.json")
-        save_to_file(unpaired_data, unpaired_file_path)
-
-        logger.info(
-            f"Created unpair_files.json: "
-            f"{unpaired_data['total_unpaired_archives']} unpaired archives, "
-            f"{unpaired_data['total_unpaired_images']} unpaired images"
-        )
 
     def _create_unpair_files_json(
         self,
@@ -604,11 +433,7 @@ class AssetRepository:
         common_names: set,
     ) -> None:
         """
-        Creates a JSON file with unpaired files using specialized helper functions.
-        
-        This method is now much simpler and more maintainable than the previous
-        implementation. It uses the Single Responsibility Principle by delegating
-        specific tasks to specialized helper functions.
+        Creates a JSON file with unpaired files
 
         Args:
             folder_path (str): Path to the folder
@@ -617,16 +442,35 @@ class AssetRepository:
             common_names (set): Set of common names
         """
         try:
-            # Step 1: Find unpaired files
-            unpaired_archives, unpaired_images = self._find_unpaired_files(
-                archive_by_name, image_by_name, common_names
+            # Find unpaired files (names without extensions)
+            unpaired_archive_names = set(archive_by_name.keys()) - common_names
+            unpaired_image_names = set(image_by_name.keys()) - common_names
+
+            # Get full filenames with extensions
+            unpaired_archives = [
+                os.path.basename(archive_by_name[name])
+                for name in unpaired_archive_names
+            ]
+            unpaired_images = [
+                os.path.basename(image_by_name[name]) for name in unpaired_image_names
+            ]
+
+            unpaired_data = {
+                "unpaired_archives": unpaired_archives,
+                "unpaired_images": unpaired_images,
+                "total_unpaired_archives": len(unpaired_archives),
+                "total_unpaired_images": len(unpaired_images),
+            }
+
+            # Save to JSON file
+            unpaired_file_path = os.path.join(folder_path, "unpair_files.json")
+            save_to_file(unpaired_data, unpaired_file_path)
+
+            logger.info(
+                f"Created unpair_files.json: "
+                f"{len(unpaired_archives)} unpaired archives, "
+                f"{len(unpaired_images)} unpaired images"
             )
-
-            # Step 2: Create data structure
-            unpaired_data = self._create_unpaired_data_structure(unpaired_archives, unpaired_images)
-
-            # Step 3: Save to JSON file
-            self._save_unpaired_files_json(folder_path, unpaired_data)
 
         except PermissionError as e:
             self._handle_error("creating unpair_files.json - permission denied", e)
