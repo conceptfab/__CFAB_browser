@@ -99,22 +99,20 @@ class AssetRebuilderWorker(QThread):
             raise
 
     def _remove_cache_folder(self):
-        """ABSOLUTELY removes the .cache folder - it's a cache folder, so its contents don't matter"""
+        """Usuwa folder .cache"""
         try:
             import shutil
-
             cache_folder = os.path.join(self.folder_path, ".cache")
-
-            # ABSOLUTELY remove the .cache folder - its contents don't matter
+            
             if os.path.exists(cache_folder):
-                shutil.rmtree(cache_folder, ignore_errors=True)
-                logger.debug("ABSOLUTELY removed .cache folder: %s", cache_folder)
+                shutil.rmtree(cache_folder)
+                logger.debug("Usunięto folder .cache: %s", cache_folder)
             else:
-                logger.debug(".cache folder did not exist - we removed it anyway")
+                logger.debug("Folder .cache nie istniał")
+                
         except Exception as e:
-            logger.error(f"Error removing .cache folder: {e}")
-            # Even if there's an error - continue, the cache folder must be deleted
-            raise
+            # Loguj błąd ale nie przerywaj operacji - cache można odtworzyć
+            logger.warning(f"Nie można usunąć folderu .cache: {e}")
 
     def _run_scanner(self):
         """Runs scanner.py in the folder"""

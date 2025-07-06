@@ -117,7 +117,11 @@ class AmvController(QObject):
                 operation_type,
             )
             self.model.control_panel_model.set_progress(100)
-            self.view.update_gallery_placeholder("")
+            
+            # KRYTYCZNE: Nie przełączaj na galerię jeśli folder jest pusty!
+            # AssetGridController pokaże właściwy placeholder w _finalize_grid_update(empty=True)
+            if assets:
+                self.view.update_gallery_placeholder("")
 
             # Zamiast resetować filtry, zastosuj aktualny filtr do nowych danych
             self.model.asset_grid_model.set_assets(assets)

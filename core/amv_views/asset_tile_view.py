@@ -680,41 +680,26 @@ class AssetTileView(QFrame):
     # ===============================================
     
     def _cleanup_connections_and_resources(self):
-        """Consolidated method for disconnecting all signals and cleaning up resources"""
-        # Disconnect model signals
-        if hasattr(self, "model") and self.model is not None:
-            try:
-                self.model.data_changed.disconnect(self.update_ui)
-            except (TypeError, AttributeError):
-                pass  # Connection already doesn't exist
-        
-        # Disconnect checkbox signals
-        if hasattr(self, "checkbox") and self.checkbox:
-            try:
-                self.checkbox.blockSignals(True)
-                self.checkbox.stateChanged.disconnect()
-                self.checkbox.blockSignals(False)
-            except (TypeError, AttributeError):
-                pass
-        
-        # Disconnect star checkbox signals
-        if hasattr(self, "star_checkboxes"):
-            for star_cb in self.star_checkboxes:
+        """Bezpieczne odłączanie sygnałów"""
+        try:
+            # Sprawdź czy widget nie został już usunięty
+            if not self or not hasattr(self, 'model'):
+                return
+                
+            # Odłącz sygnały modelu
+            if self.model and hasattr(self.model, 'data_changed'):
                 try:
-                    star_cb.blockSignals(True)
-                    star_cb.clicked.disconnect()
-                    star_cb.blockSignals(False)
-                except (TypeError, AttributeError, RuntimeError):
-                    pass  # Widget already removed or signal already disconnected
-        
-        # Stop any running thumbnail workers
-        if hasattr(self, 'is_loading_thumbnail') and self.is_loading_thumbnail:
-            # Cancel any pending thumbnail loading
-            self.is_loading_thumbnail = False
-        
-        # Clear cached pixmap to free memory
-        if hasattr(self, "_cached_pixmap"):
-            self._cached_pixmap = None
+                    self.model.data_changed.disconnect(self.update_ui)
+                except (TypeError, RuntimeError):
+                    pass  # Sygnał już odłączony lub widget usunięty
+            
+            # Blokuj sygnały przed odłączaniem
+            if hasattr(self, 'checkbox') and self.checkbox:
+                self.checkbox.blockSignals(True)
+                
+        except RuntimeError:
+            # Widget został już usunięty - to jest OK
+            pass
     
     def _reset_state_variables(self):
         """Reset all state variables to default values"""

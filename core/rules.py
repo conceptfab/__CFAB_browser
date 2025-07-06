@@ -2,6 +2,8 @@
 """
 Rules - Decision logic for handling folder clicks
 
+⚠️ UWAGA: TEN PLIK JEST OBECNIE NIEUŻYWANY - FUNKCJONALNOŚĆ PRZYSZŁOŚCIOWA ⚠️
+
 This module contains the FolderClickRules class, which implements decision logic
 for the CFAB Browser application. The class analyzes folder contents and decides
 whether to run the scanner to process files or display the gallery of ready assets.
@@ -11,6 +13,8 @@ Main features:
 - Checks for the existence and contents of the .cache folder
 - Decides on action based on folder state
 - Handles various scenarios (no files, incomplete cache, ready assets)
+
+STATUS: PREPARED FOR FUTURE USE - Currently not integrated into the main application
 
 Author: CFAB Browser Team
 Date: 2025

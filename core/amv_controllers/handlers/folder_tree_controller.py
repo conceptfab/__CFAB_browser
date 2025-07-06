@@ -86,6 +86,25 @@ class FolderTreeController(QObject):
             return self.model.folder_system_model.get_recursive_asset_counts()
         return False
 
+    def _clear_gallery_immediately(self):
+        """KRYTYCZNE: Natychmiastowe czyszczenie galerii przy zmianie folderu"""
+        try:
+            # Wyczyść wszystkie kafelki z galerii
+            self.controller.asset_grid_controller.clear_asset_tiles()
+            
+            # Wyczyść layout galerii
+            while self.view.gallery_layout.count():
+                item = self.view.gallery_layout.takeAt(0)
+                if item.widget():
+                    item.widget().hide()
+            
+            # Pokaż placeholder ładowania
+            self.view.update_gallery_placeholder("Loading folder...")
+            
+            logger.debug("Gallery cleared immediately on folder change")
+        except Exception as e:
+            logger.error(f"Error clearing gallery immediately: {e}")
+
     def _scan_folder_safely(self, folder_path: str, force_rescan: bool = False):
         """
         OPTIMIZATION: Centralized scanning method with throttling
@@ -122,6 +141,9 @@ class FolderTreeController(QObject):
     def on_folder_clicked(self, folder_path: str):
         logger.info("Folder clicked: %s", folder_path)
         
+        # KRYTYCZNE: NATYCHMIAST wyczyść galerię przy zmianie folderu!
+        self._clear_gallery_immediately()
+        
         # Automatically refresh folder structure to detect new folders
         logger.info(f"Automatically refreshing folder structure for: {folder_path}")
         try:
@@ -138,6 +160,10 @@ class FolderTreeController(QObject):
 
     def on_workspace_folder_clicked(self, folder_path: str):
         logger.info("Workspace folder clicked: %s", folder_path)
+        
+        # KRYTYCZNE: NATYCHMIAST wyczyść galerię przy zmianie folderu!
+        self._clear_gallery_immediately()
+        
         self.model.folder_system_model.set_root_folder(folder_path)
         if self._scan_folder_safely(folder_path):
             self.controller.control_panel_controller.update_button_states()
@@ -187,6 +213,10 @@ class FolderTreeController(QObject):
     def on_folder_refresh_requested(self, folder_path: str):
         """Handles the folder refresh request from the context menu."""
         logger.info(f"REFRESHING FOLDER: {folder_path}")
+        
+        # KRYTYCZNE: NATYCHMIAST wyczyść galerię przy odświeżaniu folderu!
+        self._clear_gallery_immediately()
+        
         try:
             # Refresh the folder tree structure
             self.model.folder_system_model.refresh_folder(folder_path)

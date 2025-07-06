@@ -151,7 +151,11 @@ class FileOperationController(QObject):
                 logger.debug(f"Success messages: {success_messages}")
 
                 # OPTYMALIZACJA: Szybkie usuwanie tylko przeniesionych kafelków
-                self._remove_moved_assets_optimized(success_messages)
+                # WYŁĄCZONE TYMCZASOWO - może powodować znikanie galerii przy drag&drop
+                # self._remove_moved_assets_optimized(success_messages)
+                
+                # BEZPIECZNE ROZWIĄZANIE: Pełne odświeżanie galerii
+                self._fallback_refresh_gallery()
 
             # Clear selection after the operation
             self.model.selection_model.clear_selection()
@@ -177,11 +181,22 @@ class FileOperationController(QObject):
             if not self._validate_optimization_inputs(success_messages):
                 return
             
-            self._update_asset_model_fast(success_messages)
+            # Najpierw usuń kafelki z widoku
             self._remove_tiles_from_view_fast(success_messages)
-            self._update_controller_asset_list(success_messages)
-            self._update_gallery_placeholder_state()
-
+            
+            # Zaktualizuj model assetów (bez bezpośredniej modyfikacji _assets)
+            current_assets = self.model.asset_grid_model.get_assets()
+            updated_assets = [
+                asset for asset in current_assets 
+                if asset.get("name") not in success_messages
+            ]
+            
+            # BEZPIECZNA aktualizacja poprzez publiczne API
+            self.model.asset_grid_model.set_assets(updated_assets)
+            
+            # Odłożone odświeżanie struktury folderów
+            QTimer.singleShot(100, self._refresh_folder_structure_delayed)
+            
             logger.debug(f"OPTYMALIZACJA: Usunięto {len(success_messages)} assetów bez przebudowy galerii")
 
         except Exception as e:
@@ -201,42 +216,7 @@ class FileOperationController(QObject):
             
         return True
     
-    def _update_asset_model_fast(self, success_messages: list):
-        """Szybka aktualizacja modelu assetów bez emitowania sygnałów"""
-        current_assets = self.model.asset_grid_model.get_assets()
-        logger.debug(f"Current assets count: {len(current_assets)}")
 
-        updated_assets = [
-            asset
-            for asset in current_assets
-            if asset.get("name") not in success_messages
-        ]
-        logger.debug(f"Updated assets count: {len(updated_assets)}")
-        
-        # Bezpośrednia aktualizacja bez emitowania sygnałów
-        self.model.asset_grid_model._assets = updated_assets
-    
-    def _update_controller_asset_list(self, success_messages: list):
-        """Aktualizuje listę assetów w kontrolerze"""
-        asset_tiles = self.controller.asset_grid_controller.get_asset_tiles()
-        if asset_tiles:
-            logger.debug(f"Active tiles count before removal: {len(asset_tiles)}")
-            
-            updated_tiles = [
-                tile
-                for tile in asset_tiles
-                if tile.asset_id not in success_messages
-            ]
-            self.controller.asset_grid_controller.asset_tiles = updated_tiles
-            logger.debug(f"Active tiles count after removal: {len(updated_tiles)}")
-    
-    def _update_gallery_placeholder_state(self):
-        """Aktualizuje placeholder galerii w zależności od stanu assetów"""
-        current_assets = self.model.asset_grid_model.get_assets()
-        if not current_assets:
-            self.view.update_gallery_placeholder("No assets found in this folder.")
-        else:
-            self.view.update_gallery_placeholder("")
 
     def _remove_tiles_from_view_fast(self, asset_ids_to_remove: list):
         """OPTYMALIZACJA: Szybkie usuwanie kafelków bez reorganizacji layoutu"""
@@ -253,24 +233,31 @@ class FileOperationController(QObject):
             # Wyłącz aktualizacje widoku dla lepszej wydajności
             self.view.gallery_container_widget.setUpdatesEnabled(False)
             
-            # Znajdź i usuń kafelki
-            tiles_removed = 0
+            # Znajdź kafelki do usunięcia (bez modyfikacji podczas iteracji)
             asset_tiles = self.controller.asset_grid_controller.get_asset_tiles()
+            tiles_to_remove = []
             
             for tile in asset_tiles:
                 if hasattr(tile, 'asset_id') and tile.asset_id in asset_ids_to_remove:
-                    # Usuń z layoutu
-                    if hasattr(self.view, 'gallery_layout'):
-                        self.view.gallery_layout.removeWidget(tile)
-                    
-                    # Zwróć do puli (zamiast deleteLater dla lepszej wydajności)
-                    if hasattr(self.controller.asset_grid_controller, 'tile_pool'):
-                        self.controller.asset_grid_controller.tile_pool.release(tile)
-                    
-                    tiles_removed += 1
-                    logger.debug(f"FAST REMOVE: {tile.asset_id}")
+                    tiles_to_remove.append(tile)
+            
+            # Usuń znalezione kafelki
+            for tile in tiles_to_remove:
+                # Usuń z layoutu
+                if hasattr(self.view, 'gallery_layout'):
+                    self.view.gallery_layout.removeWidget(tile)
+                
+                # Usuń z listy asset_tiles
+                if tile in asset_tiles:
+                    asset_tiles.remove(tile)
+                
+                # Zwróć do puli
+                if hasattr(self.controller.asset_grid_controller, 'tile_pool'):
+                    self.controller.asset_grid_controller.tile_pool.release(tile)
+                
+                logger.debug(f"FAST REMOVE: {tile.asset_id}")
 
-            logger.debug(f"OPTYMALIZACJA: Szybko usunięto {tiles_removed} kafelków z widoku")
+            logger.debug(f"OPTYMALIZACJA: Szybko usunięto {len(tiles_to_remove)} kafelków z widoku")
 
         except Exception as e:
             logger.error(f"Błąd podczas szybkiego usuwania kafelków: {e}")
