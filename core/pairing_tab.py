@@ -2,9 +2,11 @@ import logging
 import os
 import subprocess
 import sys
+import json
+from pathlib import Path
 
-from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QAction
+from PyQt6.QtCore import QSize, Qt, pyqtSignal, QObject
+from PyQt6.QtGui import QAction, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
@@ -17,12 +19,16 @@ from PyQt6.QtWidgets import (
     QSlider,
     QVBoxLayout,
     QWidget,
+    QScrollArea,
+    QSizePolicy,
+    QSplitter,
 )
 
 from core.amv_models.pairing_model import PairingModel
 from core.amv_views.preview_gallery_view import PreviewGalleryView
 from core.preview_window import PreviewWindow
 from core.workers.asset_rebuilder_worker import AssetRebuilderWorker
+# thumbnail_cache imported w utilities.clear_thumbnail_cache_after_rebuild()
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +63,7 @@ class ArchiveListItem(QWidget):
     def contextMenuEvent(self, event):
         """Create context menu for right-click."""
         menu = QMenu(self)
-        open_action = QAction("Otwórz w programie domyślnym", self)
+        open_action = QAction("Open in default program", self)
         open_action.triggered.connect(self._handle_open)
         menu.addAction(open_action)
         menu.exec(event.globalPos())
@@ -76,14 +82,19 @@ class ArchiveListItem(QWidget):
         self.checkbox.setChecked(checked)
 
     def sizeHint(self):
-        """Zwraca zwiększoną wysokość wiersza o 30%"""
+        """Returns row height increased by 30%"""
         base_size = super().sizeHint()
-        # Zwiększ wysokość o 30%
+        # Increase height by 30%
         increased_height = int(base_size.height() * 1.5)
         return QSize(base_size.width(), increased_height)
 
 
 class PairingTab(QWidget):
+    """Tab for pairing archives and previews, asset creation, and cleanup operations"""
+    
+    # Signal emitted when pairing changes (files paired/unpaired)
+    pairing_changed = pyqtSignal(str)  # folder_path
+
     def __init__(self):
         super().__init__()
         self.model = PairingModel()
@@ -120,26 +131,26 @@ class PairingTab(QWidget):
         button_column_layout.setSpacing(5)
         button_column_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        self.create_asset_button = QPushButton("Utwórz asset")
+        self.create_asset_button = QPushButton("Create asset")
         self.create_asset_button.setFixedSize(250, 30)  # Increased width
         self.create_asset_button.clicked.connect(self._on_create_asset_button_clicked)
         button_column_layout.addWidget(self.create_asset_button)
 
-        self.delete_previews_button = QPushButton("Usuń podglądy bez pary")
+        self.delete_previews_button = QPushButton("Delete unpaired previews")
         self.delete_previews_button.setFixedSize(250, 30)  # Increased width
         self.delete_previews_button.clicked.connect(
             self._on_delete_unpaired_images_clicked
         )
         button_column_layout.addWidget(self.delete_previews_button)
 
-        self.delete_archives_button = QPushButton("Usuń archiwa bez pary")
+        self.delete_archives_button = QPushButton("Delete unpaired archives")
         self.delete_archives_button.setFixedSize(250, 30)  # Increased width
         self.delete_archives_button.clicked.connect(
             self._on_delete_unpaired_archives_clicked
         )
         button_column_layout.addWidget(self.delete_archives_button)
 
-        self.rebuild_assets_button = QPushButton("Przebuduj assety")
+        self.rebuild_assets_button = QPushButton("Rebuild assets")
         self.rebuild_assets_button.setFixedSize(250, 30)  # Increased width
         self.rebuild_assets_button.clicked.connect(self._on_rebuild_assets_clicked)
         button_column_layout.addWidget(self.rebuild_assets_button)
@@ -180,7 +191,7 @@ class PairingTab(QWidget):
         self.selected_archive = None
         self.selected_preview = None
 
-        # Sortuj archiwa alfabetycznie
+        # Sort archives alphabetically
         sorted_archives = sorted(self.model.get_unpaired_archives(), key=str.lower)
         for archive_file in sorted_archives:
             item_widget = ArchiveListItem(archive_file)
@@ -196,15 +207,15 @@ class PairingTab(QWidget):
             self.model.work_folder if hasattr(self.model, "work_folder") else ""
         )
 
-        # Walidacja ścieżki work_folder
+        # Validate work_folder path
         if not work_folder or not os.path.exists(work_folder):
-            logger.warning(f"Nieprawidłowa ścieżka work_folder: {work_folder}")
+            logger.warning(f"Invalid work_folder path: {work_folder}")
             work_folder = ""
         preview_files = self.model.get_unpaired_images()
         logger.info(f"Loaded {len(preview_files)} preview files from model")
 
         if work_folder:
-            # Sortuj podglądy alfabetycznie
+            # Sort previews alphabetically
             sorted_preview_files = sorted(preview_files, key=str.lower)
             full_preview_paths = [
                 os.path.join(work_folder, f) for f in sorted_preview_files
@@ -221,6 +232,9 @@ class PairingTab(QWidget):
         self._update_button_states()
         self.archive_list_widget.update()
         self.preview_gallery_view.update()
+        
+        # Notify about data change to update tab indicator
+        self._notify_pairing_changed()
 
     def _on_archive_checked(self, file_name, checked):
         if checked:
@@ -247,9 +261,9 @@ class PairingTab(QWidget):
         full_path = os.path.join(work_folder, file_name)
         print(f"Opening archive: {full_path}")
         
-        # Walidacja ścieżki
+        # Path validation
         if not os.path.exists(full_path):
-            logger.error(f"Plik nie istnieje: {full_path}")
+            logger.error(f"File does not exist: {full_path}")
             return
             
         try:
@@ -260,11 +274,11 @@ class PairingTab(QWidget):
             else:  # linux
                 subprocess.run(["xdg-open", full_path], check=True, timeout=10)
         except subprocess.TimeoutExpired:
-            logger.error(f"Timeout podczas otwierania pliku: {full_path}")
+            logger.error(f"Timeout while opening file: {full_path}")
         except subprocess.CalledProcessError as e:
-            logger.error(f"Błąd procesu podczas otwierania pliku {full_path}: {e}")
+            logger.error(f"Process error while opening file {full_path}: {e}")
         except Exception as e:
-            logger.error(f"Błąd podczas otwierania pliku {full_path}: {e}")
+            logger.error(f"Error while opening file {full_path}: {e}")
         self.selected_preview = file_name if file_name else None
         self._update_button_states()
 
@@ -282,7 +296,7 @@ class PairingTab(QWidget):
         self.preview_window.show_window()
 
     def _remove_paired_items_from_ui(self, archive_name: str, preview_full_path: str):
-        """Usuwa sparowane elementy z UI bez przeładowywania całej listy"""
+        """Removes paired items from UI without reloading the entire list"""
         # Usuń archiwum z listy archiwów
         for i in range(self.archive_list_widget.count()):
             item = self.archive_list_widget.item(i)
@@ -298,35 +312,15 @@ class PairingTab(QWidget):
         print(f"Removed preview from UI: {preview_name}")
 
     def _update_button_states(self):
-        """Aktualizuje stan wszystkich przycisków na podstawie folderu roboczego"""
-        has_working_folder = bool(
-            hasattr(self.model, "work_folder")
-            and self.model.work_folder
-            and os.path.exists(self.model.work_folder)
-        )
-
-        # Aktualizuj stan wszystkich przycisków
-        if hasattr(self, "delete_previews_button"):
-            self.delete_previews_button.setEnabled(has_working_folder)
-        if hasattr(self, "delete_archives_button"):
-            self.delete_archives_button.setEnabled(has_working_folder)
-        if hasattr(self, "rebuild_assets_button"):
-            self.rebuild_assets_button.setEnabled(has_working_folder)
-
-        # Przycisk "Utwórz asset" wymaga dodatkowo wybranych elementów
-        if hasattr(self, "create_asset_button"):
-            is_archive_selected = (
-                hasattr(self, "selected_archive") and self.selected_archive is not None
-            )
-            is_preview_selected = (
-                hasattr(self, "selected_preview") and self.selected_preview is not None
-            )
-            self.create_asset_button.setEnabled(
-                has_working_folder and is_archive_selected and is_preview_selected
-            )
+        """Updates the state of all buttons based on the working folder"""
+        working_folder_valid = self._validate_working_folder()
+        selection_state = self._get_selection_state()
+        
+        self._update_basic_buttons(working_folder_valid)
+        self._update_create_asset_button(working_folder_valid, selection_state)
 
     def _update_create_asset_button_state(self):
-        """Aktualizuje stan przycisku 'Utwórz asset' - teraz używa _update_button_states()"""
+        """Updates the state of the 'Create asset' button - now uses _update_button_states()"""
         self._update_button_states()
 
     def _on_create_asset_button_clicked(self):
@@ -368,14 +362,16 @@ class PairingTab(QWidget):
                 self.selected_archive = None
                 self.selected_preview = None
                 self._update_create_asset_button_state()
+                # Notify about pairing change
+                self._notify_pairing_changed()
             else:
                 print("Failed to create asset.")
 
     def _on_delete_unpaired_images_clicked(self):
         reply = QMessageBox.question(
             self,
-            "Potwierdzenie",
-            "Czy na pewno chcesz usunąć WSZYSTKIE niesparowane podglądy z listy i z dysku?\nTej operacji nie można cofnąć.",
+            "Confirmation",
+            "Are you sure you want to delete ALL unpaired previews from the list and disk?\nThis operation cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -383,21 +379,23 @@ class PairingTab(QWidget):
             success = self.model.delete_unpaired_images()
             if success:
                 QMessageBox.information(
-                    self, "Sukces", "Pomyślnie usunięto niesparowane podglądy."
+                    self, "Success", "Successfully deleted unpaired previews."
                 )
+                # Notify about pairing change
+                self._notify_pairing_changed()
             else:
                 QMessageBox.warning(
                     self,
-                    "Błąd",
-                    "Wystąpił błąd podczas usuwania podglądów. Sprawdź logi.",
+                    "Error",
+                    "An error occurred while deleting previews. Check logs.",
                 )
             self.load_data()
 
     def _on_delete_unpaired_archives_clicked(self):
         reply = QMessageBox.question(
             self,
-            "Potwierdzenie",
-            "Czy na pewno chcesz usunąć WSZYSTKIE niesparowane archiwa z listy i z dysku?\nTej operacji nie można cofnąć.",
+            "Confirmation",
+            "Are you sure you want to delete ALL unpaired archives from the list and disk?\nThis operation cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -405,13 +403,15 @@ class PairingTab(QWidget):
             success = self.model.delete_unpaired_archives()
             if success:
                 QMessageBox.information(
-                    self, "Sukces", "Pomyślnie usunięto niesparowane archiwa."
+                    self, "Success", "Successfully deleted unpaired archives."
                 )
+                # Notify about pairing change
+                self._notify_pairing_changed()
             else:
                 QMessageBox.warning(
                     self,
-                    "Błąd",
-                    "Wystąpił błąd podczas usuwania archiwów. Sprawdź logi.",
+                    "Error",
+                    "An error occurred while deleting archives. Check logs.",
                 )
             self.load_data()
 
@@ -423,14 +423,14 @@ class PairingTab(QWidget):
 
         if not work_folder or not os.path.exists(work_folder):
             QMessageBox.warning(
-                self, "Błąd", "Folder roboczy nie jest ustawiony lub nie istnieje."
+                self, "Error", "Working folder is not set or does not exist."
             )
             return
 
         reply = QMessageBox.question(
             self,
-            "Potwierdzenie",
-            f"Czy na pewno chcesz przebudować wszystkie assety w folderze:\n{work_folder}?",
+            "Confirmation",
+            f"Are you sure you want to rebuild all assets in the folder:\n{work_folder}?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -443,13 +443,72 @@ class PairingTab(QWidget):
             self.rebuild_thread.start()
             QMessageBox.information(
                 self,
-                "Proces rozpoczęty",
-                f"Rozpoczęto przebudowę assetów w folderze:\n{work_folder}",
+                "Process started",
+                f"Asset rebuild started in folder:\n{work_folder}",
             )
 
     def _on_rebuild_finished(self, message):
-        QMessageBox.information(self, "Sukces", message)
+        # KATEGORYCZNE CZYSZCZENIE CACHE PAMIĘCI RAM PO PRZEBUDOWIE ASSETÓW!!!
+        from core.utilities import clear_thumbnail_cache_after_rebuild
+        clear_thumbnail_cache_after_rebuild(is_error=False)
+        
+        QMessageBox.information(self, "Success", message)
         self.load_data()  # Refresh data as assets might have changed
 
     def _on_rebuild_error(self, error_message):
-        QMessageBox.critical(self, "Błąd przebudowy", error_message)
+        # CATEGORICAL CLEARING OF RAM CACHE EVEN AFTER REBUILD ERROR!!!
+        from core.utilities import clear_thumbnail_cache_after_rebuild
+        clear_thumbnail_cache_after_rebuild(is_error=True)
+        
+        QMessageBox.critical(self, "Rebuild Error", error_message)
+
+    # ===============================================
+    # HELPER FUNCTIONS FOR _update_button_states
+    # ===============================================
+    
+    def _validate_working_folder(self) -> bool:
+        """Validate if working folder exists and is accessible"""
+        return bool(
+            hasattr(self.model, "work_folder")
+            and self.model.work_folder
+            and os.path.exists(self.model.work_folder)
+        )
+    
+    def _get_selection_state(self) -> dict:
+        """Get current selection state for archive and preview"""
+        return {
+            "archive_selected": (
+                hasattr(self, "selected_archive") and self.selected_archive is not None
+            ),
+            "preview_selected": (
+                hasattr(self, "selected_preview") and self.selected_preview is not None
+            )
+        }
+    
+    def _update_basic_buttons(self, enabled: bool):
+        """Update states of basic operation buttons"""
+        if hasattr(self, "delete_previews_button"):
+            self.delete_previews_button.setEnabled(enabled)
+        if hasattr(self, "delete_archives_button"):
+            self.delete_archives_button.setEnabled(enabled)
+        if hasattr(self, "rebuild_assets_button"):
+            self.rebuild_assets_button.setEnabled(enabled)
+    
+    def _update_create_asset_button(self, folder_valid: bool, selection: dict):
+        """Update create asset button based on folder and selection state"""
+        if hasattr(self, "create_asset_button"):
+            can_create = (
+                folder_valid 
+                and selection["archive_selected"] 
+                and selection["preview_selected"]
+            )
+            self.create_asset_button.setEnabled(can_create)
+
+    def _notify_pairing_changed(self):
+        """Emit signal that pairing has changed to update tab indicator"""
+        try:
+            if hasattr(self.model, 'work_folder') and self.model.work_folder:
+                self.pairing_changed.emit(self.model.work_folder)
+                logger.debug(f"Emitted pairing_changed signal for: {self.model.work_folder}")
+        except Exception as e:
+            logger.error(f"Error emitting pairing_changed signal: {e}")

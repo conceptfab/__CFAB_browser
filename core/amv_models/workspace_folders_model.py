@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class WorkspaceFoldersModel(QObject):
-    """Model dla folderów roboczych w architekturze M/V"""
+    """Model for workspace folders in M/V architecture"""
 
     folders_updated = pyqtSignal(list)
 
@@ -30,42 +30,71 @@ class WorkspaceFoldersModel(QObject):
             self._folders = []
 
     def _load_folders_from_config(self, config: dict):
-        """Loads folders from configuration data"""
+        """Loads folders from configuration and emits update signal."""
         try:
-            workspace_folders = config.get("workspace_folders", [])
             self._folders = []
 
-            for folder_data in workspace_folders:
-                if isinstance(folder_data, dict):
-                    folder_info = {
-                        "name": folder_data.get("name", "Unknown Folder"),
-                        "path": folder_data.get("path", ""),
-                        "icon": folder_data.get("icon", "workfolder_icon.png"),
-                        "color": folder_data.get("color", "#717bbc"),
-                        "enabled": folder_data.get("enabled", True),
-                    }
+            # Przeiteruj przez work_folder1 do work_folder9
+            for i in range(1, 10):
+                folder_key = f"work_folder{i}"
+                folder_config = config.get(folder_key, {})
 
-                    # Validate path
-                    if folder_info["path"] and os.path.exists(folder_info["path"]):
-                        self._folders.append(folder_info)
+                if not isinstance(folder_config, dict):
+                    continue
+
+                folder_name = folder_config.get("name", f"Folder {i}")
+                folder_path = folder_config.get("path", "")
+                folder_icon = folder_config.get("icon", "")
+                folder_color = folder_config.get("color", "#007ACC")
+
+                # Sprawdź, czy folder istnieje (tylko jeśli ma ścieżkę)
+                folder_exists = os.path.exists(folder_path) if folder_path else False
+                if folder_path and not folder_exists:
+                    logger.warning(f"Folder roboczy nie istnieje: {folder_path}")
+
+                # Ustaw domyślną ikonę jeśli nie ma określonej
+                if not folder_icon:
+                    if folder_name.lower().find("texture") != -1:
+                        folder_icon = "texture.png"
                     else:
-                        logger.warning(
-                            "Workspace folder path does not exist: %s",
-                            folder_info["path"],
-                        )
-                        # Add disabled folder for UI consistency
-                        folder_info["enabled"] = False
-                        self._folders.append(folder_info)
+                        folder_icon = "workfolder_icon.png"
 
-            # Sort folders by name
-            self._folders.sort(key=lambda x: x["name"].lower())
+                # Dodaj wszystkie foldery, nawet puste
+                self._folders.append(
+                    {
+                        "name": folder_name,
+                        "path": folder_path,
+                        "icon": folder_icon,
+                        "color": folder_color,
+                        "exists": folder_exists,
+                        "enabled": bool(
+                            folder_path and folder_exists
+                        ),  # Aktywny tylko jeśli ma ścieżkę i istnieje
+                    }
+                )
 
-            # Emit signal
+            # SORTOWANIE ALFABETYCZNE - najpierw aktywne, potem nieaktywne
+            # Sortuj aktywne foldery alfabetycznie
+            active_folders = [f for f in self._folders if f["enabled"] and f["name"]]
+            active_folders.sort(key=lambda x: x["name"].lower())
+            
+            # Sortuj nieaktywne foldery alfabetycznie
+            inactive_folders = [f for f in self._folders if not f["enabled"] and f["name"]]
+            inactive_folders.sort(key=lambda x: x["name"].lower())
+            
+            # Puste foldery na końcu
+            empty_folders = [f for f in self._folders if not f["name"]]
+            
+            # Złóż wszystko w kolejności: aktywne, nieaktywne, puste
+            self._folders = active_folders + inactive_folders + empty_folders
+
             self.folders_updated.emit(self._folders)
+            logger.debug(f"Załadowano {len(self._folders)} folderów roboczych (sortowanie alfabetyczne)")
 
         except Exception as e:
-            logger.error("Error processing workspace folders config: %s", str(e))
+            logger.error(f"Błąd podczas ładowania folderów roboczych: {e}")
             self._folders = []
+            self.folders_updated.emit(self._folders)
 
     def get_folders(self):
         """Returns the list of workspace folders"""

@@ -1,7 +1,7 @@
 import logging
 import os
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 
 from core.json_utils import save_to_file
 
@@ -16,8 +16,13 @@ class AssetTileModel(QObject):
     def __init__(self, asset_data: dict, asset_file_path: str = None):
         super().__init__()
         self.data = asset_data
-        self.asset_file_path = asset_file_path  # Ścieżka do pliku .asset
+        self.asset_file_path = asset_file_path  # Path to the .asset file
         self.is_special_folder = self.data.get("type") == "special_folder"
+        
+        # Asynchronous save queue timer
+        self._save_timer = QTimer()
+        self._save_timer.setSingleShot(True)
+        self._save_timer.timeout.connect(self._perform_save_to_file)
 
     def get_name(self) -> str:
         return self.data.get("name", "Unknown")
@@ -51,7 +56,12 @@ class AssetTileModel(QObject):
             logger.warning(f"Invalid number of stars: {stars}. Allowed: 0-5")
 
     def _save_to_file(self):
-        """Saves asset data to the .asset file"""
+        """Queues asynchronous save to prevent blocking main thread"""
+        # Use timer to defer I/O operation
+        self._save_timer.start(200)  # 200ms delay to batch multiple changes
+        
+    def _perform_save_to_file(self):
+        """Performs the actual save operation"""
         try:
             if not self.asset_file_path:
                 logger.error(f"Missing asset_file_path for asset: {self.get_name()}")

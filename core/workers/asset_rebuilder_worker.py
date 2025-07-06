@@ -1,6 +1,6 @@
 """
-AssetRebuilderWorker - Worker dla przebudowy assetów w folderze
-Przeniesiony z AmvController dla lepszej separacji odpowiedzialności.
+AssetRebuilderWorker - Worker for rebuilding assets in a folder.
+Moved from AmvController for better separation of concerns.
 """
 
 import logging
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class AssetRebuilderWorker(QThread):
-    """Worker dla przebudowy assetów w folderze"""
+    """Worker for rebuilding assets in a folder"""
 
     progress_updated = pyqtSignal(int, int, str)  # current, total, message
     finished = pyqtSignal(str)  # message
@@ -23,83 +23,110 @@ class AssetRebuilderWorker(QThread):
     def __init__(self, folder_path: str):
         super().__init__()
         self.folder_path = folder_path
+        self._should_stop = False
+
+    def request_stop(self):
+        """Safely requests the operation to stop"""
+        self._should_stop = True
+        self.requestInterruption()
 
     def run(self):
-        """Główna metoda przebudowy assetów"""
+        """Main asset rebuild method"""
         try:
             if not self.folder_path or not os.path.exists(self.folder_path):
-                error_msg = f"Nieprawidłowy folder: {self.folder_path}"
+                error_msg = f"Invalid folder: {self.folder_path}"
                 self.error_occurred.emit(error_msg)
                 return
 
             logger.info(
-                "Rozpoczęcie przebudowy assetów w folderze: %s", self.folder_path
+                "Starting asset rebuild in folder: %s", self.folder_path
             )
 
-            # Krok 1: Usuwanie plików .asset
-            self.progress_updated.emit(0, 100, "Usuwanie starych plików .asset...")
+            # Step 1: Removing .asset files
+            if self._should_stop or self.isInterruptionRequested():
+                logger.debug("Rebuild was interrupted by the user")
+                return
+            self.progress_updated.emit(0, 100, "Removing old .asset files...")
             self._remove_asset_files()
 
-            # Krok 2: Usuwanie folderu .cache
-            self.progress_updated.emit(20, 100, "Usuwanie folderu .cache...")
+            # Step 2: Removing .cache folder
+            if self._should_stop or self.isInterruptionRequested():
+                logger.debug("Rebuild was interrupted by the user")
+                return
+            self.progress_updated.emit(20, 100, "Removing .cache folder...")
             self._remove_cache_folder()
 
-            # Krok 3: Uruchamianie scanner.py
+            # Step 3: Running scanner.py
+            if self._should_stop or self.isInterruptionRequested():
+                logger.debug("Rebuild was interrupted by the user")
+                return
             self.progress_updated.emit(
-                40, 100, "Skanowanie i tworzenie nowych assetów..."
+                40, 100, "Scanning and creating new assets..."
             )
             self._run_scanner()
 
-            self.progress_updated.emit(100, 100, "Przebudowa zakończona!")
-            self.finished.emit(
-                f"Pomyślnie przebudowano assety w folderze: {self.folder_path}"
-            )
+            # Finish only if not stopped
+            if not self._should_stop:
+                self.progress_updated.emit(100, 100, "Rebuild finished!")
+                self.finished.emit(
+                    f"Successfully rebuilt assets in folder: {self.folder_path}"
+                )
 
         except Exception as e:
-            error_msg = f"Błąd podczas przebudowy assetów: {e}"
-            logger.error(error_msg)
-            self.error_occurred.emit(error_msg)
+            if not self._should_stop:
+                error_msg = f"Error during asset rebuild: {e}"
+                logger.error(error_msg)
+                self.error_occurred.emit(error_msg)
 
     def _remove_asset_files(self):
-        """Usuwa wszystkie pliki .asset z folderu"""
+        """Removes all .asset files from the folder"""
         try:
             asset_files = [
                 f for f in os.listdir(self.folder_path) if f.endswith(".asset")
             ]
             for asset_file in asset_files:
+                # Check if the operation should be stopped
+                if self._should_stop or self.isInterruptionRequested():
+                    logger.debug("Removing .asset files was interrupted")
+                    return
+                    
                 file_path = os.path.join(self.folder_path, asset_file)
                 os.remove(file_path)
-                logger.debug("Usunięto plik asset: %s", asset_file)
-            logger.info("Usunięto %d plików .asset", len(asset_files))
+                logger.debug("Removed asset file: %s", asset_file)
+            logger.debug("Removed %d .asset files", len(asset_files))
         except Exception as e:
-            logger.error(f"Błąd usuwania plików .asset: {e}")
+            logger.error(f"Error removing .asset files: {e}")
             raise
 
     def _remove_cache_folder(self):
-        """BEZWZGLĘDNIE usuwa folder .cache - folder cache do kurwy, nie ważne co zawiera"""
+        """ABSOLUTELY removes the .cache folder - it's a cache folder, so its contents don't matter"""
         try:
             import shutil
 
             cache_folder = os.path.join(self.folder_path, ".cache")
 
-            # BEZWZGLĘDNIE usuń folder .cache - nie ważne co zawiera
+            # ABSOLUTELY remove the .cache folder - its contents don't matter
             if os.path.exists(cache_folder):
                 shutil.rmtree(cache_folder, ignore_errors=True)
-                logger.info("BEZWZGLĘDNIE usunięto folder .cache: %s", cache_folder)
+                logger.debug("ABSOLUTELY removed .cache folder: %s", cache_folder)
             else:
-                logger.info("Folder .cache nie istniał - i tak go usunęliśmy")
+                logger.debug(".cache folder did not exist - we removed it anyway")
         except Exception as e:
-            logger.error(f"Błąd usuwania folderu .cache: {e}")
-            # Nawet jeśli błąd - kontynuuj, folder cache ma być usunięty
+            logger.error(f"Error removing .cache folder: {e}")
+            # Even if there's an error - continue, the cache folder must be deleted
             raise
 
     def _run_scanner(self):
-        """Uruchamia scanner.py w folderze"""
+        """Runs scanner.py in the folder"""
         try:
 
             def progress_callback(current, total, message):
+                # Check if the operation should be stopped
+                if self._should_stop or self.isInterruptionRequested():
+                    return
+                    
                 if total > 0:
-                    # Mapuj postęp skanowania na przedział 40-100%
+                    # Map scanning progress to the 40-100% range
                     scanner_progress = int(40 + (current / total) * 60)
                     self.progress_updated.emit(scanner_progress, 100, message)
                 else:
@@ -109,8 +136,8 @@ class AssetRebuilderWorker(QThread):
             created_assets = asset_repository.find_and_create_assets(
                 self.folder_path, progress_callback
             )
-            logger.info("Scanner utworzył %d nowych assetów", len(created_assets))
+            logger.debug("Scanner created %d new assets", len(created_assets))
 
         except Exception as e:
-            logger.error(f"Błąd uruchamiania scanner-a: {e}")
+            logger.error(f"Error running scanner: {e}")
             raise

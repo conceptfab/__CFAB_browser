@@ -9,11 +9,10 @@ import os
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtWidgets import QMessageBox
 
-from core.file_utils import open_file_in_default_app, open_path_in_explorer
+from core.file_utils import open_file_in_default_app, open_path_in_explorer, handle_file_action
 from core.performance_monitor import measure_operation
 
-# Importy widoków będą dodane po przeniesieniu klas do core/amv_views/
-# from ..amv_views.amv_main_view import AmvView
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,18 +23,19 @@ class AmvController(QObject):
     # Sygnał emitowany przy zmianie folderu roboczego
     working_directory_changed = pyqtSignal(str)
 
-    def __init__(self, model, view):
+    def __init__(self, model, view, main_window=None):
         """
-        Simplified constructor - używa tylko głównych komponentów.
-        Wszystkie sub-modele są dostępne przez model.
+        Simplified constructor - uses only main components.
+        All sub-models are accessible via the model.
         """
         from ..amv_models.amv_model import AmvModel
 
         super().__init__()
         self.model: AmvModel = model
         self.view = view
+        self.main_window = main_window
 
-        self.asset_rebuilder = None  # Worker dla przebudowy assetów
+
 
         from .handlers.asset_grid_controller import AssetGridController
         from .handlers.asset_rebuild_controller import AssetRebuildController
@@ -68,7 +68,7 @@ class AmvController(QObject):
     def _connect_signals(self):
         from .handlers.signal_connector import SignalConnector
 
-        self.signal_connector = SignalConnector(self.model, self.view, self)
+        self.signal_connector = SignalConnector(self.model, self.view, self, self.main_window)
         self.signal_connector.connect_all()
 
     def _on_splitter_state_changed(self, is_open: bool):
@@ -130,37 +130,8 @@ class AmvController(QObject):
         self.control_panel_controller.update_button_states()
 
     def _handle_file_action(self, path: str, action_type: str):
-        """Wspólna logika dla obsługi kliknięć w pliki"""
+        """
+        Delegates file action handling to consolidated utility function
+        """
         logger.debug(f"Controller: File action '{action_type}' for: {path}")
-        if not path:
-            return
-
-        if os.path.exists(path):
-            try:
-                if os.path.isdir(path):
-                    # Otwórz folder w eksploratorze
-                    open_path_in_explorer(path, self.view)
-                    logger.info(f"Opened folder in explorer: {path}")
-                else:
-                    if action_type == "thumbnail":
-                        from core.preview_window import PreviewWindow
-
-                        # Zabezpieczenie przed otwieraniem wielu okien naraz
-                        if (
-                            hasattr(self, "current_preview_window")
-                            and self.current_preview_window
-                        ):
-                            self.current_preview_window.close()
-
-                        self.current_preview_window = PreviewWindow(path, self.view)
-                        self.current_preview_window.show_window()
-                        logger.info(f"Opened preview in dedicated window: {path}")
-                    elif action_type == "filename":
-                        open_file_in_default_app(path, self.view)
-                        logger.info(f"Opened file in external application: {path}")
-            except Exception as e:
-                logger.error(f"Error while opening {path}: {e}")
-                QMessageBox.warning(self.view, "Error", f"Cannot open: {path}")
-        else:
-            logger.warning(f"Path does not exist: {path}")
-            QMessageBox.warning(self.view, "Error", f"Path does not exist: {path}")
+        return handle_file_action(path, action_type, self.view)

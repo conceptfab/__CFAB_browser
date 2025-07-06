@@ -1,5 +1,5 @@
 """
-ThumbnailCache - Zarządzanie buforowaniem miniatur w pamięci.
+ThumbnailCache - Manages in-memory thumbnail caching.
 """
 
 import logging
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ThumbnailCache:
     """
-    Klasa do buforowania miniatur (QPixmap) w pamięci z ograniczeniem rozmiaru (LRU).
+    Class for caching thumbnails (QPixmap) in memory with size limit (LRU).
     """
 
     _instance = None
@@ -27,65 +27,71 @@ class ThumbnailCache:
                     cls._instance = super(ThumbnailCache, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, max_size_mb: int = 200):
+    def __init__(self, max_size_mb: int = 600):
         """
-        Inicjalizuje cache.
+        Initializes the cache.
 
         Args:
-            max_size_mb (int): Maksymalny rozmiar cache w megabajtach.
+            max_size_mb (int): Maximum cache size in megabytes.
         """
-        if not hasattr(self, "_initialized"):  # Zapobiega ponownej inicjalizacji
+        if not hasattr(self, "_initialized"):  # Prevents re-initialization
             self.max_size_bytes = max_size_mb * 1024 * 1024
+            self.max_single_item_size = 50 * 1024 * 1024  # 50MB max per item
             self.current_size_bytes = 0
             self.cache = OrderedDict()
             self._initialized = True
-            logger.info(f"ThumbnailCache zainicjalizowany z limitem {max_size_mb} MB.")
+            logger.info(f"ThumbnailCache initialized with limit {max_size_mb} MB.")
 
     def get(self, path: str) -> Optional[QPixmap]:
         """
-        Pobiera QPixmap z cache.
+        Retrieves QPixmap from cache.
 
         Args:
-            path (str): Klucz (ścieżka do miniatury).
+            path (str): Key (thumbnail path).
 
         Returns:
-            Optional[QPixmap]: Zwraca QPixmap jeśli istnieje, w przeciwnym razie None.
+            Optional[QPixmap]: Returns QPixmap if exists, otherwise None.
         """
         if path in self.cache:
-            # Przesuń element na koniec, aby oznaczyć go jako ostatnio używany (LRU)
+            # Move element to end to mark as recently used (LRU)
             self.cache.move_to_end(path)
-            logger.debug(f"Cache HIT dla: {path}")
+            logger.debug(f"Cache HIT for: {path}")
             return self.cache[path]
-        logger.debug(f"Cache MISS dla: {path}")
+        logger.debug(f"Cache MISS for: {path}")
         return None
 
     def put(self, path: str, pixmap: QPixmap):
         """
-        Dodaje QPixmap do cache.
+        Adds QPixmap to cache.
 
         Args:
-            path (str): Klucz (ścieżka do miniatury).
-            pixmap (QPixmap): Miniatura do zbuforowania.
+            path (str): Key (thumbnail path).
+            pixmap (QPixmap): Thumbnail to cache.
         """
         if path in self.cache:
-            return  # Już w cache
+            return  # Already in cache
 
         pixmap_size = pixmap.toImage().sizeInBytes()
+        
+        # Check if single item is too large
+        if pixmap_size > self.max_single_item_size:
+            logger.warning(f"Pixmap too large for cache: {pixmap_size / (1024*1024):.1f} MB > {self.max_single_item_size / (1024*1024):.1f} MB")
+            return
 
-        # Sprawdź, czy jest wystarczająco miejsca
+        # Check if there is enough space
         while self.current_size_bytes + pixmap_size > self.max_size_bytes:
             self._evict_oldest()
 
-        # Dodaj nowy element
+        # Add new item
         self.cache[path] = pixmap
         self.current_size_bytes += pixmap_size
         logger.debug(
-            f"Dodano do cache: {path} ({pixmap_size / 1024:.1f} KB)."
-            f" Aktualny rozmiar cache: {self.current_size_bytes / (1024*1024):.1f} MB"
+            f"Added to cache: {path} ({pixmap_size / 1024:.1f} KB)."
+            f" Current cache size: {self.current_size_bytes / (1024*1024):.1f} MB"
         )
 
     def _evict_oldest(self):
-        """Usuwa najstarszy element z cache (LRU)."""
+        """Removes the oldest item from the cache (LRU)."""
         if not self.cache:
             return
 
@@ -93,20 +99,16 @@ class ThumbnailCache:
         pixmap_size = oldest_pixmap.toImage().sizeInBytes()
         self.current_size_bytes -= pixmap_size
         logger.debug(
-            f"Usunięto z cache (LRU): {oldest_path}."
-            f" Aktualny rozmiar cache: {self.current_size_bytes / (1024*1024):.1f} MB"
+            f"Removed from cache (LRU): {oldest_path}."
+            f" Current cache size: {self.current_size_bytes / (1024*1024):.1f} MB"
         )
 
     def clear(self):
-        """Czyści cały cache."""
+        """Clears the entire cache."""
         self.cache.clear()
         self.current_size_bytes = 0
-        logger.info("ThumbnailCache został wyczyszczony.")
-
-    def get_current_size_mb(self) -> float:
-        """Zwraca aktualny rozmiar cache w MB."""
-        return self.current_size_bytes / (1024 * 1024)
+        logger.info("ThumbnailCache has been cleared.")
 
 
-# Globalna instancja cache
+# Global cache instance
 thumbnail_cache = ThumbnailCache()

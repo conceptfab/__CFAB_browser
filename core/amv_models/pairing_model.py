@@ -4,6 +4,7 @@ import os
 import shutil
 
 from core.scanner import AssetRepository
+from core.json_utils import save_to_file
 
 logger = logging.getLogger(__name__)
 
@@ -67,21 +68,21 @@ class PairingModel:
             self.unpaired_images = []
 
     def _create_default_unpair_files(self):
-        # Reset lists to ensure clean state
         self.unpaired_archives = []
         self.unpaired_images = []
+        
         if not self.unpair_files_path:
-            return  # Do not create file if path is not set
-
+            return
+            
         default_data = {
             "unpaired_archives": [],
-            "unpaired_images": [],  # POPRAWKA: unpaired_images zamiast unpaired_previews
+            "unpaired_images": [],
             "total_unpaired_archives": 0,
             "total_unpaired_images": 0,
         }
+        
         try:
-            with open(self.unpair_files_path, "w", encoding="utf-8") as f:
-                json.dump(default_data, f, indent=4)
+            save_to_file(default_data, self.unpair_files_path)
         except Exception as e:
             logger.error(f"Error creating default {self.unpair_files_path}: {e}")
 

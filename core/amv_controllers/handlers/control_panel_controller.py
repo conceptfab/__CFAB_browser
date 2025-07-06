@@ -4,8 +4,9 @@ Responsible for handling buttons, filtering, and asset selection.
 """
 
 import logging
+import os
 
-from PyQt6.QtCore import QObject
+from PyQt6.QtCore import QObject, QTimer
 
 from core.utilities import update_main_window_status
 
@@ -20,6 +21,11 @@ class ControlPanelController(QObject):
         self.model = model
         self.view = view
         self.controller = controller
+        
+        # Debouncing timer for update_button_states
+        self._update_button_states_timer = QTimer()
+        self._update_button_states_timer.setSingleShot(True)
+        self._update_button_states_timer.timeout.connect(self._perform_update_button_states)
 
     def setup(self):
         """Initializes the control panel"""
@@ -54,7 +60,7 @@ class ControlPanelController(QObject):
         # Update button states after selecting all
         self.update_button_states()
 
-        # DODANO: Wymuszenie aktualizacji paska statusu
+        # ADDED: Force status bar update
         update_main_window_status(self.view)
 
     def on_deselect_all_clicked(self):
@@ -72,7 +78,7 @@ class ControlPanelController(QObject):
             # Update button states
             self.update_button_states()
 
-            # DODANO: Wymuszenie aktualizacji paska statusu
+            # ADDED: Force status bar update
             update_main_window_status(self.view)
 
     def on_selection_changed(self, selected_asset_ids: list):
@@ -83,7 +89,12 @@ class ControlPanelController(QObject):
         self.update_button_states()
 
     def update_button_states(self):
-        """Updates the state of all control buttons."""
+        """Updates the state of all control buttons with debouncing."""
+        # Use debouncing to prevent excessive updates
+        self._update_button_states_timer.start(50)  # 50ms delay
+        
+    def _perform_update_button_states(self):
+        """Performs the actual button state update."""
         selected_count = len(self.model.selection_model.get_selected_asset_ids())
 
         # Count only visible assets (excluding special folders)
@@ -138,7 +149,7 @@ class ControlPanelController(QObject):
                 for cb in self.view.star_checkboxes:
                     cb.blockSignals(False)
             self.controller.asset_grid_controller.clear_star_filter()
-            self.filter_assets_by_stars(0)
+            self.filter_assets()
             logger.info("Deselected all stars - showing all assets")
         else:
             for cb in self.view.star_checkboxes:
@@ -150,57 +161,23 @@ class ControlPanelController(QObject):
                 for cb in self.view.star_checkboxes:
                     cb.blockSignals(False)
             self.controller.asset_grid_controller.set_star_filter(star_rating)
-            self.filter_assets_by_stars(star_rating)
+            self.filter_assets()
             logger.info(f"Selected {star_rating} stars - filtering")
         logger.info("=== END OF STAR FILTERING ===")
 
-    def filter_assets_by_stars(self, min_stars: int):
-        """Filters assets by rebuilding the grid with the filtered assets."""
-        try:
-            self._update_star_checkboxes(min_stars)
-            filtered_assets = self._get_filtered_assets(min_stars)
-            self.controller.asset_grid_controller.rebuild_asset_grid(
-                filtered_assets
-            )
-        except Exception as e:
-            logger.error(f"Error while filtering assets: {e}")
-        finally:
-            self.update_button_states()  # Jeden wywołanie na końcu
-
-    def _update_star_checkboxes(self, min_stars: int):
-        """Pomocnicza metoda do update checkboxów gwiazdek"""
-        if hasattr(self.view, "star_checkboxes") and self.view.star_checkboxes:
-            for cb in self.view.star_checkboxes:
-                cb.blockSignals(True)
-            try:
-                for i, cb in enumerate(self.view.star_checkboxes):
-                    cb.setChecked(i < min_stars)
-            finally:
-                for cb in self.view.star_checkboxes:
-                    cb.blockSignals(False)
-        self.controller.asset_grid_controller.set_star_filter(min_stars)
-
-    def _get_filtered_assets(self, min_stars: int) -> list:
-        """Pomocnicza metoda do filtrowania assetów"""
+    def filter_assets(self):
+        """Filters assets by stars and text at once."""
+        min_stars = self.controller.asset_grid_controller.active_star_filter
+        text = self.view.text_input.text().strip().lower() if hasattr(self.view, 'text_input') else ''
         original_assets = self.controller.asset_grid_controller.get_original_assets()
-        if not original_assets:
-            logger.debug("No original assets to filter.")
-            return []
-
-        if min_stars > 0:
-            # Filter the list, instead of showing/hiding tiles
-            filtered_assets = [
-                asset
-                for asset in original_assets
-                if (asset.get("stars") or 0) >= min_stars
-                or asset.get("type") == "special_folder"
-            ]
-            logger.debug(
-                f"Filtered {len(filtered_assets)} of {len(original_assets)} assets for {min_stars}+ stars."
-            )
-        else:
-            # If the filter is off, use the original list
-            filtered_assets = original_assets
-            logger.debug("Star filter off, showing all assets.")
-
-        return filtered_assets
+        filtered_assets = []
+        for asset in original_assets:
+            if asset.get("type") == "special_folder":
+                filtered_assets.append(asset)
+                continue
+            stars = asset.get("stars") or 0
+            name = asset.get("name", "")
+            name_no_ext = os.path.splitext(name)[0].lower()
+            if (min_stars == 0 or stars >= min_stars) and (not text or text in name_no_ext):
+                filtered_assets.append(asset)
+        self.controller.asset_grid_controller.rebuild_asset_grid(filtered_assets)

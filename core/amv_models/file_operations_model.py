@@ -3,7 +3,7 @@ import logging
 import os
 import shutil
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal
+from PyQt6.QtCore import QObject, QThread, pyqtSignal, QMutex, QMutexLocker
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,12 @@ class FileOperationsWorker(QThread):
         self.assets_data = assets_data
         self.source_folder_path = source_folder_path
         self.target_folder_path = target_folder_path
+        self._should_stop = False
+
+    def request_stop(self):
+        """Safely requests the operation to stop"""
+        self._should_stop = True
+        self.requestInterruption()
 
     def run(self):
         try:
@@ -31,34 +37,44 @@ class FileOperationsWorker(QThread):
             elif self.operation_type == "delete":
                 self._delete_assets()
         except Exception as e:
-            self.operation_error.emit(
-                f"Błąd podczas operacji {self.operation_type}: {e}"
-            )
+            if not self._should_stop:
+                self.operation_error.emit(
+                    f"Error during {self.operation_type} operation: {e}"
+                )
 
     def _move_assets(self):
-        """Przenosi zaznaczone assety do nowego folderu."""
+        """Moves selected assets to a new folder."""
         if not self.assets_data:
             self.operation_completed.emit([], [])
             return
+        
         success_asset_names = []
         error_messages = []
         total_assets = len(self.assets_data)
+        
         if not os.path.exists(self.target_folder_path):
             try:
                 os.makedirs(self.target_folder_path)
-                logger.debug(f"Utworzono folder docelowy: {self.target_folder_path}")
+                logger.debug(f"Target folder created: {self.target_folder_path}")
             except Exception as e:
                 self.operation_error.emit(
-                    f"Nie można utworzyć folderu docelowego "
+                    f"Cannot create target folder "
                     f"{self.target_folder_path}: {e}"
                 )
                 return
+        
         for i, asset_data in enumerate(self.assets_data):
+            # Check if the operation should be stopped
+            if self._should_stop or self.isInterruptionRequested():
+                logger.debug("Operation was interrupted by the user")
+                break
+                
             asset_name = asset_data.get("name", "Unknown Asset")
             logger.debug(f"Processing asset {i}: name='{asset_name}'")
             self.operation_progress.emit(
-                i + 1, total_assets, f"Przenoszenie: {asset_name}"
+                i + 1, total_assets, f"Moving: {asset_name}"
             )
+            
             try:
                 result = self._move_single_asset_with_conflict_resolution(
                     asset_data, asset_name
@@ -70,50 +86,55 @@ class FileOperationsWorker(QThread):
                     error_messages.append(result["message"])
                     logger.error(result["message"])
             except Exception as e:
-                error_msg = f"Błąd przenoszenia assetu {asset_name}: {e}"
-                error_messages.append(error_msg)
-                logger.error(error_msg)
-        source_cache_dir = os.path.join(self.source_folder_path, ".cache")
-        if os.path.exists(source_cache_dir) and not os.listdir(source_cache_dir):
-            try:
-                os.rmdir(source_cache_dir)
-                logger.debug(
-                    f"Usunięto pusty folder .cache w źródle: {source_cache_dir}"
-                )
-            except Exception as e:
-                logger.warning(
-                    f"Nie można usunąć pustego folderu .cache w źródle {source_cache_dir}: {e}"
-                )
-        self.operation_completed.emit(success_asset_names, error_messages)
+                if not self._should_stop:
+                    error_msg = f"Error moving asset {asset_name}: {e}"
+                    error_messages.append(error_msg)
+                    logger.error(error_msg)
+        
+        # Only if the operation was not interrupted
+        if not self._should_stop:
+            source_cache_dir = os.path.join(self.source_folder_path, ".cache")
+            if os.path.exists(source_cache_dir) and not os.listdir(source_cache_dir):
+                try:
+                    os.rmdir(source_cache_dir)
+                    logger.debug(
+                        f"Removed empty .cache folder in source: {source_cache_dir}"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Cannot remove empty .cache folder in source {source_cache_dir}: {e}"
+                    )
+            
+            self.operation_completed.emit(success_asset_names, error_messages)
 
     def _generate_unique_asset_name(self, original_name: str) -> str:
-        """Generuje unikalną nazwę assetu dodając suffix _D_01, _D_02, itd."""
+        """Generates a unique asset name by adding suffix _D_01, _D_02, etc."""
         base_name = original_name
         counter = 1
 
         while True:
-            # Sprawdź czy asset o tej nazwie już istnieje (sprawdź plik .asset)
+            # Check if an asset with this name already exists (check .asset file)
             test_asset_file = os.path.join(
                 self.target_folder_path, f"{base_name}.asset"
             )
             if not os.path.exists(test_asset_file):
                 return base_name
 
-            # Jeśli istnieje, spróbuj z sufiksem _D_01, _D_02, itd.
+            # If it exists, try with suffix _D_01, _D_02, etc.
             base_name = f"{original_name}_D_{counter:02d}"
             counter += 1
 
-            # Zabezpieczenie przed nieskończoną pętlą
+            # Protection against infinite loop
             if counter > 99:
-                logger.warning(f"Osiągnięto maksymalną liczbę prób dla {original_name}")
+                logger.warning(f"Maximum number of attempts reached for {original_name}")
                 return f"{original_name}_D_{counter}"
 
     def _move_single_asset_with_conflict_resolution(
         self, asset_data: dict, original_name: str
     ) -> dict:
         """
-        Przenosi pojedynczy asset z obsługą konfliktów nazw.
-        Zwraca dict z kluczami: success (bool), message (str), final_name (str)
+        Moves a single asset with name conflict resolution.
+        Returns a dict with keys: success (bool), message (str), final_name (str)
         """
         unique_name = self._generate_unique_asset_name(original_name)
         try:
@@ -172,7 +193,7 @@ class FileOperationsWorker(QThread):
         for source_path, target_path in files_to_move:
             shutil.move(source_path, target_path)
             moved_files.append(target_path)
-            logger.debug(f"Przeniesiono: {source_path} -> {target_path}")
+            logger.debug(f"Moved: {source_path} -> {target_path}")
         return moved_files
 
     def _handle_post_move(self, unique_name, original_name, source_asset, target_asset):
@@ -184,11 +205,10 @@ class FileOperationsWorker(QThread):
     def _compose_move_message(self, unique_name, original_name):
         if unique_name != original_name:
             return (
-                f"Przeniesiono asset: {original_name} -> {unique_name} "
-                f"(zmieniono nazwę z powodu konfliktu)"
+                f"Moved asset: {original_name} -> {unique_name} (renamed due to conflict)"
             )
         else:
-            return f"Pomyślnie przeniesiono asset: {original_name}"
+            return f"Successfully moved asset: {original_name}"
 
     def _update_asset_file_after_rename(self, original_asset_path, new_asset_path):
         try:
@@ -201,10 +221,10 @@ class FileOperationsWorker(QThread):
                 )[0]
                 new_basename = os.path.splitext(os.path.basename(new_asset_path))[0]
 
-                # Zaktualizuj nazwę w danych assetu
+                # Update name in asset data
                 asset_data["name"] = new_basename
 
-                # Zaktualizuj nazwy plików archiwum i podglądu
+                # Update archive and preview filenames
                 if "archive" in asset_data:
                     archive_ext = os.path.splitext(asset_data["archive"])[1]
                     asset_data["archive"] = f"{new_basename}{archive_ext}"
@@ -213,17 +233,17 @@ class FileOperationsWorker(QThread):
                     preview_ext = os.path.splitext(asset_data["preview"])[1]
                     asset_data["preview"] = f"{new_basename}{preview_ext}"
 
-                # Zapisz zaktualizowane dane
+                # Save updated data
                 with open(asset_file_path, "w", encoding="utf-8") as f:
                     json.dump(asset_data, f, indent=2, ensure_ascii=False)
 
                 logger.debug(
-                    f"Zaktualizowano plik .asset po zmianie nazwy: "
+                    f"Updated .asset file after rename: "
                     f"{original_basename} -> {new_basename}"
                 )
 
         except Exception as e:
-            logger.error(f"Błąd podczas aktualizacji pliku .asset: {e}")
+            logger.error(f"Error updating .asset file: {e}")
 
     def _mark_asset_as_duplicate(self, asset_path, original_asset_path):
         try:
@@ -231,7 +251,7 @@ class FileOperationsWorker(QThread):
                 with open(asset_path, "r", encoding="utf-8") as f:
                     asset_data = json.load(f)
 
-                # Dodaj informację o duplikacie
+                # Add duplicate information
                 if "meta" not in asset_data:
                     asset_data["meta"] = {}
                 asset_data["meta"]["duplicate_of"] = os.path.basename(
@@ -241,17 +261,17 @@ class FileOperationsWorker(QThread):
                     os.path.getctime(original_asset_path)
                 )
 
-                # Zapisz zaktualizowane dane
-                with open(asset_path, "w", encoding="utf-8") as f:
+                # Save updated data
+                with open(asset_file_path, "w", encoding="utf-8") as f:
                     json.dump(asset_data, f, indent=2, ensure_ascii=False)
 
-                logger.debug(f"Oznaczono asset jako duplikat: {asset_path}")
+                logger.debug(f"Marked asset as duplicate: {asset_path}")
 
         except Exception as e:
-            logger.error(f"Błąd podczas oznaczania assetu jako duplikat: {e}")
+            logger.error(f"Error marking asset as duplicate: {e}")
 
     def _delete_assets(self):
-        """Usuwa zaznaczone assety."""
+        """Deletes selected assets."""
         if not self.assets_data:
             self.operation_completed.emit([], [])
             return
@@ -261,53 +281,54 @@ class FileOperationsWorker(QThread):
         total_assets = len(self.assets_data)
 
         for i, asset_data in enumerate(self.assets_data):
+            # Check if the operation should be stopped
+            if self._should_stop or self.isInterruptionRequested():
+                logger.debug("Delete operation was interrupted by the user")
+                break
+                
             asset_name = asset_data.get("name", "Unknown Asset")
-            self.operation_progress.emit(i + 1, total_assets, f"Usuwanie: {asset_name}")
+            self.operation_progress.emit(
+                i + 1, total_assets, f"Deleting: {asset_name}"
+            )
 
             try:
-                # Pobierz ścieżki do plików assetu
+                # Get paths to asset files
                 asset_files = self._get_asset_files_paths(
                     asset_data, self.source_folder_path
                 )
 
-                # Usuń wszystkie pliki
+                # Delete all files
                 for file_path in asset_files:
                     if os.path.exists(file_path):
                         os.remove(file_path)
-                        logger.debug(f"Usunięto plik: {file_path}")
+                        logger.debug(f"Deleted file: {file_path}")
 
                 success_asset_names.append(asset_name)
-                logger.debug(f"Pomyślnie usunięto asset: {asset_name}")
+                logger.debug(f"Successfully deleted asset: {asset_name}")
 
             except Exception as e:
-                error_msg = f"Błąd usuwania assetu {asset_name}: {e}"
-                error_messages.append(error_msg)
-                logger.error(error_msg)
+                if not self._should_stop:
+                    error_msg = f"Error deleting asset {asset_name}: {e}"
+                    error_messages.append(error_msg)
+                    logger.error(error_msg)
 
-        # Usuń pusty folder .cache jeśli istnieje
-        cache_dir = os.path.join(self.source_folder_path, ".cache")
-        if os.path.exists(cache_dir) and not os.listdir(cache_dir):
-            try:
-                os.rmdir(cache_dir)
-                logger.debug(f"Usunięto pusty folder .cache: {cache_dir}")
-            except Exception as e:
-                logger.warning(
-                    f"Nie można usunąć pustego folderu .cache {cache_dir}: {e}"
-                )
+        # Only if the operation was not interrupted
+        if not self._should_stop:
+            # Remove empty .cache folder if it exists
+            cache_dir = os.path.join(self.source_folder_path, ".cache")
+            if os.path.exists(cache_dir) and not os.listdir(cache_dir):
+                try:
+                    os.rmdir(cache_dir)
+                    logger.debug(f"Removed empty .cache folder: {cache_dir}")
+                except Exception as e:
+                    logger.warning(
+                        f"Cannot remove empty .cache folder {cache_dir}: {e}"
+                    )
 
-        self.operation_completed.emit(success_asset_names, error_messages)
+            self.operation_completed.emit(success_asset_names, error_messages)
 
     def _get_asset_files_paths(self, asset_data: dict, folder_path: str) -> list:
-        """
-        Zwraca listę ścieżek do wszystkich plików związanych z assetem.
-
-        Args:
-            asset_data (dict): Dane assetu
-            folder_path (str): Ścieżka do folderu zawierającego asset
-
-        Returns:
-            list: Lista ścieżek do plików
-        """
+        """Returns a list of paths to all files related to the asset."""
         asset_name = asset_data.get("name", "")
         files = []
 
@@ -337,9 +358,9 @@ class FileOperationsWorker(QThread):
 
 class FileOperationsModel(QObject):
     """
-    Model dla operacji na plikach (przenoszenie, usuwanie).
+    Model for file operations (moving, deleting).
 
-    Zarządza operacjami na plikach w osobnym wątku, aby nie blokować UI.
+    Manages file operations in a separate thread to avoid blocking the UI.
     """
 
     operation_progress = pyqtSignal(int, int, str)  # current, total, message
@@ -347,55 +368,86 @@ class FileOperationsModel(QObject):
     operation_error = pyqtSignal(str)
 
     def __init__(self):
-        """Inicjalizuje model operacji na plikach."""
+        """Initializes the file operations model."""
         super().__init__()
         self._worker = None
+        self._worker_mutex = QMutex()
+        self._last_target_folder = None  # Przechowuj folder docelowy
 
     def move_assets(
         self, assets_data: list, source_folder_path: str, target_folder_path: str
     ):
-        """Przenosi assety z folderu źródłowego do docelowego."""
-        if self._worker and self._worker.isRunning():
-            logger.warning("Operacja już w toku. Zatrzymuję poprzednią operację.")
-            self.stop_operation()
+        """Moves the selected assets to a target folder."""
+        with QMutexLocker(self._worker_mutex):
+            if self._worker and self._worker.isRunning():
+                logger.warning(
+                    "Previous file operation is still running. Stopping it..."
+                )
+                self._stop_worker_safely()
 
-        self._worker = FileOperationsWorker(
-            "move", assets_data, source_folder_path, target_folder_path
-        )
-        self._connect_worker_signals()
-        self._worker.start()
+            self._last_target_folder = target_folder_path  # Zapisz folder docelowy
+            self._worker = FileOperationsWorker(
+                "move", assets_data, source_folder_path, target_folder_path
+            )
+            self._connect_worker_signals()
+            self._worker.start()
+
+    def get_last_target_folder(self) -> str:
+        """Zwraca folder docelowy ostatniej operacji move"""
+        return self._last_target_folder
 
     def delete_assets(self, assets_data: list, current_folder_path: str):
-        """Usuwa zaznaczone assety."""
-        if self._worker and self._worker.isRunning():
-            logger.warning("Operacja już w toku. Zatrzymuję poprzednią operację.")
-            self.stop_operation()
+        """Deletes selected assets."""
+        with QMutexLocker(self._worker_mutex):
+            if self._worker and self._worker.isRunning():
+                logger.warning(
+                    "Previous file operation is still running. Stopping it..."
+                )
+                self._stop_worker_safely()
 
-        self._worker = FileOperationsWorker(
-            "delete", assets_data, current_folder_path, ""
-        )
-        self._connect_worker_signals()
-        self._worker.start()
+            self._last_target_folder = None  # Wyczyść folder docelowy przy delete
+            self._worker = FileOperationsWorker(
+                "delete", assets_data, current_folder_path, None
+            )
+            self._connect_worker_signals()
+            self._worker.start()
 
     def stop_operation(self):
-        """Zatrzymuje bieżącą operację na plikach."""
+        """Stops the current file operation."""
+        self._stop_worker_safely()
+
+    def _stop_worker_safely(self):
+        """Safely stops the worker"""
         if self._worker and self._worker.isRunning():
-            logger.info("Zatrzymywanie bieżącej operacji...")
-            self._worker.terminate()
-            if self._worker:
+            logger.info("Stopping current operation...")
+            
+            # First, request a stop
+            self._worker.request_stop()
+            
+            # Try to gracefully quit
+            if not self._worker.wait(3000):  # 3-second timeout
+                logger.warning("Worker did not stop gracefully, forcing termination...")
+                self._worker.terminate()
                 self._worker.wait()
-            logger.info("Operacja została zatrzymana.")
+            
+            logger.info("Operation has been stopped.")
 
     def _connect_worker_signals(self):
-        """Łączy sygnały workera z sygnałami modelu."""
-        self._worker.operation_progress.connect(self.operation_progress.emit)
-        self._worker.operation_completed.connect(self.operation_completed.emit)
-        self._worker.operation_error.connect(self.operation_error.emit)
-        self._worker.finished.connect(self._on_worker_finished)
+        """Connects worker signals to model signals."""
+        if self._worker:
+            self._worker.operation_progress.connect(self.operation_progress.emit)
+            self._worker.operation_completed.connect(self.operation_completed.emit)
+            self._worker.operation_error.connect(self.operation_error.emit)
+            self._worker.finished.connect(self._on_worker_finished)
 
     def _on_worker_finished(self):
-        """Obsługa zakończenia pracy workera."""
+        """Handles worker finished event."""
         if self._worker:
             self._worker.deleteLater()
             self._worker = None
-            logger.debug("Worker został usunięty.")
+            logger.debug("Worker has been safely deleted.")
+
+    def __del__(self):
+        """Destructor - ensures the worker is stopped"""
+        if hasattr(self, '_worker') and self._worker and self._worker.isRunning():
+            self._stop_worker_safely()

@@ -11,6 +11,10 @@ class FolderTreeController(QObject):
         self.model = model
         self.view = view
         self.controller = controller
+        
+        # OPTIMIZATION: Throttling for scan_folder - avoid duplication
+        self._last_scanned_folder = None
+        self._scanning_in_progress = False
 
     def setup(self):
         tree_model = self.model.folder_system_model.get_tree_model()
@@ -18,6 +22,10 @@ class FolderTreeController(QObject):
         self.view.folder_tree_view.clicked.connect(self.on_tree_item_clicked)
         self.view.folder_tree_view.expanded.connect(self.on_tree_item_expanded)
         self.view.folder_tree_view.collapsed.connect(self.on_tree_item_collapsed)
+
+        # Ustaw referencję do kontrolera w widoku
+        if hasattr(self.view.folder_tree_view, "set_folder_tree_controller"):
+            self.view.folder_tree_view.set_folder_tree_controller(self)
 
         if hasattr(self.view.folder_tree_view, "set_models"):
             self.view.folder_tree_view.set_models(
@@ -54,6 +62,56 @@ class FolderTreeController(QObject):
 
         logger.debug("Folder system model connected to view - STAGE 6")
 
+    def set_show_asset_counts(self, show_counts: bool):
+        """Włącza/wyłącza pokazywanie liczby assetów w folderach"""
+        if hasattr(self.model, 'folder_system_model'):
+            self.model.folder_system_model.set_show_asset_counts(show_counts)
+            logger.debug(f"Asset counts in folder tree set to: {show_counts}")
+
+    def get_show_asset_counts(self) -> bool:
+        """Zwraca czy pokazywane są liczby assetów w folderach"""
+        if hasattr(self.model, 'folder_system_model'):
+            return self.model.folder_system_model.get_show_asset_counts()
+        return False
+
+    def set_recursive_asset_counts(self, recursive: bool):
+        """Włącza/wyłącza rekurencyjne sumowanie assetów z podfolderów"""
+        if hasattr(self.model, 'folder_system_model'):
+            self.model.folder_system_model.set_recursive_asset_counts(recursive)
+            logger.debug(f"Recursive asset counts in folder tree set to: {recursive}")
+
+    def get_recursive_asset_counts(self) -> bool:
+        """Zwraca czy sumowane są assety rekurencyjnie"""
+        if hasattr(self.model, 'folder_system_model'):
+            return self.model.folder_system_model.get_recursive_asset_counts()
+        return False
+
+    def _scan_folder_safely(self, folder_path: str, force_rescan: bool = False):
+        """
+        OPTIMIZATION: Centralized scanning method with throttling
+        """
+        # Check if the same folder is already being scanned
+        if not force_rescan and self._last_scanned_folder == folder_path and self._scanning_in_progress:
+            logger.debug(f"Folder {folder_path} is already being scanned - skipping duplication")
+            return False
+            
+        # Check if it's the same folder as last scanned
+        if not force_rescan and self._last_scanned_folder == folder_path:
+            logger.debug(f"Folder {folder_path} was recently scanned - skipping")
+            return False
+            
+        # Perform scan
+        logger.debug(f"Scanning folder: {folder_path}")
+        self._scanning_in_progress = True
+        self._last_scanned_folder = folder_path
+        
+        try:
+            self.model.asset_grid_model.set_current_folder(folder_path)
+            self.model.asset_grid_model.scan_folder(folder_path)
+            return True
+        finally:
+            self._scanning_in_progress = False
+
     def on_folder_structure_changed(self, tree_model):
         self.view.folder_tree_view.setModel(tree_model)
         if tree_model.rowCount() > 0:
@@ -63,19 +121,30 @@ class FolderTreeController(QObject):
 
     def on_folder_clicked(self, folder_path: str):
         logger.info("Folder clicked: %s", folder_path)
-        self.model.asset_grid_model.set_current_folder(folder_path)
-        self.model.asset_grid_model.scan_folder(folder_path)
-        self.controller.control_panel_controller.update_button_states()
-        logger.info(f"Emitting working_directory_changed signal: {folder_path}")
-        self.controller.working_directory_changed.emit(folder_path)
-        logger.info("working_directory_changed signal was emitted")
+        
+        # Automatically refresh folder structure to detect new folders
+        logger.info(f"Automatically refreshing folder structure for: {folder_path}")
+        try:
+            self.model.folder_system_model.refresh_folder(folder_path)
+            logger.info(f"Folder structure refreshed successfully: {folder_path}")
+        except Exception as e:
+            logger.error(f"Error refreshing folder structure: {e}")
+        
+        if self._scan_folder_safely(folder_path):
+            self.controller.control_panel_controller.update_button_states()
+            logger.info(f"Emitting working_directory_changed signal: {folder_path}")
+            self.controller.working_directory_changed.emit(folder_path)
+            logger.info("working_directory_changed signal was emitted")
 
     def on_workspace_folder_clicked(self, folder_path: str):
         logger.info("Workspace folder clicked: %s", folder_path)
         self.model.folder_system_model.set_root_folder(folder_path)
-        self.model.asset_grid_model.set_current_folder(folder_path)
-        self.model.asset_grid_model.scan_folder(folder_path)
-        self.controller.control_panel_controller.update_button_states()
+        if self._scan_folder_safely(folder_path):
+            self.controller.control_panel_controller.update_button_states()
+            # Emit working_directory_changed signal to inform Tools Tab
+            logger.info(f"Emitting working_directory_changed signal: {folder_path}")
+            self.controller.working_directory_changed.emit(folder_path)
+            logger.info("working_directory_changed signal was emitted")
 
     def on_tree_item_clicked(self, index):
         model = self.view.folder_tree_view.model()
@@ -117,16 +186,15 @@ class FolderTreeController(QObject):
 
     def on_folder_refresh_requested(self, folder_path: str):
         """Handles the folder refresh request from the context menu."""
-        logger.info(f"ODŚWIEŻANIE FOLDERU: {folder_path}")
+        logger.info(f"REFRESHING FOLDER: {folder_path}")
         try:
             # Refresh the folder tree structure
             self.model.folder_system_model.refresh_folder(folder_path)
 
-            # USTAW folder jako aktualny i odśwież assety
-            self.model.asset_grid_model.set_current_folder(folder_path)
-            self.model.asset_grid_model.scan_folder(folder_path)
-            self.controller.control_panel_controller.update_button_states()
-            logger.info(f"ODŚWIEŻONO FOLDER I ASSETY: {folder_path}")
+            # SET folder as current and refresh assets - FORCE_RESCAN=True for refresh
+            if self._scan_folder_safely(folder_path, force_rescan=True):
+                self.controller.control_panel_controller.update_button_states()
+                logger.info(f"FOLDER AND ASSETS REFRESHED: {folder_path}")
 
             logger.debug(f"Successfully refreshed folder: {folder_path}")
         except Exception as e:

@@ -1,8 +1,8 @@
 """
-Moduł monitoringu wydajności dla aplikacji CFAB Browser.
+Performance monitoring module for the CFAB Browser application.
 
-Zapewnia narzędzia do mierzenia czasu trwania operacji, monitorowania zużycia pamięci
-i logowania metryk wydajności w ustrukturyzowany sposób.
+Provides tools for measuring operation duration, monitoring memory usage,
+and logging performance metrics in a structured way.
 """
 
 import json
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 class PerformanceMetrics:
-    """Klasa do przechowywania metryk wydajności"""
+    """Class for storing performance metrics"""
 
     def __init__(self, operation_name: str, start_time: float):
         self.operation_name = operation_name
@@ -45,7 +45,7 @@ class PerformanceMetrics:
         error_message: Optional[str] = None,
         additional_data: Optional[Dict[str, Any]] = None,
     ):
-        """Finalizuje pomiar metryk"""
+        """Finalizes metric measurement"""
         self.end_time = time.perf_counter()
         self.duration = self.end_time - self.start_time
         self.success = success
@@ -64,7 +64,7 @@ class PerformanceMetrics:
                 logger.debug(f"Could not get memory usage: {e}")
 
     def to_dict(self) -> Dict[str, Any]:
-        """Konwertuje metryki do słownika"""
+        """Converts metrics to a dictionary"""
         return {
             "operation_name": self.operation_name,
             "start_time": self.start_time,
@@ -81,17 +81,17 @@ class PerformanceMetrics:
 
 
 class PerformanceMonitor:
-    """Główna klasa monitoringu wydajności"""
+    """Main class for performance monitoring"""
 
     def __init__(
         self, log_file: Optional[str] = None, enable_console_logging: bool = True
     ):
         """
-        Inicjalizuje monitor wydajności
+        Initializes the performance monitor
 
         Args:
-            log_file: Ścieżka do pliku logów (opcjonalnie)
-            enable_console_logging: Czy włączyć logowanie do konsoli
+            log_file: Path to log file (optional)
+            enable_console_logging: Whether to enable console logging
         """
         self.log_file = log_file
         self.enable_console_logging = enable_console_logging
@@ -99,13 +99,13 @@ class PerformanceMonitor:
         self._setup_logging()
 
     def _setup_logging(self):
-        """Konfiguruje system logowania"""
+        """Configures logging system"""
         if self.log_file:
             log_dir = Path(self.log_file).parent
             log_dir.mkdir(parents=True, exist_ok=True)
 
     def _log_metrics(self, metrics: PerformanceMetrics):
-        """Loguje metryki do pliku i/lub konsoli"""
+        """Logs metrics to file and/or console"""
         metrics_dict = metrics.to_dict()
 
         # Logowanie do pliku
@@ -142,7 +142,7 @@ class PerformanceMonitor:
             self.metrics_history = self.metrics_history[-1000:]
 
     def _get_memory_usage(self) -> Optional[float]:
-        """Pobiera aktualne zużycie pamięci w MB"""
+        """Gets current memory usage in MB"""
         if not PSUTIL_AVAILABLE:
             return None
 
@@ -158,14 +158,14 @@ class PerformanceMonitor:
         self, operation_name: str, additional_data: Optional[Dict[str, Any]] = None
     ):
         """
-        Context manager do mierzenia wydajności operacji
+        Context manager for measuring operation performance
 
         Args:
-            operation_name: Nazwa operacji do zmierzenia
-            additional_data: Dodatkowe dane do zapisania w metrykach
+            operation_name: Name of the operation to measure
+            additional_data: Additional data to save in metrics
 
         Yields:
-            PerformanceMetrics: Obiekt metryk
+            PerformanceMetrics: Metrics object
         """
         start_time = time.perf_counter()
         memory_before = self._get_memory_usage()
@@ -191,14 +191,14 @@ class PerformanceMonitor:
         additional_data: Optional[Dict[str, Any]] = None,
     ):
         """
-        Dekorator do mierzenia wydajności funkcji
+        Decorator for measuring function performance
 
         Args:
-            operation_name: Nazwa operacji (jeśli None, używa nazwy funkcji)
-            additional_data: Dodatkowe dane do zapisania w metrykach
+            operation_name: Operation name (if None, uses function name)
+            additional_data: Additional data to save in metrics
 
         Returns:
-            Decorator function
+            Callable: Decorated function
         """
 
         def decorator(func: Callable) -> Callable:
@@ -235,11 +235,11 @@ _performance_monitor: Optional[PerformanceMonitor] = None
 
 
 def get_performance_monitor() -> PerformanceMonitor:
-    """Pobiera globalną instancję monitora wydajności"""
+    """Gets the global performance monitor instance"""
     global _performance_monitor
 
     if _performance_monitor is None:
-        # Utwórz domyślną instancję
+        # Create a default instance
         log_file = Path(__file__).parent.parent / "logs" / "performance.log"
         _performance_monitor = PerformanceMonitor(str(log_file))
 
@@ -249,7 +249,7 @@ def get_performance_monitor() -> PerformanceMonitor:
 def measure_operation(
     operation_name: str, additional_data: Optional[Dict[str, Any]] = None
 ):
-    """Krótka funkcja do mierzenia operacji"""
+    """Short function for measuring operation performance"""
     return get_performance_monitor().measure_operation(operation_name, additional_data)
 
 
@@ -257,5 +257,5 @@ def measure_function(
     operation_name: Optional[str] = None,
     additional_data: Optional[Dict[str, Any]] = None,
 ):
-    """Krótka funkcja do dekorowania funkcji"""
+    """Short function for decorating functions"""
     return get_performance_monitor().measure_function(operation_name, additional_data)

@@ -1,104 +1,133 @@
 Raport analizy kodu CFAB Browser
-1. Duplikaty kodu
-1.1 Obsługa workerów w core/tools_tab.py
-Problem: Powtarzająca się logika obsługi workerów (progress, finished, error) w wielu metodach.
-Rozwiązanie: Wykorzystać istniejącą klasę WorkerManager konsekwentnie we wszystkich miejscach.
-1.2 Walidacja ścieżek
-Problem: Wielokrotna implementacja walidacji ścieżek w różnych plikach.
-Rozwiązanie: Scentralizować w core/file_utils.py.
-2. Nieużywane importy i funkcje
-2.1 core/amv_controllers/amv_controller.py
-python# Linia 87-91 - nieużywana metoda
-def _on_config_loaded(self, config: dict):
-    self.model.set_config(config)
-    logger.debug("Configuration loaded successfully")
-2.2 core/main_window.py
-python# Linia 478 - nieużywana metoda
-def _connect_status_signals(self):
-    """Łączy sygnały Status Bar"""
-    # Przykładowe miejsce na sygnały statusu, do rozbudowy jeśli potrzeba
-    pass
-2.3 core/scanner.py
-python# Linia 51 - nieużywana metoda
-def _scan_for_named_folders(self, folder_path: str, folder_names: list[str]) -> list:
-3. Błędy i problemy
-3.1 core/amv_controllers/handlers/asset_grid_controller.py
-Problem: Brak zabezpieczenia przed None w metodzie on_assets_changed (linia 54-56).
-pythondef on_assets_changed(self, assets):
-    """Handles asset list changes"""
-    if not assets:  # ADD check for None
-        self.set_original_assets([])
-        return
-Poprawka: Zmienić na:
-pythonif assets is None:
-    self.set_original_assets([])
-    return
-3.2 core/amv_models/asset_grid_model.py
-Problem: Niespójność w sprawdzaniu None (linia 50).
-pythondef get_assets(self) -> List[Any]:
-    return self._assets if self._assets is not None else []
-Poprawka: Ujednolicić z metodą set_assets.
-3.3 core/scanner.py
-Problem: Metoda _validate_folder_path_static nie wykonuje pełnej walidacji.
-python@staticmethod
-def _validate_folder_path_static(folder_path: str) -> bool:
-    """Statyczna walidacja ścieżki folderu"""
-    return bool(folder_path and os.path.exists(folder_path))
-Poprawka: Dodać sprawdzenie os.path.isdir().
-4. Optymalizacje
-4.1 core/amv_views/asset_tile_view.py
-Problem: Tworzenie globalnego QThreadPool dla każdej instancji klasy.
-pythonthread_pool = QThreadPool()  # Linia 43
-Poprawka: Przenieść do singletona lub współdzielić jedną instancję.
-4.2 core/thumbnail_cache.py
-Problem: Brak okresowego czyszczenia cache'u.
-Poprawka: Dodać mechanizm automatycznego czyszczenia starych wpisów.
-5. Pliki do poprawy
-core/amv_controllers/amv_controller.py
+Pliki wymagające poprawek
+1. core/scanner.py
+Problemy:
 
-Usunąć nieużywane metody: _on_config_loaded, _on_state_initialized
-Uprościć konstruktor
+Duplikacje metod walidacji ścieżek
+Nieużywane metody pomocnicze
+Niespójne wzorce obsługi błędów
 
-core/amv_controllers/handlers/asset_grid_controller.py
+Zmiany:
 
-Poprawić sprawdzanie None w on_assets_changed
-Zoptymalizować metodę rebuild_asset_grid
+Usunąć duplikat walidacji: Skonsolidować _validate_folder_path_static i AssetRepository._validate_folder_path_static
+Refaktoryzacja metod helper: Przenieść _handle_error do klasy bazowej
+Uporządkować imports: Przenieść from core.json_utils import load_from_file, save_to_file na górę pliku
 
-core/amv_models/asset_grid_model.py
+2. core/amv_controllers/amv_controller.py
+Problemy:
 
-Ujednolicić obsługę None
-Dodać type hints dla _assets
+Nieużywane metody callback
+Duplikacja logiki obsługi plików
 
-core/scanner.py
+Zmiany:
 
-Usunąć nieużywaną metodę _scan_for_named_folders
-Poprawić _validate_folder_path_static
-Usunąć duplikację w _check_texture_folders_presence
+Usunąć nieużywane metody: _on_config_loaded, _on_state_initialized - nie są połączone z sygnałami
+Skonsolidować logikę: Połączyć _handle_file_action z podobnymi metodami w innych kontrolerach
 
-core/tools_tab.py
+3. core/amv_controllers/handlers/asset_grid_controller.py
+Problemy:
 
-Wykorzystać WorkerManager konsekwentnie
-Usunąć duplikację kodu w metodach _on_*_clicked
+Nieużywane metody filtrowania
+Duplikacja logiki optymalizacji
 
-core/main_window.py
+Zmiany:
 
-Usunąć pustą metodę _connect_status_signals
-Uprościć _connect_signals
+Usunąć nieużywane metody: set_star_filter, clear_star_filter jeśli nie są używane w sygnałach
+Refaktoryzacja optymalizacji: Metody _remove_moved_assets_optimized są zbyt złożone - podzielić na mniejsze
 
-core/amv_views/asset_tile_view.py
+4. core/amv_controllers/handlers/file_operation_controller.py
+Problemy:
 
-Zoptymalizować użycie QThreadPool
-Poprawić zarządzanie pamięcią dla pixmap
+Duplikacja walidacji selekcji
+Podobne wzorce w _validate_selection
 
-core/thumbnail_cache.py
+Zmiany:
 
-Dodać automatyczne czyszczenie
-Dodać metryki użycia cache'u
+Skonsolidować walidację: Połączyć _validate_selection z innymi metodami walidacji
+Uprościć logikę: Metoda _remove_moved_assets_optimized ma za dużo odpowiedzialności
 
-6. Zalecenia dodatkowe
+5. core/amv_models/folder_system_model.py
+Problemy:
 
-Dodać testy jednostkowe - brak testów w projekcie
-Stworzyć plik constants.py - dla wspólnych stałych (rozszerzenia plików, rozmiary)
-Ulepszyć dokumentację - dodać docstringi do wszystkich publicznych metod
-Wprowadzić typing - konsekwentne używanie type hints
-Zrefaktoryzować długie metody - np. rebuild_asset_grid ma ponad 100 linii
+Nieużywane metody cache
+Duplikacja logiki liczenia assetów
+
+Zmiany:
+
+Sprawdzić użycie: Metoda clear_asset_count_cache może być nieużywana
+Optymalizacja cache: _clear_cache_for_path zawiera duplikację logiki
+
+6. core/thumbnail_cache.py
+Problemy:
+
+Nieużywana metoda
+
+Zmiany:
+
+Usunąć: Metoda get_current_size_mb() - nie jest używana w kodzie
+
+7. core/amv_views/asset_tile_view.py
+Problemy:
+
+Potencjalne memory leaks w worker threads
+Duplikacja metod disconnect
+
+Zmiany:
+
+Refaktoryzacja cleanup: Skonsolidować _disconnect_*_signals metody w jedną
+Cleanup worker threads: Dodać lepsze zarządzanie ThumbnailLoaderWorker
+Uprościć reset: Metody reset_for_pool i release_resources mają duplikacje
+
+8. core/tools/webp_converter_worker.py i core/tools/image_resizer_worker.py
+Problemy:
+
+Duplikacja logiki walidacji ścieżek
+Podobne wzorce obsługi błędów
+
+Zmiany:
+
+Wspólna klasa bazowa: Przenieść _validate_file_paths do BaseWorker
+Skonsolidować error handling: Używać wspólnych metod z BaseWorker
+
+9. core/main_window.py
+Problemy:
+
+Duplikacja logiki liczenia assetów
+Zbyt długie metody
+
+Zmiany:
+
+Refaktoryzacja liczenia: Metody _calculate_*_assets mają duplikacje - przenieść do SelectionCounter
+Podzielić długie metody: _createTabs jest za długa, podzielić na mniejsze metody
+
+10. core/thread_manager.py
+Problemy:
+
+Potencjalne race conditions
+Brak consistent cleanup
+
+Zmiany:
+
+Dodać thread safety: Więcej synchronizacji w stop_all_threads
+Cleanup validation: Dodać sprawdzenie czy threads faktycznie się zakończyły
+
+11. core/utilities.py
+Problemy:
+
+Funkcja używana tylko w jednym kontekście
+
+Zmiany:
+
+Przenieść funkcję: clear_thumbnail_cache_after_rebuild użyć tylko tam gdzie potrzebna
+Uprościć: update_main_window_status może być uprośćzona
+
+Podsumowanie najważniejszych problemów:
+
+Duplikacje walidacji ścieżek w 4 różnych plikach
+Nieużywane metody w kontrolerach (około 6 metod)
+Inconsistent error handling w worker classes
+Memory leaks potential w thumbnail loading
+Threading cleanup issues w kilku miejscach
+Performance issues w asset grid operations
+
+Priorytet: Rozpocząć od punktów 1, 6, 7 jako najbardziej krytycznych dla stabilności aplikacji.

@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 class SelectionModel(QObject):
-    """Model dla zarządzania zaznaczeniem assetów"""
+    """Model for managing asset selection"""
 
     selection_changed = pyqtSignal(list)  # Emituje listę ID zaznaczonych assetów
 

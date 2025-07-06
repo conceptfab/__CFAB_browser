@@ -36,10 +36,10 @@ class ControlPanelModel(QObject):
         return self._thumbnail_size
 
     def set_has_selection(self, has_selection: bool):
-        """Ustawia, czy jest zaznaczenie i emituje sygnał."""
+        """Sets whether there is a selection and emits a signal."""
         self._has_selection = has_selection
         self.selection_state_changed.emit(self._has_selection)
 
     def get_has_selection(self) -> bool:
-        """Zwraca, czy jest zaznaczenie."""
+        """Returns whether there is a selection."""
         return self._has_selection

@@ -27,19 +27,26 @@ class AssetGridController(QObject):
         self.view = view
         self.controller = controller
 
-        # Pula obiektów AssetTileView
+        # Pool of AssetTileView objects
         self.tile_pool = AssetTilePool(
             self.model.selection_model, self.view.gallery_content_widget
         )
 
-        # Przeniesione z AmvController
-        self.asset_tiles = []  # Lista kafelków
+        # Moved from AmvController
+        self.asset_tiles = []  # List of tiles
         self.original_assets = (
             []
-        )  # Przechowuje oryginalną listę assetów (bez filtrowania)
-        self.drag_and_drop_enabled = True  # Flaga blokady D&D
+        )  # Stores the original list of assets (unfiltered)
+        self.drag_and_drop_enabled = True  # D&D lock flag
 
-        self.active_star_filter = 0  # 0 = brak filtra, 1-5 = filtr gwiazdek
+        self.active_star_filter = 0  # 0 = no filter, 1-5 = star filter
+        
+        # OPTIMIZATION: Throttling for rebuild_asset_grid
+        from PyQt6.QtCore import QTimer
+        self._rebuild_timer = QTimer()
+        self._rebuild_timer.setSingleShot(True)
+        self._rebuild_timer.timeout.connect(self._perform_delayed_rebuild)
+        self._pending_assets = None
 
     def setup(self):
         """Initializes the asset grid"""
@@ -47,7 +54,7 @@ class AssetGridController(QObject):
 
     def on_assets_changed(self, assets):
         """Handles asset list changes"""
-        if not assets:  # ADD check for None
+        if assets is None or len(assets) == 0:  # More specific check for None
             self.set_original_assets([])
             return
         self.set_original_assets(assets)
@@ -58,19 +65,39 @@ class AssetGridController(QObject):
             self.active_star_filter
         )  # Not self.controller.asset_grid_controller.active_star_filter
         if current_star_filter > 0:
-            self.controller.control_panel_controller.filter_assets_by_stars(
-                current_star_filter
-            )
+            # Trigger filter by updating the grid - filter will be applied automatically
+            # via signal connections, avoiding cross-controller dependencies
+            pass
 
         # Update button states after asset change
         self.controller.control_panel_controller.update_button_states()
 
     def rebuild_asset_grid(self, assets: list):
         """
+        Throttled version of asset grid rebuild to prevent excessive calls.
+        """
+        # OPTYMALIZACJA: Throttling - opóźnij rebuild o 50ms
+        self._pending_assets = assets
+        self._rebuild_timer.start(50)  # 50ms delay
+    
+    def _perform_delayed_rebuild(self):
+        """
+        Performs the actual delayed rebuild.
+        """
+        if self._pending_assets is not None:
+            self._rebuild_asset_grid_immediate(self._pending_assets)
+            self._pending_assets = None
+
+    def _rebuild_asset_grid_immediate(self, assets: list):
+        """
         Intelligently synchronizes the grid with the new asset list, minimizing
         UI operations to eliminate flickering and loading errors.
         """
-        assets.sort(key=lambda x: x.get("name", "").lower())
+        # First, extract the folder tile (is_special_folder), sort the rest alphabetically
+        folder_tile = [a for a in assets if a.get("type") == "special_folder"]
+        other_tiles = [a for a in assets if a.get("type") != "special_folder"]
+        other_tiles.sort(key=lambda x: x.get("name", "").lower())
+        assets = folder_tile + other_tiles
         with measure_operation(
             "asset_grid_controller.rebuild_asset_grid", {"assets_count": len(assets)}
         ):
@@ -145,6 +172,18 @@ class AssetGridController(QObject):
             for asset in assets
             if asset["name"] in current_tile_map
         ]
+        
+        # OPTIMIZATION: Check if layout actually needs rebuilding using hash
+        new_layout_hash = hash(tuple(asset["name"] for asset in assets))
+        
+        if hasattr(self, '_last_layout_hash') and self._last_layout_hash == new_layout_hash:
+            logger.debug("Layout unchanged - skipping full rebuild")
+            return
+        
+        self._last_layout_hash = new_layout_hash
+        
+        # Full rebuild only when necessary
+        logger.debug("Layout changed - performing full rebuild")
         while self.view.gallery_layout.count():
             item = self.view.gallery_layout.takeAt(0)
             if item.widget():
@@ -180,12 +219,12 @@ class AssetGridController(QObject):
             pass  # Signals were not connected
 
         tile.thumbnail_clicked.connect(
-            lambda asset_id, asset_path, t: self.controller._handle_file_action(
+            lambda asset_id, asset_path, _: self.controller._handle_file_action(
                 asset_path, "thumbnail"
             )
         )
         tile.filename_clicked.connect(
-            lambda asset_id, asset_path, t: self.controller._handle_file_action(
+            lambda asset_id, asset_path, _: self.controller._handle_file_action(
                 asset_path, "filename"
             )
         )
@@ -242,10 +281,28 @@ class AssetGridController(QObject):
         self.controller.control_panel_controller.update_button_states()
 
     def clear_asset_tiles(self):
-        """Returns all active tiles to the pool."""
-        for tile_view in self.asset_tiles:
-            self.tile_pool.release(tile_view)
-        self.asset_tiles.clear()
+        """OPTYMALIZACJA: Zwraca wszystkie aktywne kafelki do puli bez czyszczenia galerii."""
+        try:
+            logger.debug(f"OPTYMALIZACJA: Zwracanie {len(self.asset_tiles)} kafelków do puli")
+            
+            # Walidacja dostępności tile_pool
+            if not hasattr(self, 'tile_pool'):
+                logger.warning("OPTYMALIZACJA: Brak tile_pool - pomijam zwracanie kafelków")
+                self.asset_tiles.clear()
+                return
+            
+            for tile_view in self.asset_tiles:
+                # Sprawdź czy kafelek nie jest już w puli
+                if hasattr(tile_view, 'isVisible') and tile_view.isVisible():
+                    self.tile_pool.release(tile_view)
+                
+            self.asset_tiles.clear()
+            logger.debug("OPTYMALIZACJA: Wszystkie kafelki zwrócone do puli")
+            
+        except Exception as e:
+            logger.error(f"Błąd podczas zwracania kafelków do puli: {e}")
+            # Fallback - wyczyść listę nawet jeśli wystąpił błąd
+            self.asset_tiles.clear()
 
     def get_asset_tiles(self):
         """Returns the list of asset tiles"""

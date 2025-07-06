@@ -1,4 +1,4 @@
 """
-Katalog kontrolerów dla zakładki AMV
-Zawiera kontrolery łączące modele z widokami.
+Controller package for the AMV tab.
+Contains controllers connecting models with views.
 """ 

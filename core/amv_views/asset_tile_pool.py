@@ -1,5 +1,5 @@
 """
-AssetTilePool - Zarządzanie pulą obiektów AssetTileView.
+AssetTilePool - Manages the pool of AssetTileView objects.
 """
 
 import logging
@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 
 class AssetTilePool:
     """
-    Zarządza pulą obiektów AssetTileView, aby unikać kosztownego tworzenia
-    i niszczenia widgetów. Implementuje wzorzec Object Pooling.
+    Manages the pool of AssetTileView objects to avoid costly creation
+    and destruction of widgets. Implements the Object Pooling pattern.
     """
 
     def __init__(self, selection_model: SelectionModel, parent_widget=None):
         self._pool: List[AssetTileView] = []
         self._selection_model = selection_model
         self._parent_widget = parent_widget
-        logger.info("AssetTilePool zainicjalizowany.")
+        logger.info("AssetTilePool initialized.")
 
     def acquire(
         self,
@@ -32,17 +32,17 @@ class AssetTilePool:
         total_tiles: int,
     ) -> AssetTileView:
         """
-        Pozyskuje kafelek z puli lub tworzy nowy, jeśli pula jest pusta.
+        Acquires a tile from the pool or creates a new one if the pool is empty.
         """
         if self._pool:
             tile = self._pool.pop()
-            logger.debug("Pozyskano kafelek z puli.")
-            # Zaktualizuj istniejący kafelek nowymi danymi
+            logger.debug("Tile acquired from pool.")
+            # Update existing tile with new data
             tile.update_asset_data(tile_model, tile_number, total_tiles)
             return tile
         else:
-            logger.debug("Pula jest pusta, tworzenie nowego kafelka.")
-            # Pula jest pusta, utwórz nowy kafelek
+            logger.debug("Pool is empty, creating new tile.")
+            # Pool is empty, create new tile
             tile = AssetTileView(
                 tile_model=tile_model,
                 thumbnail_size=thumbnail_size,
@@ -50,32 +50,30 @@ class AssetTilePool:
                 total_tiles=total_tiles,
                 selection_model=self._selection_model,
             )
-            # NAPRAWIONO: Ustaw rodzica dla nowego kafelka!
+            # FIXED: Set parent for new tile!
             if self._parent_widget:
                 tile.setParent(self._parent_widget)
             return tile
 
     def release(self, tile: AssetTileView):
         """
-        Zwraca kafelek do puli, aby mógł być ponownie użyty.
+        Returns the tile to the pool so it can be reused.
         """
         if tile:
-            tile.hide()  # Ukryj widget, zamiast go niszczyć
-            # NAPRAWIONO: Ustaw właściwego rodzica zamiast None
-            if self._parent_widget:
-                tile.setParent(self._parent_widget)  # Ustaw właściwego rodzica
+            tile.hide()  # Hide widget, instead of destroying it
+            # FIXED: Do not change parent if not necessary
+            # Avoid potential memory issues by unnecessary parent changes
+            if tile.parent() != self._parent_widget and self._parent_widget:
+                tile.setParent(self._parent_widget)
             self._pool.append(tile)
             logger.debug(
-                f"Zwrócono kafelek {tile.asset_id} do puli. "
-                f"Rozmiar puli: {len(self._pool)}"
+                f"Returned tile {tile.asset_id} to pool. "
+                f"Pool size: {len(self._pool)}"
             )
 
     def clear(self):
-        """
-        Trwale usuwa wszystkie kafelki z puli.
-        Wywoływane przy zamykaniu aplikacji, aby zwolnić pamięć.
-        """
+        """Returns all tiles to the pool."""
         for tile in self._pool:
-            tile.deleteLater()
+            tile.hide()
         self._pool.clear()
-        logger.info("Pula kafelków została wyczyszczona.")
+        logger.info("AssetTilePool has been cleared.")

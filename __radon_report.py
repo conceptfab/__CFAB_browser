@@ -9,7 +9,7 @@ def run_radon_report_md(output_file="__raports/radon_report.md"):
     # Analiza złożoności cyklomatycznej
     cc_cmd = ["radon", "cc", "core", "-a"]
     # Analiza maintainability index
-    mi_cmd = ["radon", "mi", "core", "-a"]
+    mi_cmd = ["radon", "mi", "core"]
 
     try:
         with open(output_file, "w", encoding="utf-8") as f:

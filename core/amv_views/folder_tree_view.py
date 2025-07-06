@@ -86,6 +86,30 @@ class CustomFolderTreeView(QTreeView):
             )
             logger.debug(f"contextMenuEvent - pozycja myszy: {event.pos()}")
 
+            menu = QMenu(self)
+            
+            # Opcja włączania/wyłączania liczników assetów (zawsze dostępna)
+            show_counts = self._get_show_asset_counts()
+            toggle_counts_action = QAction(
+                "Ukryj liczniki assetów" if show_counts else "Pokaż liczniki assetów", 
+                self
+            )
+            toggle_counts_action.triggered.connect(self._toggle_asset_counts)
+            menu.addAction(toggle_counts_action)
+            
+            # Opcja trybu rekurencyjnego (dostępna gdy liczniki są włączone)
+            if show_counts:
+                recursive_counts = self._get_recursive_asset_counts()
+                toggle_recursive_action = QAction(
+                    "Zliczaj tylko w folderze" if recursive_counts else "Zliczaj rekurencyjnie (+)",
+                    self
+                )
+                toggle_recursive_action.triggered.connect(self._toggle_recursive_counts)
+                menu.addAction(toggle_recursive_action)
+            
+            # Separator
+            menu.addSeparator()
+
             if index.isValid():
                 item = self.model().itemFromIndex(index)
                 logger.debug(f"contextMenuEvent - item: {item}")
@@ -99,9 +123,6 @@ class CustomFolderTreeView(QTreeView):
                     logger.debug(
                         f"contextMenuEvent - item row: {item.row()}, column: {item.column()}"
                     )
-
-                    # Utwórz menu kontekstowe
-                    menu = QMenu(self)
 
                     # Opcja odświeżenia folderu (na górze)
                     refresh_folder_action = QAction("Odśwież folder", self)
@@ -134,8 +155,6 @@ class CustomFolderTreeView(QTreeView):
                     )
                     menu.addAction(rebuild_action)
 
-                    # Pokaż menu
-                    menu.exec(event.globalPos())
                 else:
                     logger.warning(
                         "contextMenuEvent - item lub UserRole data jest None"
@@ -147,8 +166,67 @@ class CustomFolderTreeView(QTreeView):
             else:
                 logger.warning("contextMenuEvent - index nie jest valid")
 
+            # Pokaż menu
+            menu.exec(event.globalPos())
+
         except Exception as e:
             logger.error(f"Błąd obsługi menu kontekstowego: {e}")
+
+    def _toggle_asset_counts(self):
+        """Przełącza pokazywanie liczników assetów w folderach"""
+        try:
+            # Pobierz aktualny stan
+            current_state = self._get_show_asset_counts()
+            new_state = not current_state
+            
+            # Poinformuj kontroler o zmianie
+            if hasattr(self, 'folder_tree_controller'):
+                self.folder_tree_controller.set_show_asset_counts(new_state)
+            
+            logger.debug(f"Toggled asset counts: {current_state} -> {new_state}")
+            
+        except Exception as e:
+            logger.error(f"Błąd przełączania liczników assetów: {e}")
+
+    def _toggle_recursive_counts(self):
+        """Przełącza tryb rekurencyjnego zliczania assetów"""
+        try:
+            # Pobierz aktualny stan
+            current_state = self._get_recursive_asset_counts()
+            new_state = not current_state
+            
+            # Poinformuj kontroler o zmianie
+            if hasattr(self, 'folder_tree_controller'):
+                self.folder_tree_controller.set_recursive_asset_counts(new_state)
+            
+            logger.debug(f"Toggled recursive asset counts: {current_state} -> {new_state}")
+            
+        except Exception as e:
+            logger.error(f"Błąd przełączania trybu rekurencyjnego: {e}")
+
+    def _get_show_asset_counts(self) -> bool:
+        """Pobiera aktualny stan pokazywania liczników assetów"""
+        try:
+            if hasattr(self, 'folder_tree_controller'):
+                return self.folder_tree_controller.get_show_asset_counts()
+            return True  # Domyślnie włączone
+        except Exception as e:
+            logger.error(f"Błąd pobierania stanu liczników assetów: {e}")
+            return True
+
+    def _get_recursive_asset_counts(self) -> bool:
+        """Pobiera aktualny stan rekurencyjnego zliczania assetów"""
+        try:
+            if hasattr(self, 'folder_tree_controller'):
+                return self.folder_tree_controller.get_recursive_asset_counts()
+            return True  # Domyślnie włączone
+        except Exception as e:
+            logger.error(f"Błąd pobierania stanu trybu rekurencyjnego: {e}")
+            return True
+
+    def set_folder_tree_controller(self, controller):
+        """Ustawia referencję do kontrolera drzewa folderów"""
+        self.folder_tree_controller = controller
 
     def _open_folder_in_explorer(self, folder_path: str):
         """Otwiera folder w eksploratorze systemu."""

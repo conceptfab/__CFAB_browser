@@ -37,8 +37,8 @@ class ImageLoader(QObject):
             self.image_loaded.emit(scaled_pixmap, "")
 
         except Exception as e:
-            logger.error(f"Błąd ładowania obrazu: {e}")
-            self.image_loaded.emit(QPixmap(), f"Błąd ładowania obrazu: {e}")
+            logger.error(f"Error loading image: {e}")
+            self.image_loaded.emit(QPixmap(), f"Error loading image: {e}")
 
     def scale_image(self, pixmap: QPixmap, target_size: QSize) -> None:
         """Scale image to target size asynchronously."""
@@ -98,20 +98,20 @@ class PreviewWindow(QDialog):
 
     def setup_ui(self) -> None:
         """Setup the user interface."""
-        self.setWindowTitle(f"Podgląd - {os.path.basename(self.image_path)}")
+        self.setWindowTitle(f"Preview - {os.path.basename(self.image_path)}")
         self.setModal(False)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_label.setText("Ładowanie obrazu...")
+        self.image_label.setText("Loading image...")
         layout.addWidget(self.image_label)
         self.setLayout(layout)
         self.load_image_and_resize()
-        # USUNIĘTO AUTOMATYCZNE POKAZANIE OKNA - wywołane świadomie z controllera
+        # AUTOMATIC WINDOW DISPLAY REMOVED - called consciously from the controller
 
     def show_window(self):
-        """Pokazuje okno podglądu."""
+        """Shows the preview window."""
         self.show()
         self.raise_()
         self.activateWindow()
@@ -134,13 +134,13 @@ class PreviewWindow(QDialog):
             self.thread_pool.start(self.image_loader.load_image)
 
         except Exception as e:
-            self.image_label.setText(f"Błąd ładowania obrazu: {e}")
-            logger.error(f"Błąd ładowania obrazu: {e}")
+            self.image_label.setText(f"Error loading image: {e}")
+            logger.error(f"Error loading image: {e}")
 
     def _on_image_loaded(self, pixmap: QPixmap, error_message: str) -> None:
         """Handle image loaded signal."""
         if error_message:
-            self.image_label.setText(error_message)
+            self.image_label.setText(f"Error loading image: {error_message}")
             return
 
         self.pre_scaled_pixmap = pixmap

@@ -1,6 +1,6 @@
 """
-Moduł utility dla operacji na plikach i ścieżkach.
-Zawiera funkcje używane przez różne komponenty aplikacji.
+Utility module for file and path operations.
+Contains functions used by various application components.
 """
 
 import logging
@@ -15,13 +15,13 @@ logger = logging.getLogger(__name__)
 
 def _is_command_available(command: str) -> bool:
     """
-    Sprawdza czy komenda jest dostępna w systemie.
+    Checks if a command is available in the system.
 
     Args:
-        command (str): Nazwa komendy do sprawdzenia
+        command (str): Name of the command to check
 
     Returns:
-        bool: True jeśli komenda jest dostępna, False w przeciwnym razie
+        bool: True if the command is available, False otherwise
     """
     try:
         subprocess.run(
@@ -32,141 +32,332 @@ def _is_command_available(command: str) -> bool:
         return False
 
 
+def _validate_path_input(path: str) -> tuple[bool, str]:
+    """
+    Validates and normalizes input path.
+    
+    Args:
+        path (str): Input path to validate
+        
+    Returns:
+        tuple[bool, str]: (is_valid, normalized_path_or_error_message)
+    """
+    if not path or not isinstance(path, str):
+        return False, "Invalid path: empty or not a string"
+    
+    normalized_path = os.path.normpath(path)
+    
+    if not os.path.exists(normalized_path):
+        return False, f"Path does not exist: {normalized_path}"
+    
+    return True, normalized_path
+
+
+def _open_path_windows(normalized_path: str) -> bool:
+    """
+    Opens path in Windows Explorer.
+    
+    Args:
+        normalized_path (str): Validated and normalized path
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        logger.debug(f"_open_path_windows - launching os.startfile with path: {normalized_path}")
+        os.startfile(normalized_path)
+        return True
+    except FileNotFoundError as e:
+        logger.error(f"Windows Explorer or path not found: {normalized_path} - {e}")
+        return False
+    except OSError as e:
+        logger.error(f"OS error opening path {normalized_path}: {e}")
+        return False
+
+
+def _open_path_macos(normalized_path: str) -> bool:
+    """
+    Opens path in macOS Finder.
+    
+    Args:
+        normalized_path (str): Validated and normalized path
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if not _is_command_available("open"):
+        logger.error("Command 'open' is not available")
+        return False
+    
+    try:
+        subprocess.run(["open", normalized_path], check=True, timeout=10)
+        return True
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+        logger.error(f"Error opening path in macOS: {e}")
+        return False
+
+
+def _open_path_linux(normalized_path: str) -> bool:
+    """
+    Opens path in Linux file manager.
+    
+    Args:
+        normalized_path (str): Validated and normalized path
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if not _is_command_available("xdg-open"):
+        logger.error("Command 'xdg-open' is not available")
+        return False
+    
+    try:
+        subprocess.run(["xdg-open", normalized_path], check=True, timeout=10)
+        return True
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+        logger.error(f"Error opening path in Linux: {e}")
+        return False
+
+
+def _open_file_windows(normalized_path: str) -> bool:
+    """
+    Opens file in Windows default application.
+    
+    Args:
+        normalized_path (str): Validated and normalized path to file
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        os.startfile(normalized_path)
+        return True
+    except FileNotFoundError as e:
+        logger.error(f"Windows application or file not found: {normalized_path} - {e}")
+        return False
+    except OSError as e:
+        logger.error(f"OS error opening file {normalized_path}: {e}")
+        return False
+
+
+def _open_file_macos(normalized_path: str) -> bool:
+    """
+    Opens file in macOS default application.
+    
+    Args:
+        normalized_path (str): Validated and normalized path to file
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if not _is_command_available("open"):
+        logger.error("Command 'open' is not available")
+        return False
+    
+    try:
+        subprocess.run(["open", normalized_path], check=True, timeout=10)
+        return True
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+        logger.error(f"Error opening file in macOS: {e}")
+        return False
+
+
+def _open_file_linux(normalized_path: str) -> bool:
+    """
+    Opens file in Linux default application.
+    
+    Args:
+        normalized_path (str): Validated and normalized path to file
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if not _is_command_available("xdg-open"):
+        logger.error("Command 'xdg-open' is not available")
+        return False
+    
+    try:
+        subprocess.run(["xdg-open", normalized_path], check=True, timeout=10)
+        return True
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+        logger.error(f"Error opening file in Linux: {e}")
+        return False
+
+
+def _show_error_message(parent_widget, error_message: str, context: str):
+    """
+    Shows error message to user if parent_widget is available.
+    
+    Args:
+        parent_widget: Parent widget for message box
+        error_message (str): Error message to display
+        context (str): Context information (path, operation type)
+    """
+    if parent_widget:
+        QMessageBox.warning(parent_widget, "Error", f"{error_message}: {context}")
+
+
 def open_path_in_explorer(path: str, parent_widget=None) -> bool:
     """
-    Otwiera ścieżkę w eksploratorze plików systemu.
+    Opens a path in the system file explorer.
 
     Args:
-        path (str): Ścieżka do otwarcia
-        parent_widget: Widget nadrzędny dla wyświetlania komunikatów błędów
+        path (str): Path to open
+        parent_widget: Parent widget for displaying error messages
 
     Returns:
-        bool: True jeśli operacja się powiodła, False w przeciwnym razie
+        bool: True if the operation succeeded, False otherwise
     """
-    logger.debug(f"open_path_in_explorer - otrzymana ścieżka: {path}")
+    logger.debug(f"open_path_in_explorer - received path: {path}")
+    
     try:
-        # Walidacja inputu
-        if not path or not isinstance(path, str):
-            logger.error("Nieprawidłowa ścieżka: pusta lub nie string")
+        # Step 1: Validate input
+        is_valid, result = _validate_path_input(path)
+        if not is_valid:
+            logger.error(result)
+            _show_error_message(parent_widget, result, path)
             return False
-
-        # Normalizuj ścieżkę - napraw mieszane ukośniki
-        normalized_path = os.path.normpath(path)
-        logger.debug(
-            f"open_path_in_explorer - znormalizowana ścieżka: " f"{normalized_path}"
-        )
-
-        # Sprawdź czy ścieżka istnieje
-        if not os.path.exists(normalized_path):
-            logger.error(f"Ścieżka nie istnieje: {normalized_path}")
-            if parent_widget:
-                QMessageBox.warning(
-                    parent_widget, "Błąd", f"Ścieżka nie istnieje: {path}"
-                )
+        
+        normalized_path = result
+        logger.debug(f"open_path_in_explorer - normalized path: {normalized_path}")
+        
+        # Step 2: Choose platform-specific handler
+        platform_handlers = {
+            "win32": _open_path_windows,
+            "darwin": _open_path_macos,
+        }
+        
+        handler = platform_handlers.get(sys.platform, _open_path_linux)
+        success = handler(normalized_path)
+        
+        if success:
+            logger.info(f"Opened path in explorer: {normalized_path}")
+            return True
+        else:
+            _show_error_message(parent_widget, "Failed to open path", normalized_path)
             return False
-
-        # Bezpieczne wywołania subprocess z walidacją
-        if sys.platform == "win32":
-            logger.debug(
-                f"open_path_in_explorer - uruchamiam explorer z ścieżką: "
-                f"{normalized_path}"
-            )
-            # Sprawdź czy explorer jest dostępny
-            if not _is_command_available("explorer"):
-                logger.error("Komenda 'explorer' nie jest dostępna")
-                return False
-            subprocess.run(["explorer", normalized_path], check=True, timeout=10)
-        elif sys.platform == "darwin":  # macOS
-            if not _is_command_available("open"):
-                logger.error("Komenda 'open' nie jest dostępna")
-                return False
-            subprocess.run(["open", normalized_path], check=True, timeout=10)
-        else:  # Linux
-            if not _is_command_available("xdg-open"):
-                logger.error("Komenda 'xdg-open' nie jest dostępna")
-                return False
-            subprocess.run(["xdg-open", normalized_path], check=True, timeout=10)
-        logger.info(f"Otworzono ścieżkę w eksploratorze: {normalized_path}")
-        return True
-    except subprocess.TimeoutExpired:
-        logger.error(f"Timeout podczas otwierania ścieżki: {path}")
-        if parent_widget:
-            QMessageBox.warning(
-                parent_widget, "Błąd", f"Timeout podczas otwierania ścieżki: {path}"
-            )
-        return False
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Błąd procesu podczas otwierania ścieżki {path}: {e}")
-        if parent_widget:
-            QMessageBox.warning(
-                parent_widget, "Błąd", f"Błąd procesu podczas otwierania: {path}"
-            )
-        return False
+            
     except Exception as e:
-        logger.error(f"Błąd podczas otwierania ścieżki {path}: {e}")
-        if parent_widget:
-            QMessageBox.warning(
-                parent_widget, "Błąd", f"Nie można otworzyć ścieżki: {path}"
-            )
+        logger.error(f"Unexpected error while opening path {path}: {e}")
+        _show_error_message(parent_widget, "Unexpected error opening path", path)
         return False
 
 
 def open_file_in_default_app(path: str, parent_widget=None) -> bool:
     """
-    Otwiera plik w domyślnej aplikacji systemu.
+    Opens a file in the system's default application.
 
     Args:
-        path (str): Ścieżka do pliku
-        parent_widget: Widget nadrzędny dla wyświetlania komunikatów błędów
+        path (str): Path to the file
+        parent_widget: Parent widget for displaying error messages
 
     Returns:
-        bool: True jeśli operacja się powiodła, False w przeciwnym razie
+        bool: True if the operation succeeded, False otherwise
     """
+    logger.debug(f"open_file_in_default_app - received path: {path}")
+    
     try:
-        # Walidacja inputu
-        if not path or not isinstance(path, str):
-            logger.error("Nieprawidłowa ścieżka: pusta lub nie string")
+        # Step 1: Validate input  
+        is_valid, result = _validate_path_input(path)
+        if not is_valid:
+            logger.error(result)
+            _show_error_message(parent_widget, result, path)
             return False
-
-        # Sprawdź czy plik istnieje
-        if not os.path.exists(path):
-            logger.error(f"Plik nie istnieje: {path}")
-            if parent_widget:
-                QMessageBox.warning(parent_widget, "Błąd", f"Plik nie istnieje: {path}")
+        
+        normalized_path = result
+        logger.debug(f"open_file_in_default_app - normalized path: {normalized_path}")
+        
+        # Step 2: Choose platform-specific handler
+        platform_handlers = {
+            "win32": _open_file_windows,
+            "darwin": _open_file_macos,
+        }
+        
+        handler = platform_handlers.get(sys.platform, _open_file_linux)
+        success = handler(normalized_path)
+        
+        if success:
+            logger.info(f"Opened file in default application: {normalized_path}")
+            return True
+        else:
+            _show_error_message(parent_widget, "Failed to open file", normalized_path)
             return False
-
-        if sys.platform == "win32":
-            os.startfile(path)
-        elif sys.platform == "darwin":  # macOS
-            if not _is_command_available("open"):
-                logger.error("Komenda 'open' nie jest dostępna")
-                return False
-            subprocess.run(["open", path], check=True, timeout=10)
-        else:  # Linux
-            if not _is_command_available("xdg-open"):
-                logger.error("Komenda 'xdg-open' nie jest dostępna")
-                return False
-            subprocess.run(["xdg-open", path], check=True, timeout=10)
-        logger.info(f"Otworzono plik w domyślnej aplikacji: {path}")
-        return True
-    except subprocess.TimeoutExpired:
-        logger.error(f"Timeout podczas otwierania pliku: {path}")
-        if parent_widget:
-            QMessageBox.warning(
-                parent_widget, "Błąd", f"Timeout podczas otwierania pliku: {path}"
-            )
-        return False
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Błąd procesu podczas otwierania pliku {path}: {e}")
-        if parent_widget:
-            QMessageBox.warning(
-                parent_widget, "Błąd", f"Błąd procesu podczas otwierania pliku: {path}"
-            )
-        return False
+            
     except Exception as e:
-        logger.error(f"Błąd podczas otwierania pliku {path}: {e}")
+        logger.error(f"Unexpected error while opening file {path}: {e}")
+        _show_error_message(parent_widget, "Unexpected error opening file", path)
+        return False
+
+
+def handle_file_action(path: str, action_type: str, parent_widget=None):
+    """
+    Consolidated file action handler for common file operations.
+    
+    Args:
+        path (str): Path to file or folder
+        action_type (str): Type of action ("thumbnail", "filename", "folder")
+        parent_widget: Parent widget for displaying error messages and preview windows
+        
+    Returns:
+        bool: True if operation succeeded, False otherwise
+    """
+    logger.debug(f"handle_file_action: '{action_type}' for: {path}")
+    
+    if not path:
+        logger.warning("handle_file_action: Empty path provided")
+        return False
+
+    if not os.path.exists(path):
+        logger.warning(f"handle_file_action: Path does not exist: {path}")
         if parent_widget:
-            QMessageBox.warning(
-                parent_widget, "Błąd", f"Nie można otworzyć pliku: {path}"
-            )
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(parent_widget, "Error", f"Path does not exist: {path}")
+        return False
+
+    try:
+        if os.path.isdir(path):
+            # Open folder in explorer
+            success = open_path_in_explorer(path, parent_widget)
+            if success:
+                logger.info(f"Opened folder in explorer: {path}")
+            return success
+        else:
+            # Handle file actions
+            if action_type == "thumbnail":
+                # Open preview window
+                try:
+                    from core.preview_window import PreviewWindow
+                    
+                    # Close existing preview window if any
+                    if hasattr(parent_widget, 'current_preview_window') and parent_widget.current_preview_window:
+                        parent_widget.current_preview_window.close()
+                        parent_widget.current_preview_window.deleteLater()
+                        parent_widget.current_preview_window = None
+                    
+                    # Create new preview window
+                    preview_window = PreviewWindow(path, parent_widget)
+                    if hasattr(parent_widget, '__dict__'):
+                        parent_widget.current_preview_window = preview_window
+                    preview_window.show_window()
+                    logger.info(f"Opened preview in dedicated window: {path}")
+                    return True
+                except Exception as e:
+                    logger.error(f"Error opening preview window for {path}: {e}")
+                    return False
+                    
+            elif action_type == "filename":
+                # Open file in default application
+                success = open_file_in_default_app(path, parent_widget)
+                if success:
+                    logger.info(f"Opened file in external application: {path}")
+                return success
+            else:
+                logger.warning(f"Unknown action type: {action_type}")
+                return False
+                
+    except Exception as e:
+        logger.error(f"Error in handle_file_action for {path}: {e}")
+        if parent_widget:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(parent_widget, "Error", f"Cannot open: {path}")
         return False

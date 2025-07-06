@@ -1,6 +1,6 @@
 """
-Widoki dla zakładki AMV.
-Zawiera komponenty UI odpowiedzialne za prezentację danych.
+Views for the AMV tab.
+Contains UI components responsible for data presentation.
 """
 
 from .asset_tile_view import AssetTileView

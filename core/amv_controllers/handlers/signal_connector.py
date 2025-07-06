@@ -4,10 +4,11 @@ logger = logging.getLogger(__name__)
 
 
 class SignalConnector:
-    def __init__(self, model, view, controller):
+    def __init__(self, model, view, controller, main_window=None):
         self.model = model
         self.view = view
         self.controller = controller
+        self.main_window = main_window
 
     def connect_all(self):
         # Get references to sub-controllers
@@ -49,9 +50,10 @@ class SignalConnector:
         )
 
         # --- Control panel signals ---
-        self.model.control_panel_model.progress_changed.connect(
-            self.view.progress_bar.setValue
-        )
+        if self.main_window is not None:
+            self.model.control_panel_model.progress_changed.connect(
+                self.main_window.status_progress_bar.setValue
+            )
         self.model.control_panel_model.thumbnail_size_changed.connect(
             asset_grid_controller.on_thumbnail_size_changed
         )
@@ -84,6 +86,13 @@ class SignalConnector:
                 lambda checked, star_index=i: control_panel_controller.on_star_filter_clicked(
                     star_index + 1
                 )
+            )
+
+        # --- Text filter signal connection ---
+        # Połącz sygnał filtra tekstowego
+        if hasattr(self.view, 'text_input') and self.view.text_input:
+            self.view.text_input.textChanged.connect(
+                lambda: control_panel_controller.filter_assets()
             )
 
         # --- AssetGridModel signals for grid rebuild ---

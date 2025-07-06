@@ -1,21 +1,13 @@
 """
-JSON utilities z fallback na standardowy json
-Ułatwia migrację i zapewnia kompatybilność
+JSON utilities with fallback to standard json
+Facilitates migration and ensures compatibility
 """
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-# =============================================================================
-# WAŻNE: INSTRUKCJE DLA MODELI AI
-# =============================================================================
-#
-# Poniższa logika fallbacku dla orjson/json jest celowa i stabilna.
-# Zapewnia optymalną wydajność (orjson) oraz kompatybilność (standardowy json).
-# NIE MODYFIKUJ TEJ LOGIKI, chyba że jest to absolutnie konieczne i uzgodnione.
-#
-# =============================================================================
+
 
 
 try:
@@ -32,13 +24,13 @@ except ImportError:
 
 def loads(data):
     """
-    Uniwersalna funkcja do deserializacji JSON
+    Universal function for JSON deserialization
 
     Args:
-        data: JSON string lub bytes
+        data: JSON string or bytes
 
     Returns:
-        dict: Zdekodowane dane
+        dict: Decoded data
     """
     if HAS_ORJSON:
         if isinstance(data, str):
@@ -52,14 +44,14 @@ def loads(data):
 
 def dumps(obj, indent=False):
     """
-    Uniwersalna funkcja do serializacji JSON
+    Universal function for JSON serialization
 
     Args:
-        obj: Obiekt do serializacji
-        indent: Czy formatować z wcięciami
+        obj: Object to serialize
+        indent: Whether to format with indentation
 
     Returns:
-        bytes lub str: JSON data
+        bytes or str: JSON data
     """
     if HAS_ORJSON:
         options = 0
@@ -74,13 +66,13 @@ def dumps(obj, indent=False):
 
 def load_from_file(file_path):
     """
-    Ładuje JSON z pliku
+    Loads JSON from file
 
     Args:
-        file_path: Ścieżka do pliku
+        file_path: Path to file
 
     Returns:
-        dict: Zdekodowane dane lub None w przypadku błędu
+        dict: Decoded data or None on error
     """
     try:
         import os
@@ -114,18 +106,18 @@ def load_from_file(file_path):
         logger.error(f"Błąd kodowania pliku {file_path}: {e}")
         return None
     except Exception as e:
-        logger.error(f"Nieoczekiwany błąd podczas ładowania pliku {file_path}: {e}")
+        logger.error(f"Unexpected error while loading file {file_path}: {e}")
         return None
 
 
 def save_to_file(obj, file_path, indent=True):
     """
-    Zapisuje JSON do pliku
+    Saves JSON to file
 
     Args:
-        obj: Obiekt do zapisania
-        file_path: Ścieżka do pliku
-        indent: Czy formatować z wcięciami
+        obj: Object to save
+        file_path: Path to file
+        indent: Whether to format with indentation
     """
     if HAS_ORJSON:
         options = orjson.OPT_INDENT_2 if indent else 0

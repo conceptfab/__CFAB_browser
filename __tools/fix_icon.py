@@ -67,7 +67,11 @@ def create_proper_ico():
                     ico_img.seek(i)
                     if ico_img.size == (size, size):
                         available_sizes.append(size)
-                except:
+                except (EOFError, IndexError):
+                    # Reached end of ICO frames - this is expected
+                    break
+                except Exception as e:
+                    print(f"⚠️  Błąd sprawdzania rozmiaru {size}: {e}")
                     break
 
             print(f"📋 Dostępne rozmiary: {available_sizes}")

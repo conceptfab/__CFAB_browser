@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 class AmvTab(QWidget):
     """
-    Główna klasa zakładki AMV
-    Model/View/Controller pattern - ETAP 15 completed with dependency injection
+    Main class of the AMV tab
+    Model/View/Controller pattern - STAGE 15 completed with dependency injection
     """
 
     def __init__(
@@ -27,6 +27,7 @@ class AmvTab(QWidget):
         model: Optional[AmvModel] = None,
         view: Optional[AmvView] = None,
         controller: Optional[AmvController] = None,
+        main_window=None,
     ):
         super().__init__()
 
@@ -36,7 +37,7 @@ class AmvTab(QWidget):
         # Wstrzykiwanie zależności z fallback do domyślnych instancji
         self.model = model or AmvModel()
         self.view = view or AmvView()
-        self.controller = controller or AmvController(self.model, self.view)
+        self.controller = controller or AmvController(self.model, self.view, main_window)
 
         self.model.initialize_state()
         layout = QVBoxLayout()
@@ -46,12 +47,12 @@ class AmvTab(QWidget):
         logger.debug("AmvTab initialized with dependency injection - ETAP 15 completed")
 
     def get_controller(self) -> AmvController:
-        """Zwraca instancję kontrolera dla tej zakładki."""
+        """Returns the controller instance for this tab."""
         return self.controller
 
 
 # ==============================================================================
-# TESTOWANIE I STANDALONE URUCHOMIENIE
+# TESTING AND STANDALONE EXECUTION
 # ==============================================================================
 
 if __name__ == "__main__":

@@ -65,7 +65,11 @@ def analyze_ico_file():
                                 available_sizes.append(size)
                                 found = True
                                 break
-                        except:
+                        except (EOFError, IndexError):
+                            # Reached end of ICO frames - continue checking
+                            continue
+                        except Exception as e:
+                            print(f"⚠️  Błąd sprawdzania ramki {i}: {e}")
                             continue
                     if not found:
                         print(f"❌ Brak rozmiaru {size}x{size}")

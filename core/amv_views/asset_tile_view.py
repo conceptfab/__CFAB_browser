@@ -1,6 +1,6 @@
 """
-AssetTileView - Widok dla pojedynczego kafelka assetu
-Prezentuje miniaturkę, nazwę pliku, gwiazdki i checkbox dla assetu.
+AssetTileView - View for a single asset tile
+Displays thumbnail, filename, stars, and checkbox for the asset.
 """
 
 import logging
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class AssetTileView(QFrame):
-    """Widok dla pojedynczego kafelka assetu - ETAP 15 + Object Pooling"""
+    """View for a single asset tile - STAGE 15 + Object Pooling"""
 
     thumbnail_clicked = pyqtSignal(str, str, object)  # asset_id, asset_path, tile
     filename_clicked = pyqtSignal(str, str, object)  # asset_id, asset_path, tile
@@ -64,22 +64,24 @@ class AssetTileView(QFrame):
         self._setup_ui()
         self.model.data_changed.connect(self.update_ui)
 
-        asset_name = self.asset_id
-        logger.debug(f"AssetTileView data updated for asset: {asset_name}")
+        logger.debug(f"AssetTileView data updated for asset: {self.asset_id}")
 
     def update_asset_data(
         self, tile_model: AssetTileModel, tile_number: int, total_tiles: int
     ):
         """
-        Aktualizuje dane kafelka dla Object Pooling.
-        Pozwala na ponowne wykorzystanie istniejącej instancji AssetTileView.
+        Updates tile data for Object Pooling.
+        Allows reuse of an existing AssetTileView instance.
         """
-        # Odłącz stare połączenie sygnału
+        # Odłącz stare połączenie sygnału - bezpieczne odłączenie
         if hasattr(self, "model") and self.model:
             try:
                 self.model.data_changed.disconnect(self.update_ui)
-            except TypeError:
+            except (TypeError, AttributeError):
                 pass  # Połączenie już nie istnieje
+
+        # Zresetuj stan ładowania miniaturki
+        self.is_loading_thumbnail = False
 
         # Zaktualizuj dane
         self.model = tile_model
@@ -87,8 +89,9 @@ class AssetTileView(QFrame):
         self.total_tiles = total_tiles
         self.asset_id = self.model.get_name()
 
-        # Podłącz nowe połączenie sygnału
-        self.model.data_changed.connect(self.update_ui)
+        # Podłącz nowe połączenie sygnału - tylko jeśli model istnieje
+        if self.model:
+            self.model.data_changed.connect(self.update_ui)
 
         # Natychmiast zaktualizuj UI z nowymi danymi
         self.update_ui()
@@ -99,44 +102,16 @@ class AssetTileView(QFrame):
             self.set_checked(is_selected)
             logger.debug(f"Set checkbox state for {self.asset_id}: {is_selected}")
 
-        asset_name = self.asset_id
-        logger.debug(f"AssetTileView data updated for asset: {asset_name}")
+        logger.debug(f"AssetTileView data updated for asset: {self.asset_id}")
 
     def reset_for_pool(self):
-        """
-        Resetuje kafelek do stanu gotowego do ponownego użycia w puli.
-        """
-        if hasattr(self, "model") and self.model is not None:
-            try:
-                self.model.data_changed.disconnect(self.update_ui)
-            except (TypeError, RuntimeError):
-                pass  # Połączenie już odłączone lub obiekt usunięty
-
-        # Wyczyść dane
-        self.model = None
-        self.asset_id = ""
-        self.tile_number = 0
-        self.total_tiles = 0
-
-        # Wyczyść UI - z zabezpieczeniami
-        if hasattr(self, "thumbnail_container"):
-            self.thumbnail_container.clear()
-        if hasattr(self, "name_label"):
-            self.name_label.clear()
-        if hasattr(self, "tile_number_label"):
-            self.tile_number_label.clear()
-        if hasattr(self, "checkbox"):
-            self.checkbox.setChecked(False)
-
-        # Wyczyść gwiazdki
-        if hasattr(self, "star_checkboxes"):
-            for star_cb in self.star_checkboxes:
-                try:
-                    star_cb.setChecked(False)
-                except RuntimeError:
-                    pass  # Widget już usunięty
-
-        logger.debug("AssetTileView reset for pool reuse")
+        """Resets the tile to a state ready for reuse in the pool."""
+        self._cleanup_connections_and_resources()
+        self._reset_state_variables()
+        self._clear_ui_elements()
+        self._remove_from_parent()
+        
+        logger.debug("AssetTileView reset for pool reuse with proper signal cleanup")
 
     def _setup_ui(self):
         # Usunięto podwójne tworzenie thumbnail_container - przeniesione do _setup_ui_without_styles()
@@ -333,7 +308,14 @@ class AssetTileView(QFrame):
         for star_cb in self.star_checkboxes:
             star_cb.setVisible(stars_visible)
         self.set_star_rating(self.model.get_stars())
-        self.texture_icon.setVisible(self.model.has_textures_in_archive())
+        # Always show texture icon to maintain layout geometry
+        # If no textures, show transparent spacer, if has textures show icon
+        if self.model.has_textures_in_archive():
+            self.texture_icon.setVisible(True)
+            self._load_texture_icon()
+        else:
+            self.texture_icon.setVisible(True)
+            self._load_empty_texture_spacer()
         self.checkbox.setVisible(True)
         # Krok 1: Spróbuj załadować z cache
         thumbnail_path = self.model.get_thumbnail_path()
@@ -371,7 +353,7 @@ class AssetTileView(QFrame):
             self.is_loading_thumbnail = False
 
     def _set_thumbnail_pixmap(self, pixmap: QPixmap):
-        """Ustawia QPixmap na etykiecie miniaturki, przycinając do kwadratu zgodnie z wymaganiami."""
+        """Sets QPixmap on the thumbnail label, cropping to square as required."""
         target_size = self.thumbnail_container.size()
         size = min(pixmap.width(), pixmap.height())
 
@@ -409,20 +391,22 @@ class AssetTileView(QFrame):
         for star_cb in self.star_checkboxes:
             star_cb.setVisible(False)
 
-        self.texture_icon.setVisible(False)
+        # Show transparent spacer for folders to maintain layout geometry
+        self.texture_icon.setVisible(True)
+        self._load_empty_texture_spacer()
         self.checkbox.setVisible(False)
 
         # Załaduj ikonę folderu
         self._load_folder_icon()
 
     def _create_placeholder_thumbnail(self):
-        """Tworzy placeholder miniaturkę gdy nie ma obrazka."""
+        """Creates a placeholder thumbnail when there is no image."""
         pixmap = QPixmap(self.thumbnail_size, self.thumbnail_size)
         pixmap.fill(QColor("#2A2D2E"))
         self.thumbnail_container.setPixmap(pixmap)
 
     def _load_icon_with_fallback(self, icon_name: str, size: tuple) -> QPixmap:
-        """Uniwersalna metoda ładowania ikon z fallback"""
+        """Universal method for loading icons with fallback"""
         try:
             icon_path = os.path.join(
                 os.path.dirname(__file__), "..", "resources", "img", icon_name
@@ -457,9 +441,16 @@ class AssetTileView(QFrame):
         self.texture_icon.setPixmap(
             self._load_icon_with_fallback("texture.png", (16, 16))
         )
+    
+    def _load_empty_texture_spacer(self):
+        """Creates a transparent spacer to maintain layout geometry when no texture icon is needed"""
+        # Create a transparent pixmap with the same dimensions as the texture icon
+        spacer_pixmap = QPixmap(16, 16)
+        spacer_pixmap.fill(Qt.GlobalColor.transparent)
+        self.texture_icon.setPixmap(spacer_pixmap)
 
     def mousePressEvent(self, event):
-        """Obsługuje naciśnięcie myszy - kliknięcia i drag & drop."""
+        """Handles mouse press - clicks and drag & drop."""
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = event.position().toPoint()
 
@@ -492,7 +483,7 @@ class AssetTileView(QFrame):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """Obsługuje ruch myszy - inicjuje drag & drop."""
+        """Handles mouse move - initiates drag & drop."""
         if (
             event.buttons() & Qt.MouseButton.LeftButton
             and (
@@ -569,7 +560,7 @@ class AssetTileView(QFrame):
             )
 
     def update_thumbnail_size(self, new_size: int):
-        """Aktualizuje rozmiar miniatury i przelicza layout."""
+        """Updates thumbnail size and recalculates layout."""
         self.thumbnail_size = new_size
         # Przelicz szerokość kafelka
         tile_width = new_size + (2 * self.margins_size)
@@ -578,29 +569,23 @@ class AssetTileView(QFrame):
         self.update_ui()  # Przeładuj UI, aby zastosować nowy rozmiar
 
     def _update_stars_visibility(self):
-        """Aktualizuje widoczność gwiazdek na podstawie dostępnej przestrzeni."""
+        """Updates the visibility of stars based on available space."""
         if hasattr(self, "model") and self.model and not self.model.is_special_folder:
             stars_visible = self._check_stars_fit()
             for star_cb in self.star_checkboxes:
                 star_cb.setVisible(stars_visible)
 
     def release_resources(self):
-        """Zwalnia zasoby powiązane z kafelkiem, w tym cached_pixmap."""
-        self._cached_pixmap = None
-        if hasattr(self, "model") and self.model:
-            try:
-                self.model.data_changed.disconnect(self.update_ui)
-            except Exception as e:
-                logger.debug(f"Exception during disconnect: {e}")
-        self.model = None
-        logger.debug("Resources released for tile: %s", self.asset_id)
+        """Releases resources associated with the tile, including cached_pixmap."""
+        self._cleanup_connections_and_resources()
+        logger.debug("Resources released for tile: %s with complete cleanup", self.asset_id)
 
     def is_checked(self) -> bool:
-        """Sprawdza czy kafelek jest zaznaczony."""
+        """Checks if the tile is selected."""
         return self.checkbox.isChecked()
 
     def set_checked(self, checked: bool):
-        """Ustawia stan zaznaczenia kafelka."""
+        """Sets the checked state of the tile."""
         # Ustaw flagę blokady przed zmianą stanu
         self._updating_checkbox = True
         try:
@@ -615,7 +600,7 @@ class AssetTileView(QFrame):
             self._updating_checkbox = False
 
     def _on_checkbox_state_changed(self, state: int):
-        """Obsługuje zmianę stanu checkboxa."""
+        """Handles checkbox state change."""
         is_checked = state == Qt.CheckState.Checked.value
         # Zabezpieczenie przed rekurencją podczas programowego ustawiania checkboxa
         if hasattr(self, "_updating_checkbox") and self._updating_checkbox:
@@ -643,16 +628,16 @@ class AssetTileView(QFrame):
             logger.debug(f"Nie można zaktualizować paska statusu: {e}")
 
     def get_star_rating(self) -> int:
-        """Pobiera ocenę gwiazdkową."""
+        """Gets the star rating."""
         return sum(1 for cb in self.star_checkboxes if cb.isChecked())
 
     def set_star_rating(self, rating: int):
-        """Ustawia ocenę gwiazdkową."""
+        """Sets the star rating."""
         for i, cb in enumerate(self.star_checkboxes):
             cb.setChecked(i < rating)
 
     def _on_star_clicked(self, clicked_rating: int):
-        """Obsługuje kliknięcie w gwiazdkę."""
+        """Handles star click."""
         current_rating = self.get_star_rating()
         if clicked_rating == current_rating:
             # Jeśli kliknięto w ostatnią zaznaczoną gwiazdkę, odznacz wszystkie
@@ -668,11 +653,11 @@ class AssetTileView(QFrame):
             cb.setChecked(False)
 
     def set_drag_and_drop_enabled(self, enabled: bool):
-        """Ustawia możliwość drag and drop dla kafelka."""
+        """Enables or disables drag and drop for the tile."""
         self._drag_and_drop_enabled = enabled
 
     def _check_stars_fit(self) -> bool:
-        """Sprawdza czy gwiazdki mieszczą się na kafelku."""
+        """Checks if stars fit on the tile."""
         # Oblicz dostępną szerokość dla gwiazdek
         # Szerokość kafelka - marginesy - numer - checkbox - odstępy
         available_width = self.width() - (2 * self.margins_size) - 30 - 16 - 12
@@ -683,15 +668,92 @@ class AssetTileView(QFrame):
         return stars_width <= available_width
 
     def resizeEvent(self, event):
-        """Obsługuje zmianę rozmiaru kafelka."""
+        """Handles tile resize event."""
         super().resizeEvent(event)
         # Aktualizuj widoczność gwiazdek po zmianie rozmiaru
         self._update_stars_visibility()
         # Aktualizuj rozmiar miniatury, aby wypełnić dostępną przestrzeń
         self._update_thumbnail_size()
 
+    # ===============================================
+    # CONSOLIDATED CLEANUP METHODS
+    # ===============================================
+    
+    def _cleanup_connections_and_resources(self):
+        """Consolidated method for disconnecting all signals and cleaning up resources"""
+        # Disconnect model signals
+        if hasattr(self, "model") and self.model is not None:
+            try:
+                self.model.data_changed.disconnect(self.update_ui)
+            except (TypeError, AttributeError):
+                pass  # Connection already doesn't exist
+        
+        # Disconnect checkbox signals
+        if hasattr(self, "checkbox") and self.checkbox:
+            try:
+                self.checkbox.blockSignals(True)
+                self.checkbox.stateChanged.disconnect()
+                self.checkbox.blockSignals(False)
+            except (TypeError, AttributeError):
+                pass
+        
+        # Disconnect star checkbox signals
+        if hasattr(self, "star_checkboxes"):
+            for star_cb in self.star_checkboxes:
+                try:
+                    star_cb.blockSignals(True)
+                    star_cb.clicked.disconnect()
+                    star_cb.blockSignals(False)
+                except (TypeError, AttributeError, RuntimeError):
+                    pass  # Widget already removed or signal already disconnected
+        
+        # Stop any running thumbnail workers
+        if hasattr(self, 'is_loading_thumbnail') and self.is_loading_thumbnail:
+            # Cancel any pending thumbnail loading
+            self.is_loading_thumbnail = False
+        
+        # Clear cached pixmap to free memory
+        if hasattr(self, "_cached_pixmap"):
+            self._cached_pixmap = None
+    
+    def _reset_state_variables(self):
+        """Reset all state variables to default values"""
+        self.model = None
+        self.selection_model = None
+        self.asset_id = ""
+        self.tile_number = 0
+        self.total_tiles = 0
+        self.is_loading_thumbnail = False
+    
+    def _clear_ui_elements(self):
+        """Clear all UI elements safely"""
+        # Clear containers and labels
+        if hasattr(self, "thumbnail_container"):
+            self.thumbnail_container.clear()
+        if hasattr(self, "name_label"):
+            self.name_label.clear()
+        if hasattr(self, "tile_number_label"):
+            self.tile_number_label.clear()
+        if hasattr(self, "checkbox"):
+            self.checkbox.setChecked(False)
+        
+        # Clear star checkboxes
+        if hasattr(self, "star_checkboxes"):
+            for star_cb in self.star_checkboxes:
+                try:
+                    star_cb.setChecked(False)
+                except RuntimeError:
+                    pass  # Widget already removed
+    
+    def _remove_from_parent(self):
+        """Remove tile from parent layout if present"""
+        if self.parent():
+            self.setParent(None)
+
+
+
     def _update_thumbnail_size(self):
-        """Aktualizuje rozmiar miniatury na podstawie dostępnej przestrzeni."""
+        """Updates thumbnail size based on available space."""
         if hasattr(self, "thumbnail_container"):
             # Oblicz dostępną przestrzeń dla miniatury
             available_width = self.width() - (2 * self.margins_size)

@@ -21,8 +21,6 @@ class PreviewTile(QWidget):
         self.file_path = file_path
         self.file_name = os.path.basename(file_path)
         self.thumbnail_size = thumbnail_size
-        self._cached_pixmap = None  # Cache oryginalnego obrazka
-        self._is_placeholder = False  # Czy to jest placeholder
         self.init_ui()
         self.load_thumbnail()
 
@@ -75,32 +73,19 @@ class PreviewTile(QWidget):
             self._create_placeholder_thumbnail()
             return
 
-        # Załaduj tylko jeśli nie ma cache'a
-        if self._cached_pixmap is None:
-            pixmap = QPixmap(self.file_path)
-            if not pixmap.isNull():
-                self._cached_pixmap = pixmap
-                self._is_placeholder = False
-                print(f"PreviewTile: Cached original pixmap for: {self.file_path}")
-            else:
-                print(f"PreviewTile: Failed to load pixmap for: {self.file_path}")
-                self._create_placeholder_thumbnail()
-                return
-
-        # Przeskaluj z cache'a
-        self._scale_cached_pixmap()
-
-    def _scale_cached_pixmap(self):
-        """Przeskalowuje cache'owany pixmap do aktualnego rozmiaru"""
-        if self._cached_pixmap and not self._is_placeholder:
-            scaled_pixmap = self._cached_pixmap.scaled(
+        # Ładuj bezpośrednio z dysku - BEZ CACHOWANIA!
+        pixmap = QPixmap(self.file_path)
+        if not pixmap.isNull():
+            # Bezpośrednie skalowanie i ustawienie
+            scaled_pixmap = pixmap.scaled(
                 self.thumbnail_size,
                 self.thumbnail_size,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
             self.thumbnail_label.setPixmap(scaled_pixmap)
-        elif self._is_placeholder:
+        else:
+            print(f"PreviewTile: Failed to load pixmap for: {self.file_path}")
             self._create_placeholder_thumbnail()
 
     def _create_placeholder_thumbnail(self):
@@ -115,10 +100,6 @@ class PreviewTile(QWidget):
         painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "NO PREVIEW")
         painter.end()
         self.thumbnail_label.setPixmap(pixmap)
-
-        # Cache placeholder jako specjalny typ
-        self._cached_pixmap = pixmap
-        self._is_placeholder = True
 
     def _on_thumbnail_clicked(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -140,11 +121,9 @@ class PreviewTile(QWidget):
     def update_thumbnail_size(self, new_size: int):
         self.thumbnail_size = new_size
         self.setFixedWidth(self.thumbnail_size + 10)
-        self.setFixedHeight(self.thumbnail_size + 70)  # Stała wysokość
+        self.setFixedHeight(self.thumbnail_size + 70)
         self.thumbnail_label.setFixedSize(self.thumbnail_size, self.thumbnail_size)
-        self.filename_label.setFixedWidth(
-            self.thumbnail_size
-        )  # Dopasuj szerokość nazwy pliku
-        # Używaj cache'a zamiast ładowania z dysku!
-        self._scale_cached_pixmap()
+        self.filename_label.setFixedWidth(self.thumbnail_size)
+        # Przeładuj bezpośrednio z dysku - BEZ CACHOWANIA!
+        self.load_thumbnail()
         self.updateGeometry()

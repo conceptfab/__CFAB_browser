@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class PreviewGalleryView(QWidget):
-    """Preview Gallery - uproszczona wersja bez Object Pooling"""
+    """Preview Gallery - simplified version without Object Pooling"""
 
     preview_selected = pyqtSignal(str)
     preview_clicked = pyqtSignal(str)
@@ -51,7 +51,7 @@ class PreviewGalleryView(QWidget):
         self.setLayout(main_layout)
 
     def _clear_gallery(self):
-        """Usuwa wszystkie widgety z galerii w sposób zoptymalizowany."""
+        """Removes all widgets from the gallery in an optimized way."""
         self.setUpdatesEnabled(False)
         for i in reversed(range(self.gallery_layout.count())):
             item = self.gallery_layout.itemAt(i)
@@ -155,7 +155,7 @@ class PreviewGalleryView(QWidget):
             logger.warning(f"Preview not found in gallery: {path_to_remove}")
 
     def _reorganize_tiles(self):
-        """Przeorganizuje kafelki w layoutcie po zmianie rozmiaru lub usunięciu elementu"""
+        """Reorganizes tiles in the layout after resizing or removing an item"""
         widgets = []
         while self.gallery_layout.count():
             child = self.gallery_layout.takeAt(0)
