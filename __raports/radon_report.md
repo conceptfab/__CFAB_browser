@@ -1,6 +1,6 @@
 # 📊 Raport Radon (Złożoność)
 
-**Data generowania:** 2025-07-06 21:27:12
+**Data generowania:** 2025-07-06 22:49:42
 
 ---
 
@@ -12,10 +12,12 @@ core\amv_tab.py
     M 25:4 AmvTab.__init__ - A
     M 49:4 AmvTab.get_controller - A
 core\file_utils.py
-    F 292:0 handle_file_action - C
+    F 398:0 handle_file_action - B
+    F 316:0 _manage_preview_window - A
     F 35:0 _validate_path_input - A
     F 200:0 open_path_in_explorer - A
     F 246:0 open_file_in_default_app - A
+    F 292:0 _validate_file_action_input - A
     F 56:0 _open_path_windows - A
     F 78:0 _open_path_macos - A
     F 100:0 _open_path_linux - A
@@ -24,6 +26,9 @@ core\file_utils.py
     F 165:0 _open_file_linux - A
     F 16:0 _is_command_available - A
     F 187:0 _show_error_message - A
+    F 347:0 _handle_folder_action - A
+    F 364:0 _handle_file_thumbnail_action - A
+    F 381:0 _handle_file_filename_action - A
 core\json_utils.py
     F 67:0 load_from_file - B
     F 25:0 loads - A
@@ -147,71 +152,112 @@ core\preview_window.py
     M 188:4 PreviewWindow.resizeEvent - A
     M 202:4 PreviewWindow.closeEvent - A
 core\rules.py
-    M 606:4 FolderClickRules.decide_action - C
-    M 487:4 FolderClickRules.analyze_folder_content - B
-    M 326:4 FolderClickRules._validate_folder_path - B
-    M 411:4 FolderClickRules._categorize_file - B
-    C 291:0 FolderClickRules - B
-    M 442:4 FolderClickRules._analyze_cache_folder - B
+    M 618:4 FolderClickRules.analyze_folder_content - B
+    M 457:4 FolderClickRules._validate_folder_path - B
+    M 542:4 FolderClickRules._categorize_file - B
+    M 573:4 FolderClickRules._analyze_cache_folder - B
+    C 419:0 FolderClickRules - A
     C 176:0 AdditionalCaseStrategy - A
+    C 345:0 Condition2bRule - A
+    M 351:4 Condition2bRule.matches - A
+    C 358:0 Condition2cRule - A
+    M 364:4 Condition2cRule.matches - A
     M 180:4 AdditionalCaseStrategy.execute - A
     C 258:0 DefaultCaseStrategy - A
-    M 378:4 FolderClickRules._get_cached_analysis - A
+    M 312:4 DecisionRule.handle - A
+    C 322:0 Condition1Rule - A
+    C 333:0 Condition2aRule - A
+    M 339:4 Condition2aRule.matches - A
+    C 371:0 AdditionalCaseRule - A
+    M 509:4 FolderClickRules._get_cached_analysis - A
+    M 744:4 FolderClickRules.decide_action - A
     C 31:0 DecisionStrategy - A
     C 48:0 Condition1Strategy - A
     C 75:0 Condition2aStrategy - A
     C 104:0 Condition2bStrategy - A
     C 140:0 Condition2cStrategy - A
     M 262:4 DefaultCaseStrategy.execute - A
-    M 359:4 FolderClickRules._is_cache_valid - A
-    M 589:4 FolderClickRules._log_folder_analysis - A
+    C 294:0 DecisionRule - A
+    M 328:4 Condition1Rule.matches - A
+    M 377:4 AdditionalCaseRule.matches - A
+    C 382:0 DecisionEngine - A
+    M 490:4 FolderClickRules._is_cache_valid - A
+    M 720:4 FolderClickRules._log_folder_analysis - A
+    M 737:4 FolderClickRules._get_decision_engine - A
     M 35:4 DecisionStrategy.execute - A
     M 52:4 Condition1Strategy.execute - A
     M 79:4 Condition2aStrategy.execute - A
     M 108:4 Condition2bStrategy.execute - A
     M 144:4 Condition2cStrategy.execute - A
-    M 398:4 FolderClickRules._cache_analysis - A
-    M 472:4 FolderClickRules._create_error_result - A
+    M 299:4 DecisionRule.__init__ - A
+    M 303:4 DecisionRule.set_next - A
+    M 308:4 DecisionRule.matches - A
+    M 325:4 Condition1Rule.__init__ - A
+    M 336:4 Condition2aRule.__init__ - A
+    M 348:4 Condition2bRule.__init__ - A
+    M 361:4 Condition2cRule.__init__ - A
+    M 374:4 AdditionalCaseRule.__init__ - A
+    M 387:4 DecisionEngine.__init__ - A
+    M 391:4 DecisionEngine._build_decision_chain - A
+    M 405:4 DecisionEngine.decide - A
+    M 529:4 FolderClickRules._cache_analysis - A
+    M 603:4 FolderClickRules._create_error_result - A
 core\scanner.py
-    M 188:4 AssetRepository._create_single_asset - C
-    M 119:4 AssetRepository._check_texture_folders_presence - B
-    M 297:4 AssetRepository.create_thumbnail_for_asset - B
-    M 53:4 AssetRepository._get_files_by_extensions - B
-    M 351:4 AssetRepository._create_unpair_files_json - B
+    M 235:4 AssetRepository._validate_asset_creation_inputs - B
+    M 67:4 AssetRepository._get_files_by_extensions - B
+    M 311:4 AssetRepository._preserve_user_data - B
+    M 342:4 AssetRepository._save_asset_with_error_handling - B
+    M 485:4 AssetRepository.create_thumbnail_for_asset - A
+    M 638:4 AssetRepository.find_and_create_assets - A
+    M 709:4 AssetRepository._create_assets_from_groups - A
+    M 838:4 AssetRepository.load_existing_assets - A
     C 19:0 AssetRepository - A
-    M 405:4 AssetRepository.find_and_create_assets - A
-    M 476:4 AssetRepository._create_assets_from_groups - A
-    M 605:4 AssetRepository.load_existing_assets - A
     M 36:4 AssetRepository._handle_error - A
-    M 565:4 AssetRepository._load_asset_files - A
+    M 141:4 AssetRepository._validate_texture_check_inputs - A
+    M 182:4 AssetRepository._check_texture_folders_presence - A
+    M 421:4 AssetRepository._validate_thumbnail_inputs - A
+    M 599:4 AssetRepository._create_unpair_files_json - A
+    M 798:4 AssetRepository._load_asset_files - A
     M 32:4 AssetRepository._validate_folder_path_static - A
-    M 74:4 AssetRepository._scan_folder_for_files - A
-    M 165:4 AssetRepository._scan_for_named_folders - A
-    M 525:4 AssetRepository._handle_asset_loading_errors - A
-    M 539:4 AssetRepository._load_single_asset_file - A
-    M 463:4 AssetRepository._scan_and_group_files - A
-    M 514:4 AssetRepository._validate_asset_data - A
+    M 96:4 AssetRepository._scan_folder_for_files - A
+    M 160:4 AssetRepository._scan_texture_folders - A
+    M 212:4 AssetRepository._scan_for_named_folders - A
+    M 262:4 AssetRepository._load_existing_asset_data - A
+    M 374:4 AssetRepository._create_single_asset - A
+    M 441:4 AssetRepository._parse_thumbnail_result - A
+    M 460:4 AssetRepository._update_asset_with_thumbnail - A
+    M 536:4 AssetRepository._find_unpaired_files - A
+    M 758:4 AssetRepository._handle_asset_loading_errors - A
+    M 772:4 AssetRepository._load_single_asset_file - A
+    M 53:4 AssetRepository._has_valid_extension - A
+    M 696:4 AssetRepository._scan_and_group_files - A
+    M 747:4 AssetRepository._validate_asset_data - A
     M 27:4 AssetRepository.__init__ - A
-    M 183:4 AssetRepository._scan_for_special_folders - A
-    M 293:4 AssetRepository._get_file_size_mb - A
-    M 586:4 AssetRepository._combine_with_special_folders - A
+    M 230:4 AssetRepository._scan_for_special_folders - A
+    M 282:4 AssetRepository._create_base_asset_data - A
+    M 417:4 AssetRepository._get_file_size_mb - A
+    M 564:4 AssetRepository._create_unpaired_data_structure - A
+    M 582:4 AssetRepository._save_unpaired_files_json - A
+    M 819:4 AssetRepository._combine_with_special_folders - A
 core\selection_counter.py
-    M 53:4 SelectionCounter.count_selected_assets - B
-    M 82:4 SelectionCounter.count_visible_assets - B
+    M 53:4 SelectionCounter._get_asset_tiles - A
+    M 75:4 SelectionCounter._count_tiles_by_condition - A
+    M 126:4 SelectionCounter.count_total_assets - A
+    M 239:4 SelectionCounter.get_status_text - A
     C 14:0 SelectionCounter - A
-    M 111:4 SelectionCounter.count_total_assets - A
-    M 224:4 SelectionCounter.get_status_text - A
-    M 143:4 SelectionCounter._validate_controller - A
-    M 165:4 SelectionCounter._is_valid_asset_tile - A
-    M 185:4 SelectionCounter._is_valid_selected_tile - A
-    M 205:4 SelectionCounter._count_non_special_assets - A
+    M 158:4 SelectionCounter._validate_controller - A
+    M 180:4 SelectionCounter._is_valid_asset_tile - A
+    M 200:4 SelectionCounter._is_valid_selected_tile - A
+    M 220:4 SelectionCounter._count_non_special_assets - A
     M 32:4 SelectionCounter.get_selection_summary - A
     M 22:4 SelectionCounter.__init__ - A
+    M 102:4 SelectionCounter.count_selected_assets - A
+    M 114:4 SelectionCounter.count_visible_assets - A
 core\thread_manager.py
-    M 186:4 ThreadManager._stop_single_thread - B
-    M 231:4 ThreadManager.emergency_stop_all - B
-    C 16:0 ThreadManager - A
     M 163:4 ThreadManager._validate_and_cleanup_registries - A
+    M 225:4 ThreadManager._stop_single_thread - A
+    M 262:4 ThreadManager._emergency_stop_threads - A
+    C 16:0 ThreadManager - A
     M 31:4 ThreadManager.register_thread - A
     M 48:4 ThreadManager.register_thread_pool - A
     M 130:4 ThreadManager._stop_all_thread_pools - A
@@ -219,8 +265,13 @@ core\thread_manager.py
     M 80:4 ThreadManager.get_active_thread_count - A
     M 92:4 ThreadManager.stop_all_threads - A
     M 150:4 ThreadManager._stop_all_individual_threads - A
-    M 258:4 ThreadManager.get_status_report - A
+    M 274:4 ThreadManager._emergency_stop_thread_pools - A
+    M 314:4 ThreadManager.get_status_report - A
+    M 186:4 ThreadManager._try_graceful_thread_stop - A
+    M 204:4 ThreadManager._try_force_thread_termination - A
     M 24:4 ThreadManager.__init__ - A
+    M 285:4 ThreadManager._emergency_cleanup_registries - A
+    M 292:4 ThreadManager.emergency_stop_all - A
 core\thumbnail.py
     M 98:4 ThumbnailGenerator.generate_thumbnail - C
     C 41:0 ThumbnailGenerator - A
@@ -758,8 +809,8 @@ core\workers\worker_manager.py
     M 42:4 WorkerManager.reset_button_state - A
     M 35:4 WorkerManager.handle_error - A
 
-700 blocks (classes, functions, methods) analyzed.
-Average complexity: A (3.212857142857143)
+751 blocks (classes, functions, methods) analyzed.
+Average complexity: A (3.0905459387483356)
 ```
 
 ---
