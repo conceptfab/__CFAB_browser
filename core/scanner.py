@@ -33,7 +33,7 @@ class AssetRepository:
         """Static validation of folder path - centralized method"""
         return bool(folder_path and os.path.exists(folder_path) and os.path.isdir(folder_path))
 
-    def _handle_error(self, operation: str, error: Exception, file_path: str = None):
+    def _handle_error(self, operation: str, error: Exception, file_path: str | None = None):
         """Enhanced error handling with more detailed logging"""
         error_msg = f"Error during {operation}"
         if file_path:
@@ -62,7 +62,7 @@ class AssetRepository:
             bool: True if file has valid extension, False otherwise
         """
         _, ext = os.path.splitext(file_path)
-        return ext and ext[1:].lower() in extensions_set
+        return bool(ext and ext[1:].lower() in extensions_set)
 
     def _get_files_by_extensions(self, folder_path: str, extensions: list) -> list:
         """
@@ -308,13 +308,13 @@ class AssetRepository:
             "meta": {},
         }
 
-    def _preserve_user_data(self, asset_data: dict, existing_asset_data: dict, name: str) -> None:
+    def _preserve_user_data(self, asset_data: dict, existing_asset_data: dict | None, name: str) -> None:
         """
         Preserves user data from existing asset (stars, color, thumbnail, meta).
         
         Args:
             asset_data (dict): New asset data to update
-            existing_asset_data (dict): Existing asset data
+            existing_asset_data (dict | None): Existing asset data
             name (str): Asset name for logging
         """
         if not existing_asset_data:
@@ -447,23 +447,25 @@ class AssetRepository:
             asset_name (str): Name of the asset for logging
             
         Returns:
-            str|None: Thumbnail path or None on error
+            str|None: Thumbnail filename (not full path) or None on error
         """
         if isinstance(result, tuple) and len(result) >= 1:
-            thumbnail_path = result[0]  # First element is thumbnail path
-            logger.debug(f"Extracted thumbnail path: {thumbnail_path}")
-            return thumbnail_path
+            thumbnail_full_path = result[0]  # First element is thumbnail path
+            # Extract only filename from full path since thumbnails are always in .cache folder
+            thumbnail_filename = os.path.basename(thumbnail_full_path)
+            logger.debug(f"Extracted thumbnail filename: {thumbnail_filename} from full path: {thumbnail_full_path}")
+            return thumbnail_filename
         else:
             logger.warning(f"Invalid result from generate_thumbnail for {asset_name}: {result}")
             return None
 
-    def _update_asset_with_thumbnail(self, asset_path: str, thumbnail_path: str) -> bool:
+    def _update_asset_with_thumbnail(self, asset_path: str, thumbnail_filename: str) -> bool:
         """
-        Updates the .asset file with thumbnail path.
+        Updates the .asset file with thumbnail filename.
         
         Args:
             asset_path (str): Path to the .asset file
-            thumbnail_path (str): Path to the thumbnail
+            thumbnail_filename (str): Filename of the thumbnail (not full path)
             
         Returns:
             bool: True if successful, False otherwise
@@ -471,9 +473,9 @@ class AssetRepository:
         try:
             asset_data = load_from_file(asset_path)
             if asset_data:
-                asset_data["thumbnail"] = thumbnail_path
+                asset_data["thumbnail"] = thumbnail_filename
                 save_to_file(asset_data, asset_path)
-                logger.debug(f"Updated .asset file with thumbnail: {asset_path}")
+                logger.debug(f"Updated .asset file with thumbnail filename: {thumbnail_filename}")
                 return True
             else:
                 logger.warning(f"Failed to load asset data from: {asset_path}")
@@ -497,7 +499,7 @@ class AssetRepository:
             image_path (str): Path to the image file
 
         Returns:
-            str: Path to the created thumbnail or None on error
+            str: Filename of the created thumbnail or None on error
         """
         # Step 1: Validate inputs
         is_valid, asset_name_or_error = self._validate_thumbnail_inputs(asset_path, image_path)
@@ -515,14 +517,14 @@ class AssetRepository:
             logger.debug(f"generate_thumbnail result: {result}")
 
             # Step 3: Parse thumbnail result
-            thumbnail_path = self._parse_thumbnail_result(result, asset_name)
+            thumbnail_filename = self._parse_thumbnail_result(result, asset_name)
             
-            if thumbnail_path:
-                logger.debug(f"Created thumbnail: {thumbnail_path}")
+            if thumbnail_filename:
+                logger.debug(f"Created thumbnail: {thumbnail_filename}")
 
-                # Step 4: Update .asset file with thumbnail path
-                if self._update_asset_with_thumbnail(asset_path, thumbnail_path):
-                    return thumbnail_path
+                # Step 4: Update .asset file with thumbnail filename
+                if self._update_asset_with_thumbnail(asset_path, thumbnail_filename):
+                    return thumbnail_filename
                 else:
                     logger.warning(f"Failed to update asset file for: {asset_name}")
                     return None

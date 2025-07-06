@@ -150,12 +150,9 @@ class FileOperationController(QObject):
             if success_messages:
                 logger.debug(f"Success messages: {success_messages}")
 
-                # OPTYMALIZACJA: Szybkie usuwanie tylko przeniesionych kafelków
-                # WYŁĄCZONE TYMCZASOWO - może powodować znikanie galerii przy drag&drop
-                # self._remove_moved_assets_optimized(success_messages)
-                
-                # BEZPIECZNE ROZWIĄZANIE: Pełne odświeżanie galerii
-                self._fallback_refresh_gallery()
+                # TYMCZASOWO: CAŁKOWITE WYŁĄCZENIE ODŚWIEŻANIA - TEST
+                logger.warning("TYMCZASOWO: CAŁKOWITE WYŁĄCZENIE ODŚWIEŻANIA GALERII - TYLKO CLEAR SELECTION")
+                # self._fallback_refresh_gallery()
 
             # Clear selection after the operation
             self.model.selection_model.clear_selection()
@@ -163,11 +160,11 @@ class FileOperationController(QObject):
             # Update button states after the operation is complete
             self.controller.control_panel_controller.update_button_states()
 
-            # OPTYMALIZACJA: Odłożone odświeżanie struktury folderów
-            if success_messages:
-                # Użyj QTimer żeby odłożyć odświeżanie struktury folderów
-                # To pozwoli najpierw zakończyć usuwanie kafelków z galerii
-                QTimer.singleShot(100, lambda: self._refresh_folder_structure_delayed())
+            # TYMCZASOWO WYŁĄCZONE: Odłożone odświeżanie struktury folderów
+            # if success_messages:
+            #     # Użyj QTimer żeby odłożyć odświeżanie struktury folderów
+            #     # To pozwoli najpierw zakończyć usuwanie kafelków z galerii
+            #     QTimer.singleShot(100, lambda: self._refresh_folder_structure_delayed())
 
             logger.info(
                 "File operation completed - Success: %d, Errors: %d",
@@ -184,15 +181,15 @@ class FileOperationController(QObject):
             # Najpierw usuń kafelki z widoku
             self._remove_tiles_from_view_fast(success_messages)
             
-            # Zaktualizuj model assetów (bez bezpośredniej modyfikacji _assets)
+            # Zaktualizuj model assetów BEZ EMITOWANIA SYGNAŁU (bez przebudowy galerii)
             current_assets = self.model.asset_grid_model.get_assets()
             updated_assets = [
                 asset for asset in current_assets 
                 if asset.get("name") not in success_messages
             ]
             
-            # BEZPIECZNA aktualizacja poprzez publiczne API
-            self.model.asset_grid_model.set_assets(updated_assets)
+            # CICHA aktualizacja bez emitowania sygnału assets_changed
+            self.model.asset_grid_model.update_assets_silently(updated_assets)
             
             # Odłożone odświeżanie struktury folderów
             QTimer.singleShot(100, self._refresh_folder_structure_delayed)
@@ -226,13 +223,6 @@ class FileOperationController(QObject):
                 logger.debug("OPTYMALIZACJA: Brak ID assetów do usunięcia")
                 return
             
-            if not hasattr(self.view, 'gallery_container_widget'):
-                logger.warning("OPTYMALIZACJA: Brak gallery_container_widget w widoku")
-                return
-            
-            # Wyłącz aktualizacje widoku dla lepszej wydajności
-            self.view.gallery_container_widget.setUpdatesEnabled(False)
-            
             # Znajdź kafelki do usunięcia (bez modyfikacji podczas iteracji)
             asset_tiles = self.controller.asset_grid_controller.get_asset_tiles()
             tiles_to_remove = []
@@ -247,7 +237,7 @@ class FileOperationController(QObject):
                 if hasattr(self.view, 'gallery_layout'):
                     self.view.gallery_layout.removeWidget(tile)
                 
-                # Usuń z listy asset_tiles
+                # Usuń z listy asset_tiles BEZPIECZNIE
                 if tile in asset_tiles:
                     asset_tiles.remove(tile)
                 
@@ -261,13 +251,6 @@ class FileOperationController(QObject):
 
         except Exception as e:
             logger.error(f"Błąd podczas szybkiego usuwania kafelków: {e}")
-        finally:
-            # Ponownie włącz aktualizacje widoku
-            if hasattr(self.view, 'gallery_container_widget'):
-                self.view.gallery_container_widget.setUpdatesEnabled(True)
-                # Jednorazowa aktualizacja layoutu
-                if hasattr(self.view, 'gallery_layout'):
-                    self.view.gallery_layout.update()
 
     def _refresh_folder_structure_delayed(self):
         """OPTYMALIZACJA: Odłożone odświeżanie struktury folderów"""

@@ -46,6 +46,14 @@ class AssetGridModel(QObject):
         self.assets_changed.emit(self._assets)
         logger.debug("Assets set: %d items", len(self._assets))
 
+    def update_assets_silently(self, assets: Optional[List[Any]]) -> None:
+        """Updates assets without emitting signals - for optimization purposes"""
+        if assets is None:
+            self._assets = []
+        else:
+            self._assets = assets
+        logger.debug("Assets updated silently: %d items", len(self._assets))
+
     def get_assets(self) -> List[Any]:
         return self._assets if self._assets is not None else []
 
