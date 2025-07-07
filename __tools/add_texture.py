@@ -1,19 +1,31 @@
-import sys
 import os
+import sys
+
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLineEdit, QLabel, QTextEdit, QFileDialog, QMessageBox
+    QApplication,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import QThread, pyqtSignal, QObject
 
 # --- Logika działająca w osobnym wątku, aby nie blokować UI ---
+
 
 class Worker(QObject):
     """
     Klasa robocza, która wykonuje zadanie w tle.
     """
+
     progress = pyqtSignal(str)  # Sygnał do wysyłania komunikatów o postępie
-    finished = pyqtSignal()     # Sygnał informujący o zakończeniu pracy
+    finished = pyqtSignal()  # Sygnał informujący o zakończeniu pracy
 
     def __init__(self, root_path):
         super().__init__()
@@ -25,7 +37,9 @@ class Worker(QObject):
         Główna metoda wykonująca przeszukiwanie i tworzenie folderów.
         """
         if not os.path.isdir(self.root_path):
-            self.progress.emit(f"BŁĄD: Podana ścieżka nie jest prawidłowym katalogiem: {self.root_path}")
+            self.progress.emit(
+                f"BŁĄD: Podana ścieżka nie jest prawidłowym katalogiem: {self.root_path}"
+            )
             self.finished.emit()
             return
 
@@ -38,7 +52,7 @@ class Worker(QObject):
             if not dirnames:
                 # To jest "ostatni" podfolder w tej gałęzi drzewa
                 self.progress.emit(f"Znaleziono ostatni podfolder: {dirpath}")
-                textures_folder_path = os.path.join(dirpath, 'textures')
+                textures_folder_path = os.path.join(dirpath, "textures")
 
                 # Sprawdzamy, czy folder "textures" już nie istnieje
                 if not os.path.exists(textures_folder_path):
@@ -48,13 +62,16 @@ class Worker(QObject):
                     except OSError as e:
                         self.progress.emit(f"  -> BŁĄD podczas tworzenia folderu: {e}")
                 else:
-                    self.progress.emit(f"  -> POMINIĘTO (już istnieje): {textures_folder_path}")
-        
+                    self.progress.emit(
+                        f"  -> POMINIĘTO (już istnieje): {textures_folder_path}"
+                    )
+
         self.progress.emit("\nPrzeszukiwanie zakończone.")
         self.finished.emit()
 
 
 # --- Główny interfejs użytkownika ---
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -83,7 +100,7 @@ class MainWindow(QMainWindow):
         # Przycisk startu
         self.start_button = QPushButton("Uruchom")
         self.start_button.clicked.connect(self.start_processing)
-        self.start_button.setStyleSheet("font-size: 14px; padding: 5px;")
+        self.start_button.setProperty("class", "start-button")
 
         # Pole na dziennik (log)
         log_label = QLabel("Dziennik operacji:")
@@ -95,7 +112,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.start_button)
         main_layout.addWidget(log_label)
         main_layout.addWidget(self.log_text_edit)
-        
+
         # Inicjalizacja wątku
         self.thread = None
         self.worker = None
@@ -149,8 +166,9 @@ class MainWindow(QMainWindow):
         self.start_button.setEnabled(True)
         QMessageBox.information(self, "Zakończono", "Operacja została zakończona.")
 
+
 # --- Uruchomienie aplikacji ---
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

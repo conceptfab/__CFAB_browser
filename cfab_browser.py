@@ -6,12 +6,17 @@ CFAB Browser - Główny plik uruchamiający aplikację
 import logging
 import os
 import sys
+import time
+import traceback
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QApplication, QSplashScreen
 
 # Import głównego okna
 from core.json_utils import load_from_file
 from core.main_window import MainWindow
+from core.thumbnail_cache import ThumbnailCache
 
 
 def setup_logger():
@@ -71,11 +76,30 @@ def main():
         app.setApplicationName("CFAB Browser")
         app.setApplicationVersion("1.0.0")
 
+        # Ekran powitalny (splash screen)
+        pixmap = QPixmap("core/resources/img/icon.png")
+        splash = QSplashScreen(pixmap)
+        splash.show()
+
+        # Daj czas na wyświetlenie ekranu powitalnego
+        app.processEvents()
+
         # Ładowanie stylów
         load_styles(app, logger)
 
+        # Inicjalizacja cache miniatur po utworzeniu QApplication
+        global thumbnail_cache
+        thumbnail_cache = ThumbnailCache()
+
+        logger.info("Creating MainWindow...")
         window = MainWindow()
+
+        logger.info("Showing MainWindow...")
         window.show()
+        splash.finish(window)
+
+        # Aktualizuj status po uruchomieniu
+        window.update_status("Aplikacja gotowa")
 
         logger.info("CFAB Browser window displayed successfully")
 
@@ -83,6 +107,7 @@ def main():
 
     except Exception as e:
         logger.error(f"Failed to start application: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         sys.exit(1)
 
 

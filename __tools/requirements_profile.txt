@@ -1,0 +1,39 @@
+# Zależności dla narzędzi profilowania CFAB Browser
+# Data: 2025-01-05
+
+# Podstawowe narzędzia profilowania (wbudowane w Python)
+# cProfile - wbudowany w Python
+# pstats - wbudowany w Python
+
+# Dodatkowe narzędzia profilowania
+psutil>=5.9.0              # Monitorowanie pamięci i procesów
+memory-profiler>=0.60.0    # Szczegółowe profilowanie pamięci
+line-profiler>=4.0.0       # Profilowanie liniowe (opcjonalne)
+
+# Narzędzia analizy statycznej
+pylint>=2.17.0             # Kompleksowy analizator kodu
+flake8>=6.0.0              # Szybki linter
+black>=23.0.0              # Automatyczne formatowanie
+isort>=5.12.0              # Sortowanie importów
+
+# Narzędzia metryk kodu
+radon>=5.1.0               # Złożoność cyklomatyczna
+mccabe>=0.7.0              # Alternatywa dla Radon
+coverage>=7.2.0            # Pokrycie testami
+
+# Narzędzia bezpieczeństwa
+bandit>=1.7.0              # Bezpieczeństwo kodu
+safety>=2.3.0              # Bezpieczeństwo zależności
+
+# Narzędzia wydajności
+py-spy>=0.3.0              # Profilowanie z małym overhead (opcjonalne)
+pyinstrument>=4.0.0        # Profilowanie statystyczne (opcjonalne)
+
+# Narzędzia wizualizacji (opcjonalne)
+matplotlib>=3.7.0          # Wykresy wydajności
+seaborn>=0.12.0            # Wykresy statystyczne
+plotly>=5.14.0             # Interaktywne wykresy
+
+# Narzędzia raportowania
+jinja2>=3.1.0              # Szablony raportów (opcjonalne)
+markdown>=3.4.0            # Generowanie dokumentacji (opcjonalne) 

@@ -1,9 +1,11 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+core/__pycache__/
 *.py[cod]
 *$py.class
 _CFAB_3DHUB-env/
-
+_dist/
+*.exe
 # C extensions
 *.so
 
@@ -166,4 +168,3 @@ temp/
 thumbnails/
 local_config.json
 user_settings.json
-/core/__pycache__

@@ -1,46 +1,309 @@
 #!/usr/bin/env python3
 """
-Rules - Logika decyzyjna dla obsługi kliknięć w foldery
+Rules - Decision logic for handling folder clicks
 
-Ten moduł zawiera klasę FolderClickRules, która implementuje logikę decyzyjną
-dla aplikacji CFAB Browser. Klasa analizuje zawartość folderów i podejmuje
-decyzje o tym, czy uruchomić scanner do przetwarzania plików, czy wyświetlić
-galerię gotowych assetów.
+This module contains the FolderClickRules class, which implements decision logic
+for the CFAB Browser application. The class analyzes folder contents and decides
+whether to run the scanner to process files or display the gallery of ready assets.
 
-Główne funkcjonalności:
-- Analiza zawartości folderu (pliki asset, archiwa, podglądy)
-- Sprawdzanie istnienia i zawartości folderu .cache
-- Podejmowanie decyzji o akcji na podstawie stanu folderu
-- Obsługa różnych scenariuszy (brak plików, niekompletne cache, gotowe assety)
+Main features:
+- Analyzes folder contents (asset files, archives, previews)
+- Checks for the existence and contents of the .cache folder
+- Decides on action based on folder state
+- Handles various scenarios (no files, incomplete cache, ready assets)
 
-Autor: CFAB Browser Team
-Data: 2025
+Author: CFAB Browser Team
+Date: 2025
 """
 
 import logging
 import os
 import re
+import time
 from typing import Dict, Optional, Set
+
+from core.performance_monitor import measure_operation
+from core.json_utils import load_from_file
 
 logger = logging.getLogger(__name__)
 
 
+class DecisionStrategy:
+    """Abstract base class for folder decision strategies"""
+    
+    @staticmethod
+    def execute(folder_path: str, content: Dict) -> Dict:
+        """Execute the decision strategy
+        
+        Args:
+            folder_path: Path to the folder being analyzed
+            content: Analyzed folder content data
+            
+        Returns:
+            dict: Decision result with action, message, condition, details
+        """
+        raise NotImplementedError("Subclasses must implement execute method")
+
+
+class Condition1Strategy(DecisionStrategy):
+    """Strategy for Condition 1: Archives but no assets → Run scanner"""
+    
+    @staticmethod
+    def execute(folder_path: str, content: Dict) -> Dict:
+        """Handle condition 1: Folder contains archive/preview files, but NO asset files"""
+        asset_count = content["asset_count"]
+        preview_archive_count = content["preview_archive_count"]
+
+        logger.debug(
+            f"CONDITION 1: {folder_path} | "
+            f"Asset files: {asset_count} | "
+            f"Archive/Preview files: {preview_archive_count} | "
+            f"DECISION: Running scanner (no asset files)"
+        )
+
+        return {
+            "action": "run_scanner",
+            "message": f"No asset files - running scanner",
+            "condition": "condition_1",
+            "details": {
+                "asset_count": asset_count,
+                "preview_archive_count": preview_archive_count,
+            },
+        }
+
+
+class Condition2aStrategy(DecisionStrategy):
+    """Strategy for Condition 2a: Both archives and assets, but no cache → Run scanner"""
+    
+    @staticmethod
+    def execute(folder_path: str, content: Dict) -> Dict:
+        """Handle condition 2a: Both file types exist, but no .cache folder"""
+        asset_count = content["asset_count"]
+        preview_archive_count = content["preview_archive_count"]
+
+        logger.debug(
+            f"CONDITION 2a: {folder_path} | "
+            f"Asset files: {asset_count} | "
+            f"Archive/Preview files: {preview_archive_count} | "
+            f"Cache: NO | "
+            f"DECISION: Running scanner (no cache)"
+        )
+
+        return {
+            "action": "run_scanner",
+            "message": f"Both types of files, but no cache - running scanner",
+            "condition": "condition_2a",
+            "details": {
+                "asset_count": asset_count,
+                "preview_archive_count": preview_archive_count,
+                "cache_exists": False,
+            },
+        }
+
+
+class Condition2bStrategy(DecisionStrategy):
+    """Strategy for Condition 2b: Both archives and assets, cache exists but mismatched → Run scanner"""
+    
+    @staticmethod
+    def execute(folder_path: str, content: Dict) -> Dict:
+        """Handle condition 2b: Cache exists but thumbnail count doesn't match asset count"""
+        asset_count = content["asset_count"]
+        preview_archive_count = content["preview_archive_count"]
+        cache_thumb_count = content["cache_thumb_count"]
+
+        logger.debug(
+            f"CONDITION 2b: {folder_path} | "
+            f"Asset files: {asset_count} | "
+            f"Archive/Preview files: {preview_archive_count} | "
+            f"Cache: YES | "
+            f"Thumbnails: {cache_thumb_count} | "
+            f"DECISION: Running scanner (cache mismatch)"
+        )
+
+        return {
+            "action": "run_scanner",
+            "message": (
+                f"Both types of files, mismatched number of thumbnails "
+                f"({cache_thumb_count}) and asset files ({asset_count}) - "
+                f"running scanner"
+            ),
+            "condition": "condition_2b",
+            "details": {
+                "asset_count": asset_count,
+                "preview_archive_count": preview_archive_count,
+                "cache_exists": True,
+                "cache_thumb_count": cache_thumb_count,
+            },
+        }
+
+
+class Condition2cStrategy(DecisionStrategy):
+    """Strategy for Condition 2c: Both archives and assets, cache ready → Show gallery"""
+    
+    @staticmethod
+    def execute(folder_path: str, content: Dict) -> Dict:
+        """Handle condition 2c: Everything is ready, can display gallery"""
+        asset_count = content["asset_count"]
+        preview_archive_count = content["preview_archive_count"]
+        cache_thumb_count = content["cache_thumb_count"]
+
+        logger.debug(
+            f"CONDITION 2c: {folder_path} | "
+            f"Asset files: {asset_count} | "
+            f"Archive/Preview files: {preview_archive_count} | "
+            f"Cache: YES | "
+            f"Thumbnails: {cache_thumb_count} | "
+            f"DECISION: Displaying gallery (all ready)"
+        )
+
+        return {
+            "action": "show_gallery",
+            "message": (
+                f"Both types of files, all ready - "
+                f"displaying gallery (thumb: {cache_thumb_count}, "
+                f"asset: {asset_count})"
+            ),
+            "condition": "condition_2c",
+            "details": {
+                "asset_count": asset_count,
+                "preview_archive_count": preview_archive_count,
+                "cache_exists": True,
+                "cache_thumb_count": cache_thumb_count,
+            },
+        }
+
+
+class AdditionalCaseStrategy(DecisionStrategy):
+    """Strategy for Additional Cases: Only assets (no archives)"""
+    
+    @staticmethod
+    def execute(folder_path: str, content: Dict) -> Dict:
+        """Handle additional cases: Only asset files, various cache states"""
+        asset_count = content["asset_count"]
+        cache_exists = content["cache_exists"]
+        cache_thumb_count = content["cache_thumb_count"]
+        
+        # No .cache folder → Run scanner
+        if not cache_exists:
+            logger.debug(
+                f"ADDITIONAL CASE (NO CACHE): {folder_path} | "
+                f"Asset files: {asset_count} | "
+                f"Cache: NO | "
+                f"DECISION: Running scanner (no cache)"
+            )
+            
+            return {
+                "action": "run_scanner",
+                "message": f"Only asset files, no cache - running scanner",
+                "condition": "additional_case_no_cache",
+                "details": {
+                    "asset_count": asset_count,
+                    "cache_exists": False,
+                },
+            }
+        
+        # Mismatched number of thumbnails → Run scanner
+        elif cache_thumb_count != asset_count:
+            logger.debug(
+                f"ADDITIONAL CASE (MISMATCH): {folder_path} | "
+                f"Asset files: {asset_count} | "
+                f"Cache: YES | "
+                f"Thumbnails: {cache_thumb_count} | "
+                f"DECISION: Running scanner (cache mismatch)"
+            )
+            
+            return {
+                "action": "run_scanner",
+                "message": (
+                    f"Only asset files, mismatched number of thumbnails "
+                    f"({cache_thumb_count}) and asset files ({asset_count}) - "
+                    f"running scanner"
+                ),
+                "condition": "additional_case_mismatch",
+                "details": {
+                    "asset_count": asset_count,
+                    "preview_archive_count": 0,
+                    "cache_exists": True,
+                    "cache_thumb_count": cache_thumb_count,
+                },
+            }
+        
+        # All ready → Display gallery
+        else:
+            logger.debug(
+                f"ADDITIONAL CASE (READY): {folder_path} | "
+                f"Asset files: {asset_count} | "
+                f"Cache: YES | "
+                f"Thumbnails: {cache_thumb_count} | "
+                f"DECISION: Displaying gallery (all ready)"
+            )
+            
+            return {
+                "action": "show_gallery",
+                "message": (
+                    f"Only asset files, all ready - "
+                    f"displaying gallery (thumb: {cache_thumb_count}, "
+                    f"asset: {asset_count})"
+                ),
+                "condition": "additional_case_ready",
+                "details": {
+                    "asset_count": asset_count,
+                    "preview_archive_count": 0,
+                    "cache_exists": True,
+                    "cache_thumb_count": cache_thumb_count,
+                },
+            }
+
+
+class DefaultCaseStrategy(DecisionStrategy):
+    """Strategy for Default Case: No appropriate files → No action"""
+    
+    @staticmethod
+    def execute(folder_path: str, content: Dict) -> Dict:
+        """Handle default case: Folder does not contain appropriate files"""
+        asset_count = content["asset_count"]
+        preview_archive_count = content["preview_archive_count"]
+        cache_exists = content["cache_exists"]
+        cache_thumb_count = content["cache_thumb_count"]
+
+        logger.debug(
+            f"DEFAULT CASE: {folder_path} | "
+            f"Asset files: {asset_count} | "
+            f"Archive/Preview files: {preview_archive_count} | "
+            f"Cache: {'YES' if cache_exists else 'NO'} | "
+            f"Thumbnails: {cache_thumb_count} | "
+            f"DECISION: No action (folder does not contain appropriate files)"
+        )
+
+        return {
+            "action": "no_action",
+            "message": "Folder does not contain appropriate files",
+            "condition": "default_case",
+            "details": {
+                "asset_count": asset_count,
+                "preview_archive_count": preview_archive_count,
+                "cache_exists": cache_exists,
+                "cache_thumb_count": cache_thumb_count,
+            },
+        }
+
+
 class FolderClickRules:
     """
-    Klasa zawierająca logikę decyzyjną dla kliknięć w foldery
+    Class containing decision logic for folder clicks
 
-    Ta klasa implementuje algorytm decyzyjny, który analizuje zawartość folderu
-    i podejmuje decyzję o tym, jaką akcję wykonać:
+    This class implements a decision algorithm that analyzes folder contents
+    and decides which action to take:
 
-    - Uruchomić scanner (gdy brak plików asset lub niekompletne cache)
-    - Wyświetlić galerię (gdy wszystko jest gotowe)
-    - Nie wykonać żadnej akcji (gdy folder nie zawiera odpowiednich plików)
+    - Run the scanner (when there are no asset files or incomplete cache)
+    - Display the gallery (when everything is ready)
+    - Do nothing (when the folder does not contain appropriate files)
 
-    Klasa obsługuje następujące typy plików:
-    - Pliki .asset - główne pliki assetów
-    - Pliki archiwalne (.rar, .zip, .sbsar) - źródła do przetwarzania
-    - Pliki podglądów (.jpg, .png, .jpeg, .gif) - obrazy podglądowe
-    - Folder .cache - cache z wygenerowanymi miniaturami
+    The class handles the following file types:
+    - .asset files - main asset files
+    - Archive files (.rar, .zip, .sbsar) - sources for processing
+    - Preview files (.jpg, .png, .jpeg, .gif) - preview images
+    - .cache folder - cache with generated thumbnails
     """
 
     # Stałe konfiguracyjne
@@ -49,11 +312,11 @@ class FolderClickRules:
 
     # Zbiory rozszerzeń plików dla efektywnego lookup
     ASSET_EXTENSIONS: Set[str] = {".asset"}
-    ARCHIVE_EXTENSIONS: Set[str] = {".rar", ".zip", ".sbsar"}
-    PREVIEW_EXTENSIONS: Set[str] = {".jpg", ".jpeg", ".png", ".gif"}
+    ARCHIVE_EXTENSIONS: Set[str] = {".rar", ".zip", ".sbsar", ".7z"}
+    PREVIEW_EXTENSIONS: Set[str] = {".jpg", ".jpeg", ".png",".webp", ".gif"}
 
     # Cache TTL (Time To Live) w sekundach
-    CACHE_TTL = 300  # 5 minut
+    CACHE_TTL = 300  # 5 minutes
 
     # Cache dla wyników analizy folderów
     _folder_analysis_cache: Dict[str, Dict] = {}
@@ -62,49 +325,47 @@ class FolderClickRules:
     @staticmethod
     def _validate_folder_path(folder_path: str) -> Optional[str]:
         """
-        Waliduje ścieżkę folderu pod kątem bezpieczeństwa
+        Validates the folder path for security
 
         Args:
-            folder_path (str): Ścieżka do walidacji
+            folder_path (str): Path to validate
 
         Returns:
-            Optional[str]: Komunikat błędu lub None jeśli ścieżka jest poprawna
+            Optional[str]: Error message or None if the path is valid
         """
         if not folder_path:
-            return "Ścieżka folderu nie może być pusta"
+            return "Folder path cannot be empty"
 
         if not isinstance(folder_path, str):
-            return "Ścieżka folderu musi być stringiem"
+            return "Folder path must be a string"
 
         # Sprawdź czy ścieżka nie zawiera sekwencji path traversal
         if ".." in folder_path or "\\.." in folder_path or "/.." in folder_path:
-            return "Ścieżka zawiera niedozwolone sekwencje path traversal"
+            return "Folder path contains forbidden path traversal sequences"
 
         # Sprawdź czy ścieżka nie jest zbyt długa
         if len(folder_path) > 4096:
-            return "Ścieżka folderu jest zbyt długa"
+            return "Folder path is too long"
 
         # Sprawdź czy ścieżka nie zawiera niedozwolonych znaków
-        # Uwaga: dwukropek (:) jest dozwolony w Windows (C:\)
+        # Note: colon (:) is allowed in Windows (C:\)
         invalid_chars = re.search(r'[<>"|?*]', folder_path)
         if invalid_chars:
-            return f"Ścieżka zawiera niedozwolone znaki: " f"{invalid_chars.group()}"
+            return f"Folder path contains forbidden characters: {invalid_chars.group()}"
 
         return None
 
     @staticmethod
     def _is_cache_valid(folder_path: str) -> bool:
         """
-        Sprawdza czy cache dla folderu jest aktualny
+        Checks if the cache for the folder is up to date
 
         Args:
-            folder_path (str): Ścieżka do folderu
+            folder_path (str): Path to the folder
 
         Returns:
-            bool: True jeśli cache jest aktualny
+            bool: True if the cache is up to date
         """
-        import time
-
         if folder_path not in FolderClickRules._cache_timestamps:
             return False
 
@@ -116,19 +377,19 @@ class FolderClickRules:
     @staticmethod
     def _get_cached_analysis(folder_path: str) -> Optional[Dict]:
         """
-        Pobiera zcache'owaną analizę folderu
+        Gets cached folder analysis
 
         Args:
-            folder_path (str): Ścieżka do folderu
+            folder_path (str): Path to the folder
 
         Returns:
-            Optional[Dict]: Zcache'owana analiza lub None
+            Optional[Dict]: Cached analysis or None
         """
         if (
             folder_path in FolderClickRules._folder_analysis_cache
             and FolderClickRules._is_cache_valid(folder_path)
         ):
-            logger.debug(f"Cache hit dla folderu: {folder_path}")
+            logger.debug(f"Cache hit for folder: {folder_path}")
             return FolderClickRules._folder_analysis_cache[folder_path]
 
         return None
@@ -136,28 +397,26 @@ class FolderClickRules:
     @staticmethod
     def _cache_analysis(folder_path: str, analysis: Dict) -> None:
         """
-        Zapisuje analizę folderu do cache
+        Saves folder analysis to cache
 
         Args:
-            folder_path (str): Ścieżka do folderu
-            analysis (Dict): Wynik analizy do zcache'owania
+            folder_path (str): Path to the folder
+            analysis (Dict): Analysis result to cache
         """
-        import time
-
         FolderClickRules._folder_analysis_cache[folder_path] = analysis
         FolderClickRules._cache_timestamps[folder_path] = time.time()
-        logger.debug(f"Zcache'owano analizę folderu: {folder_path}")
+        logger.debug(f"Cached folder analysis: {folder_path}")
 
     @staticmethod
     def _categorize_file(item: str) -> Optional[str]:
         """
-        Kategoryzuje plik na podstawie rozszerzenia
+        Categorizes a file based on its extension
 
         Args:
-            item (str): Nazwa pliku
+            item (str): File name
 
         Returns:
-            Optional[str]: Kategoria pliku lub None jeśli nie pasuje
+            Optional[str]: File category or None if not matched
         """
         if item.startswith("."):
             return None
@@ -182,13 +441,13 @@ class FolderClickRules:
     @staticmethod
     def _analyze_cache_folder(cache_folder_path: str) -> int:
         """
-        Analizuje zawartość folderu cache i zwraca liczbę miniaturek
+        Analyzes the contents of the cache folder and returns the number of thumbnails
 
         Args:
-            cache_folder_path (str): Ścieżka do folderu cache
+            cache_folder_path (str): Path to the cache folder
 
         Returns:
-            int: Liczba plików miniaturek
+            int: Number of thumbnail files
         """
         try:
             if not os.path.exists(cache_folder_path) or not os.path.isdir(
@@ -206,34 +465,49 @@ class FolderClickRules:
             return thumb_count
 
         except (OSError, PermissionError) as e:
-            logger.warning(f"Błąd sprawdzania .cache: {e}")
+            logger.warning(f"Error checking .cache: {e}")
             return 0
+
+    @staticmethod
+    def _create_error_result(error_message: str) -> dict:
+        """
+        Helper method for generating an error dictionary
+        """
+        return {
+            "error": error_message,
+            "asset_files": [],
+            "preview_archive_files": [],
+            "cache_exists": False,
+            "cache_thumb_count": 0,
+            "asset_count": 0,
+            "preview_archive_count": 0,
+        }
 
     @staticmethod
     def analyze_folder_content(folder_path: str) -> dict:
         """
-        Analizuje zawartość folderu i zwraca szczegółowe informacje o plikach
+        Analyzes the contents of a folder and returns detailed file information
 
-        Metoda skanuje folder w poszukiwaniu różnych typów plików:
-        - Pliki .asset (główne pliki assetów)
-        - Pliki archiwalne (.rar, .zip, .sbsar)
-        - Pliki podglądów (.jpg, .png, .jpeg, .gif)
-        - Folder .cache z miniaturami
+        Method scans the folder for different types of files:
+        - .asset files (main asset files)
+        - Archive files (.rar, .zip, .sbsar)
+        - Preview files (.jpg, .png, .jpeg, .gif)
+        - .cache folder with thumbnails
 
         Args:
-            folder_path (str): Ścieżka do folderu do analizy
+            folder_path (str): Path to the folder to analyze
 
         Returns:
-            dict: Słownik zawierający:
-                - asset_files: lista plików .asset
-                - preview_archive_files: lista plików archiwalnych i podglądów
-                - cache_exists: czy istnieje folder .cache
-                - cache_thumb_count: liczba plików miniaturek w .cache
-                - asset_count: liczba plików asset
-                - preview_archive_count: liczba plików archiwalnych/podglądów
-                - error: komunikat błędu (jeśli wystąpił)
+            dict: Dictionary containing:
+                - asset_files: list of .asset files
+                - preview_archive_files: list of archive and preview files
+                - cache_exists: whether .cache folder exists
+                - cache_thumb_count: number of thumbnail files in .cache
+                - asset_count: number of asset files
+                - preview_archive_count: number of archive/preview files
+                - error: error message (if any)
 
-        Przykład zwracanego słownika:
+        Example return dictionary:
         {
             "asset_files": ["model.asset", "texture.asset"],
             "preview_archive_files": ["model.zip", "preview.jpg"],
@@ -243,55 +517,32 @@ class FolderClickRules:
             "preview_archive_count": 2
         }
         """
-        # Sprawdź cache
+        # Check cache
         cached_result = FolderClickRules._get_cached_analysis(folder_path)
         if cached_result:
             return cached_result
 
-        # Walidacja input
+        # Input validation
         validation_error = FolderClickRules._validate_folder_path(folder_path)
         if validation_error:
-            error_result = {
-                "error": validation_error,
-                "asset_files": [],
-                "preview_archive_files": [],
-                "cache_exists": False,
-                "cache_thumb_count": 0,
-                "asset_count": 0,
-                "preview_archive_count": 0,
-            }
-            return error_result
+            return FolderClickRules._create_error_result(validation_error)
 
         try:
-            # Sprawdź czy folder istnieje
+            # Check if folder exists
             if not os.path.exists(folder_path):
-                error_result = {
-                    "error": f"Folder nie istnieje: {folder_path}",
-                    "asset_files": [],
-                    "preview_archive_files": [],
-                    "cache_exists": False,
-                    "cache_thumb_count": 0,
-                    "asset_count": 0,
-                    "preview_archive_count": 0,
-                }
-                return error_result
+                return FolderClickRules._create_error_result(
+                    f"Folder does not exist: {folder_path}"
+                )
 
-            # Pobierz listę wszystkich elementów w folderze
+            # Get list of all items in the folder
             try:
                 items = os.listdir(folder_path)
             except (OSError, PermissionError) as e:
-                error_result = {
-                    "error": f"Brak uprawnień do odczytu folderu: {e}",
-                    "asset_files": [],
-                    "preview_archive_files": [],
-                    "cache_exists": False,
-                    "cache_thumb_count": 0,
-                    "asset_count": 0,
-                    "preview_archive_count": 0,
-                }
-                return error_result
+                return FolderClickRules._create_error_result(
+                    f"No read permission for folder: {e}"
+                )
 
-            # Kategoryzuj pliki według typów
+            # Categorize files by type
             asset_files = []
             preview_archive_files = []
 
@@ -302,7 +553,7 @@ class FolderClickRules:
                 elif category in ("archive", "preview"):
                     preview_archive_files.append(item)
 
-            # Sprawdź istnienie i zawartość folderu .cache
+            # Check for existence and contents of .cache folder
             cache_folder_path = os.path.join(
                 folder_path, FolderClickRules.CACHE_FOLDER_NAME
             )
@@ -310,12 +561,12 @@ class FolderClickRules:
                 cache_folder_path
             )
 
-            # Policz pliki miniaturek w folderze .cache
+            # Count thumbnail files in .cache folder
             cache_thumb_count = FolderClickRules._analyze_cache_folder(
                 cache_folder_path
             )
 
-            # Przygotuj wynik
+            # Prepare result
             result = {
                 "asset_files": asset_files,
                 "preview_archive_files": preview_archive_files,
@@ -325,383 +576,69 @@ class FolderClickRules:
                 "preview_archive_count": len(preview_archive_files),
             }
 
-            # Zcache'uj wynik
+            # Cache result
             FolderClickRules._cache_analysis(folder_path, result)
 
             return result
 
         except Exception as e:
-            logger.error(f"Błąd analizy zawartości folderu {folder_path}: {e}")
-            error_result = {
-                "error": f"Błąd analizy folderu: {e}",
-                "asset_files": [],
-                "preview_archive_files": [],
-                "cache_exists": False,
-                "cache_thumb_count": 0,
-                "asset_count": 0,
-                "preview_archive_count": 0,
-            }
-            return error_result
+            logger.error(f"Folder analysis error: {e}")
+            return FolderClickRules._create_error_result(f"Folder analysis error: {e}")
 
     @staticmethod
     def _log_folder_analysis(folder_path: str, content: Dict) -> None:
         """
-        Loguje informacje o analizie folderu na poziomie DEBUG
+        Logs folder analysis information at DEBUG level
 
         Args:
-            folder_path (str): Ścieżka do folderu
-            content (Dict): Wynik analizy folderu
+            folder_path (str): Path to the folder
+            content (Dict): Folder analysis result
         """
         logger.debug(
-            f"ANALIZA FOLDERU: {folder_path} | "
+            f"FOLDER ANALYSIS: {folder_path} | "
             f"Asset: {content.get('asset_count', 0)} | "
-            f"Podglądy/Archiwa: {content.get('preview_archive_count', 0)} | "
-            f"Cache: {'TAK' if content.get('cache_exists', False) else 'NIE'} | "
-            f"Miniatury: {content.get('cache_thumb_count', 0)}"
+            f"Previews/Archives: {content.get('preview_archive_count', 0)} | "
+            f"Cache: {'YES' if content.get('cache_exists', False) else 'NO'} | "
+            f"Thumbnails: {content.get('cache_thumb_count', 0)}"
         )
-
-    @staticmethod
-    def _handle_condition_1(folder_path: str, content: Dict) -> Dict:
-        """
-        Obsługuje warunek 1: Folder zawiera pliki archiwalne/podglądy,
-        ale NIE ma plików asset
-
-        Args:
-            folder_path (str): Ścieżka do folderu
-            content (Dict): Wynik analizy folderu
-
-        Returns:
-            Dict: Decyzja dla warunku 1
-        """
-        asset_count = content["asset_count"]
-        preview_archive_count = content["preview_archive_count"]
-
-        logger.debug(
-            f"PRZYPADEK 1 WYKRYTY: {folder_path} | "
-            f"Pliki archiwalne/podglądy: {preview_archive_count} | "
-            f"Pliki asset: {asset_count} | "
-            f"DECYZJA: Uruchamiam scanner (brak plików asset)"
-        )
-
-        return {
-            "action": "run_scanner",
-            "message": "Brak plików asset - uruchamiam scanner",
-            "condition": "warunek_1",
-            "details": {
-                "preview_archive_count": preview_archive_count,
-                "asset_count": asset_count,
-            },
-        }
-
-    @staticmethod
-    def _handle_condition_2a(folder_path: str, content: Dict) -> Dict:
-        """
-        Obsługuje warunek 2a: Brak folderu .cache
-
-        Args:
-            folder_path (str): Ścieżka do folderu
-            content (Dict): Wynik analizy folderu
-
-        Returns:
-            Dict: Decyzja dla warunku 2a
-        """
-        asset_count = content["asset_count"]
-        preview_archive_count = content["preview_archive_count"]
-
-        logger.debug(
-            f"PRZYPADEK 2A WYKRYTY: {folder_path} | "
-            f"Pliki archiwalne/podglądy: {preview_archive_count} | "
-            f"Pliki asset: {asset_count} | "
-            f"Cache: NIE | "
-            f"DECYZJA: Uruchamiam scanner (brak folderu .cache)"
-        )
-
-        return {
-            "action": "run_scanner",
-            "message": "Brak folderu .cache - uruchamiam scanner",
-            "condition": "warunek_2a",
-            "details": {
-                "preview_archive_count": preview_archive_count,
-                "asset_count": asset_count,
-                "cache_exists": False,
-            },
-        }
-
-    @staticmethod
-    def _handle_condition_2b(folder_path: str, content: Dict) -> Dict:
-        """
-        Obsługuje warunek 2b: .cache istnieje, ale liczba miniaturek ≠
-        liczba assetów
-
-        Args:
-            folder_path (str): Ścieżka do folderu
-            content (Dict): Wynik analizy folderu
-
-        Returns:
-            Dict: Decyzja dla warunku 2b
-        """
-        asset_count = content["asset_count"]
-        preview_archive_count = content["preview_archive_count"]
-        cache_thumb_count = content["cache_thumb_count"]
-
-        logger.debug(
-            f"PRZYPADEK 2B WYKRYTY: {folder_path} | "
-            f"Pliki archiwalne/podglądy: {preview_archive_count} | "
-            f"Pliki asset: {asset_count} | "
-            f"Cache: TAK | "
-            f"Miniatury: {cache_thumb_count} | "
-            f"DECYZJA: Uruchamiam scanner (niezgodna liczba miniaturek)"
-        )
-
-        return {
-            "action": "run_scanner",
-            "message": (
-                f"Niezgodna liczba miniaturek ({cache_thumb_count}) "
-                f"i assetów ({asset_count}) - uruchamiam scanner"
-            ),
-            "condition": "warunek_2b",
-            "details": {
-                "preview_archive_count": preview_archive_count,
-                "asset_count": asset_count,
-                "cache_exists": True,
-                "cache_thumb_count": cache_thumb_count,
-            },
-        }
-
-    @staticmethod
-    def _handle_condition_2c(folder_path: str, content: Dict) -> Dict:
-        """
-        Obsługuje warunek 2c: .cache istnieje i liczba miniaturek =
-        liczba assetów
-
-        Args:
-            folder_path (str): Ścieżka do folderu
-            content (Dict): Wynik analizy folderu
-
-        Returns:
-            Dict: Decyzja dla warunku 2c
-        """
-        asset_count = content["asset_count"]
-        preview_archive_count = content["preview_archive_count"]
-        cache_thumb_count = content["cache_thumb_count"]
-
-        logger.debug(
-            f"PRZYPADEK 2C WYKRYTY: {folder_path} | "
-            f"Pliki archiwalne/podglądy: {preview_archive_count} | "
-            f"Pliki asset: {asset_count} | "
-            f"Cache: TAK | "
-            f"Miniatury: {cache_thumb_count} | "
-            f"DECYZJA: Wyświetlam galerię (wszystko gotowe)"
-        )
-
-        return {
-            "action": "show_gallery",
-            "message": (
-                f"Wszystko gotowe - wyświetlam galerię "
-                f"(thumb: {cache_thumb_count}, asset: {asset_count})"
-            ),
-            "condition": "warunek_2c",
-            "details": {
-                "preview_archive_count": preview_archive_count,
-                "asset_count": asset_count,
-                "cache_exists": True,
-                "cache_thumb_count": cache_thumb_count,
-            },
-        }
-
-    @staticmethod
-    def _handle_additional_case_no_cache(folder_path: str, content: Dict) -> Dict:
-        """
-        Obsługuje dodatkowy przypadek: Tylko pliki asset, brak .cache
-
-        Args:
-            folder_path (str): Ścieżka do folderu
-            content (Dict): Wynik analizy folderu
-
-        Returns:
-            Dict: Decyzja dla tego przypadku
-        """
-        asset_count = content["asset_count"]
-        preview_archive_count = content["preview_archive_count"]
-
-        logger.debug(
-            f"PRZYPADEK DODATKOWY (BRAK CACHE): {folder_path} | "
-            f"Pliki asset: {asset_count} | "
-            f"Pliki archiwalne/podglądy: {preview_archive_count} | "
-            f"Cache: NIE | "
-            f"DECYZJA: Uruchamiam scanner (tylko asset, brak .cache)"
-        )
-
-        return {
-            "action": "run_scanner",
-            "message": ("Tylko pliki asset, brak .cache - uruchamiam scanner"),
-            "condition": "dodatkowy_brak_cache",
-            "details": {
-                "asset_count": asset_count,
-                "preview_archive_count": preview_archive_count,
-                "cache_exists": False,
-            },
-        }
-
-    @staticmethod
-    def _handle_additional_case_mismatch(folder_path: str, content: Dict) -> Dict:
-        """
-        Obsługuje dodatkowy przypadek: Tylko pliki asset,
-        niezgodna liczba miniaturek
-
-        Args:
-            folder_path (str): Ścieżka do folderu
-            content (Dict): Wynik analizy folderu
-
-        Returns:
-            Dict: Decyzja dla tego przypadku
-        """
-        asset_count = content["asset_count"]
-        preview_archive_count = content["preview_archive_count"]
-        cache_thumb_count = content["cache_thumb_count"]
-
-        logger.debug(
-            f"PRZYPADEK DODATKOWY (NIEZGODNA LICZBA): {folder_path} | "
-            f"Pliki asset: {asset_count} | "
-            f"Pliki archiwalne/podglądy: {preview_archive_count} | "
-            f"Cache: TAK | "
-            f"Miniatury: {cache_thumb_count} | "
-            f"DECYZJA: Uruchamiam scanner (niezgodna liczba miniaturek)"
-        )
-
-        return {
-            "action": "run_scanner",
-            "message": (
-                f"Tylko pliki asset, niezgodna liczba miniaturek "
-                f"({cache_thumb_count}) i assetów ({asset_count}) - "
-                f"uruchamiam scanner"
-            ),
-            "condition": "dodatkowy_niezgodna_liczba",
-            "details": {
-                "asset_count": asset_count,
-                "preview_archive_count": preview_archive_count,
-                "cache_exists": True,
-                "cache_thumb_count": cache_thumb_count,
-            },
-        }
-
-    @staticmethod
-    def _handle_additional_case_ready(folder_path: str, content: Dict) -> Dict:
-        """
-        Obsługuje dodatkowy przypadek: Tylko pliki asset, wszystko gotowe
-
-        Args:
-            folder_path (str): Ścieżka do folderu
-            content (Dict): Wynik analizy folderu
-
-        Returns:
-            Dict: Decyzja dla tego przypadku
-        """
-        asset_count = content["asset_count"]
-        preview_archive_count = content["preview_archive_count"]
-        cache_thumb_count = content["cache_thumb_count"]
-
-        logger.debug(
-            f"PRZYPADEK DODATKOWY (GOTOWE): {folder_path} | "
-            f"Pliki asset: {asset_count} | "
-            f"Pliki archiwalne/podglądy: {preview_archive_count} | "
-            f"Cache: TAK | "
-            f"Miniatury: {cache_thumb_count} | "
-            f"DECYZJA: Wyświetlam galerię (wszystko gotowe)"
-        )
-
-        return {
-            "action": "show_gallery",
-            "message": (
-                f"Tylko pliki asset, wszystko gotowe - "
-                f"wyświetlam galerię (thumb: {cache_thumb_count}, "
-                f"asset: {asset_count})"
-            ),
-            "condition": "dodatkowy_gotowe",
-            "details": {
-                "asset_count": asset_count,
-                "preview_archive_count": preview_archive_count,
-                "cache_exists": True,
-                "cache_thumb_count": cache_thumb_count,
-            },
-        }
-
-    @staticmethod
-    def _handle_default_case(folder_path: str, content: Dict) -> Dict:
-        """
-        Obsługuje przypadek domyślny: Folder nie zawiera odpowiednich plików
-
-        Args:
-            folder_path (str): Ścieżka do folderu
-            content (Dict): Wynik analizy folderu
-
-        Returns:
-            Dict: Decyzja dla przypadku domyślnego
-        """
-        asset_count = content["asset_count"]
-        preview_archive_count = content["preview_archive_count"]
-        cache_exists = content["cache_exists"]
-        cache_thumb_count = content["cache_thumb_count"]
-
-        logger.debug(
-            f"PRZYPADEK DOMYŚLNY: {folder_path} | "
-            f"Pliki asset: {asset_count} | "
-            f"Pliki archiwalne/podglądy: {preview_archive_count} | "
-            f"Cache: {'TAK' if cache_exists else 'NIE'} | "
-            f"Miniatury: {cache_thumb_count} | "
-            f"DECYZJA: Brak akcji (folder nie zawiera odpowiednich plików)"
-        )
-
-        return {
-            "action": "no_action",
-            "message": "Folder nie zawiera odpowiednich plików",
-            "condition": "brak_plikow",
-            "details": {
-                "asset_count": asset_count,
-                "preview_archive_count": preview_archive_count,
-                "cache_exists": cache_exists,
-                "cache_thumb_count": cache_thumb_count,
-            },
-        }
 
     @staticmethod
     def decide_action(folder_path: str) -> dict:
         """
-        Podejmuje decyzję o akcji na podstawie zawartości folderu
+        Decides on the action to take based on folder contents
 
-        Metoda implementuje algorytm decyzyjny oparty na następujących
-        warunkach:
+        Method implements a decision algorithm based on the following
+        conditions:
 
-        WARUNEK 1: Folder zawiera pliki archiwalne/podglądy, ale NIE ma plików
-        asset → Uruchom scanner (potrzebne przetworzenie archiwów na assety)
+        CONDITION 1: Folder contains archive/preview files, but NO asset files
+        → Run scanner (necessary processing of archives into asset files)
 
-        WARUNEK 2: Folder zawiera zarówno pliki archiwalne/podglądy jak i pliki
-        asset
-        - 2a: Brak folderu .cache → Uruchom scanner (generowanie miniaturek)
-        - 2b: .cache istnieje, ale liczba miniaturek ≠ liczba assetów →
-        Uruchom scanner
-        - 2c: .cache istnieje i liczba miniaturek = liczba assetów → Pokaż
-        galerię
+        CONDITION 2: Folder contains both archive/preview files and asset files
+        - 2a: No .cache folder → Run scanner (generating thumbnails)
+        - 2b: .cache exists, but number of thumbnails ≠ number of asset files
+        → Run scanner
+        - 2c: .cache exists and number of thumbnails = number of asset files
+        → Display gallery
 
-        DODATKOWY PRZYPADEK: Folder zawiera tylko pliki asset (bez archiwów)
-        - Brak .cache lub niezgodna liczba miniaturek → Uruchom scanner
-        - Wszystko gotowe → Pokaż galerię
+        ADDITIONAL CASE: Folder contains only asset files (without archives)
+        - No .cache or mismatched number of thumbnails → Run scanner
+        - All ready → Display gallery
 
         Args:
-            folder_path (str): Ścieżka do folderu do analizy
+            folder_path (str): Path to the folder to analyze
 
         Returns:
-            dict: Słownik zawierający decyzję:
+            dict: Dictionary containing the decision:
                 - action: "run_scanner", "show_gallery", "no_action", "error"
-                - message: Opis decyzji w języku polskim
-                - condition: Nazwa warunku, który został spełniony
-                - details: Szczegółowe informacje o stanie folderu
+                - message: Decision description in Polish
+                - condition: Name of the condition that was met
+                - details: Detailed information about folder state
 
-        Przykład zwracanego słownika:
+        Example return dictionary:
         {
             "action": "run_scanner",
-            "message": "Brak plików asset - uruchamiam scanner",
-            "condition": "warunek_1",
+            "message": "No asset files - running scanner",
+            "condition": "condition_1",
             "details": {
                 "preview_archive_count": 3,
                 "asset_count": 0
@@ -709,13 +646,13 @@ class FolderClickRules:
         }
         """
         try:
-            # Krok 1: Przeanalizuj zawartość folderu
+            # Step 1: Analyze folder contents
             content = FolderClickRules.analyze_folder_content(folder_path)
 
-            # Sprawdź czy wystąpił błąd podczas analizy
+            # Check if there was an error during analysis
             if "error" in content:
                 logger.error(
-                    f"BŁĄD ANALIZY FOLDERU: {folder_path} - {content['error']}"
+                    f"FOLDER ANALYSIS ERROR: {folder_path} - {content['error']}"
                 )
                 return {
                     "action": "error",
@@ -723,67 +660,60 @@ class FolderClickRules:
                     "condition": "error",
                 }
 
-            # Krok 2: Wyciągnij kluczowe informacje
+            # Step 2: Extract key information
             asset_count = content["asset_count"]
             preview_archive_count = content["preview_archive_count"]
             cache_exists = content["cache_exists"]
             cache_thumb_count = content["cache_thumb_count"]
 
-            # Logowanie informacji diagnostycznych
+            # Log diagnostic information
             FolderClickRules._log_folder_analysis(folder_path, content)
 
-            # WARUNEK 1: Folder zawiera pliki archiwalne/podglądy, ale NIE ma
-            # plików asset → Scanner musi przetworzyć archiwa na pliki asset
+            # CONDITION 1: Folder contains archive/preview files, but NO asset files
+            # → Scanner must process archives into asset files
             if preview_archive_count > 0 and asset_count == 0:
-                return FolderClickRules._handle_condition_1(folder_path, content)
+                return Condition1Strategy.execute(folder_path, content)
 
-            # WARUNEK 2: Folder zawiera zarówno pliki archiwalne/podglądy jak i
-            # pliki asset
+            # CONDITION 2: Folder contains both archive/preview files and asset files
             elif preview_archive_count > 0 and asset_count > 0:
 
-                # Podwarunek 2a: Brak folderu .cache
-                # → Scanner musi wygenerować miniatury
+                # Subcondition 2a: No .cache folder
+                # → Scanner must generate thumbnails
                 if not cache_exists:
-                    return FolderClickRules._handle_condition_2a(folder_path, content)
+                    return Condition2aStrategy.execute(folder_path, content)
 
-                # Podwarunek 2b: .cache istnieje, ale liczba miniaturek ≠ liczba
-                # assetów → Scanner musi uzupełnić brakujące miniatury
+                # Subcondition 2b: .cache exists, but number of thumbnails ≠ number of
+                # asset files → Scanner must supplement missing thumbnails
                 elif cache_thumb_count != asset_count:
-                    return FolderClickRules._handle_condition_2b(folder_path, content)
+                    return Condition2bStrategy.execute(folder_path, content)
 
-                # Podwarunek 2c: .cache istnieje i liczba miniaturek = liczba
-                # assetów → Wszystko gotowe, można pokazać galerię
+                # Subcondition 2c: .cache exists and number of thumbnails = number of
+                # asset files → All ready, can display gallery
                 else:
-                    return FolderClickRules._handle_condition_2c(folder_path, content)
+                    return Condition2cStrategy.execute(folder_path, content)
 
-            # DODATKOWY PRZYPADEK: Folder zawiera tylko pliki asset (bez
-            # archiwów) → Sprawdź czy cache jest kompletny
+            # ADDITIONAL CASE: Folder contains only asset files (without archives)
+            # → Check if cache is complete
             elif asset_count > 0 and preview_archive_count == 0:
 
-                # Brak folderu .cache → Uruchom scanner
+                # No .cache folder → Run scanner
                 if not cache_exists:
-                    return FolderClickRules._handle_additional_case_no_cache(
-                        folder_path, content
-                    )
+                    return AdditionalCaseStrategy.execute(folder_path, content)
 
-                # Niezgodna liczba miniaturek → Uruchom scanner
+                # Mismatched number of thumbnails → Run scanner
                 elif cache_thumb_count != asset_count:
-                    return FolderClickRules._handle_additional_case_mismatch(
-                        folder_path, content
-                    )
+                    return AdditionalCaseStrategy.execute(folder_path, content)
 
-                # Wszystko gotowe → Pokaż galerię
+                # All ready → Display gallery
                 else:
-                    return FolderClickRules._handle_additional_case_ready(
-                        folder_path, content
-                    )
+                    return AdditionalCaseStrategy.execute(folder_path, content)
 
-            # PRZYPADEK DOMYŚLNY: Folder nie zawiera odpowiednich plików
-            # → Nie wykonuj żadnej akcji
+            # DEFAULT CASE: Folder does not contain appropriate files
+            # → Do nothing
             else:
-                return FolderClickRules._handle_default_case(folder_path, content)
+                return DefaultCaseStrategy.execute(folder_path, content)
 
         except Exception as e:
-            error_msg = f"Błąd podejmowania decyzji dla folderu {folder_path}: {e}"
-            logger.error(f"BŁĄD DECYZJI: {folder_path} - {error_msg}")
+            error_msg = f"Error deciding action for folder {folder_path}: {e}"
+            logger.error(f"DECISION ERROR: {folder_path} - {error_msg}")
             return {"action": "error", "message": error_msg, "condition": "error"}

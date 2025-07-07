@@ -53,7 +53,7 @@ class SuffixRemoverApp(QMainWindow):
 
         # --- Przycisk uruchamiający ---
         self.run_button = QPushButton("Znajdź i usuń suffixy")
-        self.run_button.setStyleSheet("font-size: 14px; padding: 10px;")
+        self.run_button.setProperty("class", "start-button")
         self.run_button.clicked.connect(self.start_processing)
         main_layout.addWidget(self.run_button)
 

@@ -1,130 +1,177 @@
-**⚠️ KRYTYCZNE: Przed rozpoczęciem pracy zapoznaj się z ogólnymi zasadami refaktoryzacji, poprawek i testowania opisanymi w pliku [refactoring_rules.md](refactoring_rules.md).**
+# SZABLON ANALIZY POPRAWEK - AUDYT LOGIKI BIZNESOWEJ
+
+> **LOKALIZACJA:** `AUDYT/corrections/[nazwa_pliku]_correction.md`  
+> **STATUS:** Analiza poprawek dla pliku `[nazwa_pliku].py`  
+> **DATA ANALIZY:** [DATA_ANALIZY]
 
 ---
 
-# 📋 ETAP [NUMER]: [NAZWA_PLIKU] - ANALIZA I REFAKTORYZACJA
+## 📄 ANALIZOWANY PLIK
 
-**Data analizy:** [DATA]
-
-### 📋 Identyfikacja
-
-- **Plik główny:** `ścieżka/do/pliku.py`
-- **Plik z kodem (patch):** `../patches/[NAZWA_PLIKU]_patch_code.md`
-- **Priorytet:** [⚫⚫⚫⚫/🔴🔴🔴/🟡🟡/🟢]
-- **Zależności:**
-  - `plik_zalezny_1.py`
-  - `plik_zalezny_2.py`
+**Plik:** `[ŚCIEŻKA_DO_PLIKU]`  
+**Priorytet struktury:** [PRIORYTET_STRUKTURY] - [UZASADNIENIE]  
+**Priorytet poprawek:** [PRIORYTET_POPRAWEK] - [UZASADNIENIE]  
+**Finalny priorytet:** [FINALNY_PRIORYTET] - [UZASADNIENIE PROCESU MYŚLOWEGO]
 
 ---
 
-### 🔍 Analiza problemów
+## 🎯 CEL POPRAWKI
 
-1.  **Błędy krytyczne:**
-
-    - [Opis błędu 1]
-    - [Opis błędu 2]
-
-2.  **Optymalizacje:**
-
-    - [Opis optymalizacji 1]
-    - [Opis optymalizacji 2]
-
-3.  **Refaktoryzacja:**
-
-    - [Opis potrzebnej refaktoryzacji, np. podział pliku, uproszczenie logiki]
-
-4.  **Logowanie:**
-    - [Weryfikacja logowania, propozycja podziału na INFO/DEBUG]
+[OPIS_CELU_POPRAWKI_NA_PODSTAWIE_ANALIZY_KODU]
 
 ---
 
-### 🛠️ PLAN REFAKTORYZACJI
+## 💼 BUSINESS IMPACT
 
-**Typ refaktoryzacji:** [Podział pliku/Optymalizacja kodu/Reorganizacja struktury/Usunięcie duplikatów]
-
-#### KROK 1: PRZYGOTOWANIE 🛡️
-
-- [ ] **BACKUP UTWORZONY:** `[nazwa_pliku]_backup_[data].py` w folderze `AUDYT/backups/`
-- [ ] **ANALIZA ZALEŻNOŚCI:** Sprawdzenie wszystkich imports i wywołań
-- [ ] **IDENTYFIKACJA API:** Lista publicznych metod używanych przez inne pliki
-- [ ] **PLAN ETAPOWY:** Podział refaktoryzacji na małe, weryfikowalne kroki
-
-#### KROK 2: IMPLEMENTACJA 🔧
-
-- [ ] **ZMIANA 1:** [Opis pierwszej zmiany]
-- [ ] **ZMIANA 2:** [Opis drugiej zmiany]
-- [ ] **ZACHOWANIE API:** Wszystkie publiczne metody zachowane lub z deprecation warnings
-- [ ] **BACKWARD COMPATIBILITY:** 100% kompatybilność wsteczna zachowana
-
-#### KROK 3: WERYFIKACJA PO KAŻDEJ ZMIANIE 🧪
-
-- [ ] **TESTY AUTOMATYCZNE:** Uruchomienie testów po każdej zmianie
-- [ ] **URUCHOMIENIE APLIKACJI:** Sprawdzenie czy aplikacja się uruchamia
-- [ ] **WERYFIKACJA FUNKCJONALNOŚCI:** Sprawdzenie czy wszystkie funkcje działają
-
-#### KROK 4: INTEGRACJA FINALNA 🔗
-
-- [ ] **TESTY INNYCH PLIKÓW:** Sprawdzenie czy inne moduły nadal działają
-- [ ] **TESTY INTEGRACYJNE:** Pełne testy integracji z całą aplikacją
-- [ ] **TESTY WYDAJNOŚCIOWE:** Wydajność nie pogorszona o więcej niż 5%
-
-#### KRYTERIA SUKCESU REFAKTORYZACJI ✅
-
-- [ ] **WSZYSTKIE TESTY PASS** - 100% testów przechodzi
-- [ ] **APLIKACJA URUCHAMIA SIĘ** - bez błędów startowych
-- [ ] **FUNKCJONALNOŚĆ ZACHOWANA** - wszystkie funkcje działają jak wcześniej
-- [ ] **KOMPATYBILNOŚĆ WSTECZNA** - 100% backward compatibility
+[OPIS_WPŁYWU_NA_PROCESY_BIZNESOWE_NA_PODSTAWIE_ANALIZY]
 
 ---
 
-### 🧪 PLAN TESTÓW AUTOMATYCZNYCH
+## 🔍 ZIDENTYFIKOWANE PROBLEMY
 
-**Test funkcjonalności podstawowej:**
+### 1. [PROBLEM_1]
 
-- [Opis testu 1]
-- [Opis testu 2]
+**Opis:** [SZCZEGÓŁOWY_OPIS_PROBLEMU]  
+**Lokalizacja:** [LINIE_KODU_LUB_KLASY]  
+**Wpływ:** [WPŁYW_NA_WYDAJNOŚĆ/STABILNOŚĆ/ARCHITEKTURĘ]  
+**Priorytet:** [PRIORYTET_PROBLEMU]
 
-**Test integracji:**
+### 2. [PROBLEM_2]
 
-- [Opis testu integracji z modułami zależnymi]
-
-**Test wydajności:**
-
-- [Opis testu wydajności, np. pomiar czasu wykonania kluczowej operacji]
-
----
-
-### 📊 STATUS TRACKING
-
-- [ ] Backup utworzony
-- [ ] Plan refaktoryzacji przygotowany
-- [ ] Kod zaimplementowany (krok po kroku)
-- [ ] Testy podstawowe przeprowadzone (PASS)
-- [ ] Testy integracji przeprowadzone (PASS)
-- [ ] **WERYFIKACJA FUNKCJONALNOŚCI** - ręczne sprawdzenie kluczowych funkcji
-- [ ] **WERYFIKACJA ZALEŻNOŚCI** - sprawdzenie, czy nie zepsuto innych modułów
-- [ ] **WERYFIKACJA WYDAJNOŚCI** - porównanie z baseline
-- [ ] Dokumentacja zaktualizowana
-- [ ] **Gotowe do wdrożenia**
+**Opis:** [SZCZEGÓŁOWY_OPIS_PROBLEMU]  
+**Lokalizacja:** [LINIE_KODU_LUB_KLASY]  
+**Wpływ:** [WPŁYW_NA_WYDAJNOŚĆ/STABILNOŚĆ/ARCHITEKTURĘ]  
+**Priorytet:** [PRIORYTET_PROBLEMU]
 
 ---
 
-### 🚨 OBOWIĄZKOWE UZUPEŁNIENIE BUSINESS_LOGIC_MAP.MD
+## 🛠️ PROPOZOWANE ROZWIĄZANIA
 
-**🚨 KRYTYCZNE: PO ZAKOŃCZENIU WSZYSTKICH POPRAWEK MODEL MUSI OBAWIĄZKOWO UZUPEŁNIĆ PLIK `AUDYT/business_logic_map.md`!**
+### 1. [ROZWIĄZANIE_1]
 
-#### OBOWIĄZKOWE KROKI PO ZAKOŃCZENIU POPRAWEK:
+**Cel:** [OPIS_CELU_ROZWIĄZANIA]  
+**Metoda:** [SZCZEGÓŁOWY_OPIS_METODY]  
+**Szacowany czas:** [CZAS_IMPLEMENTACJI]  
+**Ryzyko:** [OCENA_RYZYKA]
 
-1. ✅ **Wszystkie poprawki wprowadzone** - kod działa poprawnie
-2. ✅ **Wszystkie testy przechodzą** - PASS na wszystkich testach
-3. ✅ **Aplikacja uruchamia się** - bez błędów startowych
-4. ✅ **OTWÓRZ business_logic_map.md** - znajdź sekcję z analizowanym plikiem
-5. ✅ **DODAJ status ukończenia** - zaznacz że analiza została ukończona
-6. ✅ **DODAJ datę ukończenia** - aktualna data w formacie YYYY-MM-DD
-7. ✅ **DODAJ business impact** - opis wpływu na procesy biznesowe
-8. ✅ **DODAJ ścieżki do plików wynikowych** - correction.md i patch_code.md
+### 2. [ROZWIĄZANIE_2]
 
-#### FORMAT UZUPEŁNIENIA W BUSINESS_LOGIC_MAP.MD:
+**Cel:** [OPIS_CELU_ROZWIĄZANIA]  
+**Metoda:** [SZCZEGÓŁOWY_OPIS_METODY]  
+**Szacowany czas:** [CZAS_IMPLEMENTACJI]  
+**Ryzyko:** [OCENA_RYZYKA]
+
+---
+
+## ⚙️ INSTRUKCJE IMPLEMENTACJI
+
+> **⚠️ KRYTYCZNE: Gotowe do użycia fragmenty kodu, które należy zaimplementować, znajdują się w dedykowanym pliku `_patch_code.md`.**
+
+**Plik z kodem:** `AUDYT/patches/[nazwa_pliku]_patch_code.md`
+
+**Procedura:**
+
+1.  **Zapoznaj się z analizą** w tym dokumencie, aby zrozumieć kontekst i cel zmian.
+2.  **Otwórz plik `_patch_code.md`**, aby uzyskać dostęp do gotowych fragmentów kodu.
+3.  **Wprowadź zmiany w kodzie źródłowym**, postępując zgodnie z instrukcją i checklistą weryfikacyjną.
+
+---
+
+## 📋 PLAN IMPLEMENTACJI
+
+### KROK 1: [OPIS_KROKU_1]
+
+- [ ] **BACKUP** - Utworzenie kopii bezpieczeństwa
+- [ ] **ANALIZA** - Szczegółowa analiza zależności
+- [ ] **TESTY** - Przygotowanie testów regresji
+
+### KROK 2: [OPIS_KROKU_2]
+
+- [ ] **IMPLEMENTACJA** - Wprowadzenie zmian
+- [ ] **WERYFIKACJA** - Sprawdzenie poprawności
+- [ ] **TESTY** - Uruchomienie testów automatycznych
+
+### KROK 3: [OPIS_KROKU_3]
+
+- [ ] **INTEGRACJA** - Sprawdzenie integracji z systemem
+- [ ] **DOKUMENTACJA** - Aktualizacja dokumentacji
+- [ ] **ZATWIERDZENIE** - Finalna weryfikacja
+
+---
+
+## 🧪 PLAN TESTÓW AUTOMATYCZNYCH
+
+### Testy funkcjonalności
+
+- [ ] **Test podstawowej funkcjonalności** - Sprawdzenie czy główne funkcje działają
+- [ ] **Test edge cases** - Sprawdzenie przypadków brzegowych
+- [ ] **Test error handling** - Sprawdzenie obsługi błędów
+
+### Testy wydajności
+
+- [ ] **Test czasu wykonania** - Sprawdzenie czy nie ma regresji wydajności
+- [ ] **Test zużycia pamięci** - Sprawdzenie czy nie ma memory leaks
+- [ ] **Test thread safety** - Sprawdzenie bezpieczeństwa wątków
+
+### Testy integracyjne
+
+- [ ] **Test zależności** - Sprawdzenie czy nie psuje innych modułów
+- [ ] **Test API** - Sprawdzenie kompatybilności API
+- [ ] **Test UI** - Sprawdzenie interfejsu użytkownika (jeśli dotyczy)
+
+---
+
+## ✅ CHECKLISTA WERYFIKACYJNA
+
+### 🛡️ Bezpieczeństwo refaktoryzacji
+
+- [ ] **BACKUP PRZED ZMIANĄ** - Utworzono kopię bezpieczeństwa
+- [ ] **INKREMENTALNE ZMIANY** - Wprowadzono małe, weryfikowalne kroki
+- [ ] **ZACHOWANIE FUNKCJONALNOŚCI** - 100% backward compatibility
+- [ ] **ROLLBACK PLAN** - Istnieje możliwość cofnięcia zmian
+- [ ] **WERYFIKACJA INTEGRACJI** - Sprawdzono, że zmiana nie psuje innych części
+
+### 🧪 Automatyczne testy
+
+- [ ] **TESTY FUNKCJONALNOŚCI** - Wszystkie testy PASS (0 FAIL)
+- [ ] **TESTY INTEGRACYJNE** - Zmiana nie psuje innych części systemu
+- [ ] **TESTY WYDAJNOŚCI** - Wydajność nie pogorszona o więcej niż 5%
+- [ ] **POKRYCIE KODU** - >80% dla nowych funkcji
+
+### 📋 Funkcjonalności
+
+- [ ] **PODSTAWOWA FUNKCJONALNOŚĆ** - Działa poprawnie
+- [ ] **KOMPATYBILNOŚĆ API** - Zachowane publiczne interfejsy
+- [ ] **OBSŁUGA BŁĘDÓW** - Proper error handling
+- [ ] **WALIDACJA** - Dane są prawidłowo walidowane
+- [ ] **LOGOWANIE** - Logi są generowane poprawnie
+- [ ] **CACHE** - Cache działa prawidłowo
+- [ ] **THREAD SAFETY** - Operacje są thread-safe
+- [ ] **WYDAJNOŚĆ** - Nie ma regresji wydajności
+
+### 🔗 Zależności
+
+- [ ] **IMPORTY** - Wszystkie importy działają
+- [ ] **ZALEŻNOŚCI ZEWNĘTRZNE** - Zewnętrzne biblioteki działają
+- [ ] **ZALEŻNOŚCI WEWNĘTRZNE** - Wewnętrzne moduły działają
+- [ ] **BRAK CYKLICZNYCH ZALEŻNOŚCI** - Nie ma cykli importów
+- [ ] **KOMPATYBILNOŚĆ WSTECZNA** - Zachowana kompatybilność
+
+### 📊 Dokumentacja
+
+- [ ] **README** - Zaktualizowany jeśli potrzebne
+- [ ] **API DOCS** - Zaktualizowane jeśli potrzebne
+- [ ] **CHANGELOG** - Dodano wpis o zmianie
+- [ ] **KOMENTARZE** - Kod jest odpowiednio udokumentowany
+
+---
+
+## 🚨 KRYTYCZNE: PO ZAKOŃCZENIU WSZYSTKICH POPRAWEK MODEL MUSI OBAWIĄZKOWO UZUPEŁNIĆ PLIKI:
+
+1. **`AUDYT/business_logic_map.md`** - Status ukończenia analizy
+2. **`AUDYT/implementation_plan.md`** - Dodanie poprawki do planu implementacji
+
+**Format uzupełnienia w business_logic_map.md:**
 
 ```markdown
 ### 📄 [NAZWA_PLIKU].PY
@@ -137,17 +184,8 @@
   - `AUDYT/patches/[nazwa_pliku]_patch_code.md`
 ```
 
-#### KONTROLA UZUPEŁNIENIA:
-
-- [ ] **OTWARTO business_logic_map.md** - plik został otwarty i zlokalizowana sekcja
-- [ ] **DODANO status ukończenia** - "✅ UKOŃCZONA ANALIZA"
-- [ ] **DODANO datę ukończenia** - aktualna data w formacie YYYY-MM-DD
-- [ ] **DODANO business impact** - konkretny opis wpływu na procesy biznesowe
-- [ ] **DODANO ścieżki do plików** - correction.md i patch_code.md
-- [ ] **ZWERYFIKOWANO poprawność** - wszystkie informacje są prawidłowe
-
-**🚨 MODEL NIE MOŻE ZAPOMNIEĆ O UZUPEŁNIENIU BUSINESS_LOGIC_MAP.MD!**
-
-**🚨 BEZ TEGO KROKU ETAP NIE JEST UKOŃCZONY!**
-
 ---
+
+**Dokument wygenerowany automatycznie na podstawie analizy pliku `[nazwa_pliku].py`.**  
+**Ostatnia aktualizacja:** [DATA_AKTUALIZACJI]  
+**Wersja:** 1.0

@@ -1,57 +1,57 @@
 {
   "work_folder1": {
-    "path": "W:___3dsky_V1",
+    "path": "W:/___3dsky_V1",
     "name": "3DSky V1",
-    "icon": "",
-    "color": ""
+    "icon": "workfolder_icon.png",
+    "color": "#2c2e40"
   },
   "work_folder2": {
     "path": "W:/_SBSAR_LIB",
     "name": "SBSAR",
-    "icon": "",
-    "color": ""
+    "icon": "workfolder_icon.png",
+    "color": "#1e1f29"
   },
   "work_folder3": {
     "path": "T:/___textures",
     "name": "Textures",
-    "icon": "folder_icon_04",
-    "color": "#E0960C"
+    "icon": "texture.png",
+    "color": "#2c2e40"
   },
   "work_folder4": {
     "path": "I:/___3dsky_V2",
     "name": "3DSky V2",
-    "icon": "",
-    "color": ""
+    "icon": "workfolder_icon.png",
+    "color": "#1e1f29"
   },
   "work_folder5": {
-    "path": "",
-    "name": "",
-    "icon": "",
-    "color": ""
+    "path": "W:/___3dsky_V1/_3D_mega/Models",
+    "name": "3D_mega",
+    "icon": "workfolder_icon.png",
+    "color": "#2c2e40"
   },
   "work_folder6": {
     "path": "T:/___textures",
     "name": "Textures",
-    "icon": "",
-    "color": ""
+    "icon": "texture.png",
+    "color": "#1e1f29"
   },
   "work_folder7": {
     "path": "",
     "name": "",
     "icon": "",
-    "color": ""
+    "color": "#2c2e40"
   },
   "work_folder8": {
     "path": "",
     "name": "",
     "icon": "",
-    "color": ""
+    "color": "#1e1f29"
   },
   "work_folder9": {
     "path": "C:/_cloud/___TEST_FOLDER",
     "name": "TEST FOLDER",
-    "icon": "",
-    "color": ""
+    "icon": "workfolder_icon.png",
+    "color": "#2c2e40"
   },
   "thumbnail": 256,
   "logger_level": "INFO",
