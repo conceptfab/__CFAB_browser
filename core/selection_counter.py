@@ -50,78 +50,63 @@ class SelectionCounter:
             logger.error(f"Error getting selection summary: {e}")
             return {'selected': 0, 'visible': 0, 'total': 0}
     
-    def _get_asset_tiles(self):
+    def count_selected_assets(self) -> int:
         """
-        Gets asset tiles from asset grid controller.
+        Count currently selected assets (excluding special folders).
         
         Returns:
-            list: Asset tiles or empty list if not available
+            int: Number of selected assets
         """
         try:
             if not self._validate_controller():
-                return []
+                return 0
             
             asset_grid_controller = self.amv_controller.asset_grid_controller
             
             if not hasattr(asset_grid_controller, "asset_tiles"):
                 logger.debug("No asset_tiles found in asset_grid_controller")
-                return []
-            
-            return asset_grid_controller.asset_tiles or []
-        except Exception as e:
-            logger.error(f"Error getting asset tiles: {e}")
-            return []
-
-    def _count_tiles_by_condition(self, condition_func) -> int:
-        """
-        Count tiles that meet a specific condition.
-        
-        This method eliminates code duplication between counting functions
-        by using a higher-order function approach.
-        
-        Args:
-            condition_func: Function that takes a tile and returns bool
-            
-        Returns:
-            int: Number of tiles meeting the condition
-        """
-        try:
-            asset_tiles = self._get_asset_tiles()
-            if not asset_tiles:
                 return 0
             
-            count = sum(1 for tile in asset_tiles if condition_func(tile))
+            selected_count = 0
+            for tile in asset_grid_controller.asset_tiles:
+                if self._is_valid_selected_tile(tile):
+                    selected_count += 1
             
-            logger.debug(f"Counted {count} tiles meeting condition")
-            return count
+            logger.debug(f"Counted {selected_count} selected assets")
+            return selected_count
             
         except Exception as e:
-            logger.error(f"Error counting tiles: {e}")
+            logger.error(f"Error counting selected assets: {e}")
             return 0
-
-    def count_selected_assets(self) -> int:
-        """
-        Count currently selected assets (excluding special folders).
-        
-        This method now uses the shared _count_tiles_by_condition function
-        for better maintainability and reduced code duplication.
-        
-        Returns:
-            int: Number of selected assets
-        """
-        return self._count_tiles_by_condition(self._is_valid_selected_tile)
     
     def count_visible_assets(self) -> int:
         """
         Count currently visible assets (excluding special folders).
         
-        This method now uses the shared _count_tiles_by_condition function
-        for better maintainability and reduced code duplication.
-        
         Returns:
             int: Number of visible assets
         """
-        return self._count_tiles_by_condition(self._is_valid_asset_tile)
+        try:
+            if not self._validate_controller():
+                return 0
+            
+            asset_grid_controller = self.amv_controller.asset_grid_controller
+            
+            if not hasattr(asset_grid_controller, "asset_tiles"):
+                logger.debug("No asset_tiles found for visible count")
+                return 0
+            
+            visible_count = 0
+            for tile in asset_grid_controller.asset_tiles:
+                if self._is_valid_asset_tile(tile):
+                    visible_count += 1
+            
+            logger.debug(f"Counted {visible_count} visible assets")
+            return visible_count
+            
+        except Exception as e:
+            logger.error(f"Error counting visible assets: {e}")
+            return 0
     
     def count_total_assets(self) -> int:
         """

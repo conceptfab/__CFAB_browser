@@ -73,13 +73,12 @@ class AssetGridController(QObject):
         self.controller.control_panel_controller.update_button_states()
 
     def rebuild_asset_grid(self, assets: list):
-        """Throttled rebuild z lepszą synchronizacją"""
-        # Anuluj poprzedni timer
-        if self._rebuild_timer.isActive():
-            self._rebuild_timer.stop()
-        
+        """
+        Throttled version of asset grid rebuild to prevent excessive calls.
+        """
+        # OPTYMALIZACJA: Throttling - opóźnij rebuild o 50ms
         self._pending_assets = assets
-        self._rebuild_timer.start(50)
+        self._rebuild_timer.start(50)  # 50ms delay
     
     def _perform_delayed_rebuild(self):
         """
@@ -141,9 +140,6 @@ class AssetGridController(QObject):
     def _remove_unnecessary_tiles(self, ids_to_remove, current_tile_map):
         for asset_id in ids_to_remove:
             tile = current_tile_map.pop(asset_id)
-            # KRYTYCZNE: Usuń kafelek z layoutu PRZED zwróceniem do puli
-            if hasattr(self.view, 'gallery_layout'):
-                self.view.gallery_layout.removeWidget(tile)
             self.tile_pool.release(tile)
             self.asset_tiles.remove(tile)
 
@@ -199,11 +195,6 @@ class AssetGridController(QObject):
 
     def _finalize_grid_update(self, empty=False):
         if empty:
-            # KRYTYCZNE: Upewnij się że layout jest pusty przy pustym folderze
-            while self.view.gallery_layout.count():
-                item = self.view.gallery_layout.takeAt(0)
-                if item.widget():
-                    item.widget().hide()
             self.view.update_gallery_placeholder("No assets found in this folder.")
             update_main_window_status(self.view)
             return

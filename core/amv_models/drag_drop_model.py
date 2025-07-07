@@ -17,12 +17,24 @@ class DragDropModel(QObject):
     def __init__(self):
         super().__init__()
         self._dragged_asset_ids = []
+        self._operation_in_progress = False  # NOWE: zabezpieczenie przed rekurencją
         logger.info("DragDropModel initialized")
 
     def start_drag(self, asset_ids: list):
+        # ZABEZPIECZENIE: Sprawdź czy operacja już nie jest w toku
+        if self._operation_in_progress:
+            logger.warning("Drag operation already in progress, ignoring new start_drag")
+            return
+            
+        self._operation_in_progress = True
         self._dragged_asset_ids = asset_ids
-        self.drag_started.emit(asset_ids)
-        logger.debug(f"Drag started for assets: {asset_ids}")
+        try:
+            self.drag_started.emit(asset_ids)
+            logger.debug(f"Drag started for assets: {asset_ids}")
+        except Exception as e:
+            logger.error(f"Error emitting drag_started signal: {e}")
+        finally:
+            self._operation_in_progress = False
 
     def validate_drop(self, target_path: str, current_folder_path: str = None) -> bool:
         """Validates whether dropping is possible in the given folder."""
@@ -60,11 +72,28 @@ class DragDropModel(QObject):
 
     def complete_drop(self, target_path: str, asset_ids: list = None):
         """Completes the drop operation and emits a signal."""
-        if asset_ids is None:
-            asset_ids = self._dragged_asset_ids
-        self.drop_completed.emit(target_path, asset_ids)
-        self._dragged_asset_ids = []  # Wyczyść po zakończeniu operacji
-        logger.debug(f"Drop completed to {target_path} for assets: {asset_ids}")
+        try:
+            if asset_ids is None:
+                asset_ids = self._dragged_asset_ids
+                
+            # ZABEZPIECZENIE: Sprawdź czy asset_ids są prawidłowe
+            if not asset_ids:
+                logger.warning("No asset IDs to complete drop operation")
+                return
+                
+            # ZABEZPIECZENIE: Sprawdź czy target_path jest prawidłowy
+            if not target_path or not target_path.strip():
+                logger.error("Invalid target_path for complete_drop")
+                return
+                
+            self.drop_completed.emit(target_path, asset_ids)
+            self._dragged_asset_ids = []  # Wyczyść po zakończeniu operacji
+            logger.debug(f"Drop completed to {target_path} for assets: {asset_ids}")
+            
+        except Exception as e:
+            logger.error(f"Error in complete_drop: {e}")
+            # W przypadku błędu, wyczyść stan
+            self._dragged_asset_ids = []
 
     def get_dragged_asset_ids(self) -> list:
         return self._dragged_asset_ids

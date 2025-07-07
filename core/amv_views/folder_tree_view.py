@@ -4,6 +4,7 @@ Zawiera niestandardowy QTreeView z funkcjonalnością przeciągania assetów.
 """
 
 import logging
+import os
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QAction, QBrush, QColor, QIcon
@@ -332,6 +333,17 @@ class CustomFolderTreeView(QTreeView):
         try:
             logger.debug(f"DropEvent triggered - mimeData: {event.mimeData().text()}")
 
+            # ZABEZPIECZENIE: Sprawdź czy nie ma już operacji w toku
+            if (hasattr(self, 'file_operations_model') and 
+                self.file_operations_model and 
+                hasattr(self.file_operations_model, '_worker') and
+                self.file_operations_model._worker and 
+                self.file_operations_model._worker.isRunning()):
+                logger.warning("File operation already in progress, rejecting drop")
+                event.ignore()
+                self._clear_folder_highlight()
+                return
+
             # REFAKTORYZUJ: wynieś walidację do osobnych metod
             if not self._validate_drop_event(event):
                 return
@@ -341,6 +353,13 @@ class CustomFolderTreeView(QTreeView):
                 return
 
             target_folder_path, asset_ids, current_folder_path = target_info
+
+            # ZABEZPIECZENIE: Dodatkowa walidacja asset_ids
+            if not asset_ids or not all(asset_id.strip() for asset_id in asset_ids):
+                logger.error(f"Invalid or empty asset IDs: {asset_ids}")
+                event.ignore()
+                self._clear_folder_highlight()
+                return
 
             # Pobierz pełne dane assetów z asset_grid_model
             assets_to_move = self._get_assets_to_move(asset_ids)
@@ -460,13 +479,38 @@ class CustomFolderTreeView(QTreeView):
         """Wykonuje operację drop."""
         logger.debug(f"Source folder path: {current_folder_path}")
         if current_folder_path:
-            # Wykonaj operację przenoszenia w osobnym wątku
-            self.file_operations_model.move_assets(
-                assets_to_move,
-                current_folder_path,
-                target_folder_path,
-            )
-            self.drag_drop_model.complete_drop(target_folder_path, asset_ids)
+            try:
+                # ZABEZPIECZENIE: Sprawdź ponownie czy modele są dostępne
+                if not self.file_operations_model:
+                    logger.error("file_operations_model is None, cannot perform drop")
+                    return
+                
+                if not self.drag_drop_model:
+                    logger.error("drag_drop_model is None, cannot complete drop")
+                    return
+                
+                # ZABEZPIECZENIE: Sprawdź czy foldery istnieją
+                if not os.path.exists(current_folder_path):
+                    logger.error(f"Source folder does not exist: {current_folder_path}")
+                    return
+                
+                if not os.path.exists(target_folder_path):
+                    logger.warning(f"Target folder does not exist, will be created: {target_folder_path}")
+                
+                # Wykonaj operację przenoszenia w osobnym wątku
+                logger.info(f"Starting move operation: {len(assets_to_move)} assets from {current_folder_path} to {target_folder_path}")
+                self.file_operations_model.move_assets(
+                    assets_to_move,
+                    current_folder_path,
+                    target_folder_path,
+                )
+                
+                # Oznacz drop jako zakończony
+                self.drag_drop_model.complete_drop(target_folder_path, asset_ids)
+                logger.debug("Drop operation initiated successfully")
+                
+            except Exception as e:
+                logger.error(f"Error in drop operation: {e}")
         else:
             logger.error("Source folder path is empty!")
 
