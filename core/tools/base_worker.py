@@ -146,18 +146,4 @@ class BaseWorker(QThread):
                 logger.error(f"No overwrite permissions: {output_path}")
                 return False
         
-        return True
-    
-    # ========================================
-    # CONSOLIDATED ERROR HANDLING METHODS
-    # ========================================
-    
-    def _handle_pillow_import_error(self, operation_name: str) -> bool:
-        """Standardized handling of Pillow import errors"""
-        logger.error(f"[{operation_name}] Pillow library is not installed")
-        return False
-    
-    def _handle_operation_error(self, file_path: str, operation_name: str, error: Exception) -> bool:
-        """Standardized handling of operation errors"""
-        logger.error(f"[{operation_name}] Error processing {file_path}: {error}")
-        return False 
+        return True 

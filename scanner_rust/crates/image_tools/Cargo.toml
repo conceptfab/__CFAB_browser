@@ -1,0 +1,12 @@
+[package]
+name = "image_tools"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pyo3 = { workspace = true }
+image = { workspace = true }
+
+[lib]
+name = "image_tools"
+crate-type = ["cdylib"] 

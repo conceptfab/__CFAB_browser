@@ -1,0 +1,12 @@
+[package]
+name = "hash_utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pyo3 = { workspace = true }
+sha2 = { workspace = true }
+
+[lib]
+name = "hash_utils"
+crate-type = ["cdylib"] 

@@ -9,6 +9,14 @@ from typing import List, Tuple
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from .base_worker import BaseWorker
+from core.__rust import image_tools
+
+# Log informacyjny o załadowaniu modułu Rust (WebP converter)
+try:
+    image_tools_location = image_tools.__file__
+    print(f"🦀 RUST IMAGE_TOOLS (WebP): Używam LOKALNEJ wersji z: {image_tools_location}")
+except AttributeError:
+    print(f"🦀 RUST IMAGE_TOOLS (WebP): Moduł załadowany (brak informacji o lokalizacji)")
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +123,7 @@ class WebPConverterWorker(BaseWorker):
             logger.error(f"[WebP] {error_msg}")
             self.error_occurred.emit(error_msg)
 
-    def _find_files_to_convert(self) -> List[Tuple[str, str]]:
+    def _find_files_to_convert(self) -> List[tuple]:
         """Finds files to convert to WebP"""
         files_to_convert = []
         supported_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff"}
@@ -140,52 +148,8 @@ class WebPConverterWorker(BaseWorker):
             return []
 
     def _convert_to_webp(self, input_path: str, output_path: str) -> bool:
-        """Converts a single file to WebP"""
-        try:
-            logger.info(f"[WebP] _convert_to_webp START: {input_path} -> {output_path}")
-
-            # PATH VALIDATION - using consolidated BaseWorker method
-            if not self._validate_file_paths(input_path, output_path):
-                logger.error(f"[WebP] Path validation failed: {input_path} -> {output_path}")
-                return False
-
-            # Import Pillow here to avoid global requirement
-            logger.info(f"[WebP] Importing PIL.Image")
-            from PIL import Image
-
-            # Open image
-            logger.info(f"[WebP] Opening image: {input_path}")
-            with Image.open(input_path) as img:
-                logger.info(
-                    f"[WebP] Image opened, size: {img.size}, mode: {img.mode}"
-                )
-
-                # Convert to RGB if necessary (WebP does not support RGBA)
-                if img.mode in ("RGBA", "LA", "P"):
-                    logger.info(f"[WebP] Converting mode {img.mode} to RGB")
-                    # Create white background
-                    background = Image.new("RGB", img.size, (255, 255, 255))
-                    if img.mode == "P":
-                        img = img.convert("RGBA")
-                    background.paste(
-                        img, mask=img.split()[-1] if img.mode == "RGBA" else None
-                    )
-                    img = background
-                    logger.info(f"[WebP] Mode conversion completed")
-                elif img.mode != "RGB":
-                    logger.info(f"[WebP] Converting mode {img.mode} to RGB")
-                    img = img.convert("RGB")
-                    logger.info(f"[WebP] Mode conversion completed")
-
-                # Save as WebP with optimal quality
-                logger.info(f"[WebP] Saving as WebP: {output_path}")
-                img.save(output_path, "WEBP", quality=85, method=6)
-                logger.info(f"[WebP] Save completed successfully")
-                return True
-
-        except ImportError:
-            return self._handle_pillow_import_error("WebP")
-        except Exception as e:
-            return self._handle_operation_error(input_path, "WebP", e)
-        finally:
-            logger.info(f"[WebP] _convert_to_webp END: {input_path}") 
+        """Converts a single file to WebP using Rust module"""
+        logger.info(f"[WebP] Calling Rust convert for: {input_path}")
+        converted = image_tools.convert_to_webp(input_path, output_path)
+        logger.info(f"[WebP] Rust module returned: {converted}")
+        return converted 

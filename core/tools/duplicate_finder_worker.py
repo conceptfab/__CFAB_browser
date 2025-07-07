@@ -3,7 +3,6 @@ Duplicate Finder Worker module for CFAB Browser
 Finds and moves duplicate files based on SHA-256 hash comparison
 """
 
-import hashlib
 import logging
 import os
 import shutil
@@ -11,6 +10,14 @@ from typing import Dict, List
 from PyQt6.QtCore import pyqtSignal
 
 from .base_worker import BaseWorker
+from core.__rust import hash_utils
+
+# Log informacyjny o załadowaniu modułu Rust
+try:
+    hash_utils_location = hash_utils.__file__
+    print(f"🦀 RUST HASH_UTILS: Używam LOKALNEJ wersji z: {hash_utils_location}")
+except AttributeError:
+    print(f"🦀 RUST HASH_UTILS: Moduł załadowany (brak informacji o lokalizacji)")
 
 logger = logging.getLogger(__name__)
 
@@ -98,12 +105,8 @@ class DuplicateFinderWorker(BaseWorker):
         return file_hashes
 
     def _calculate_sha256(self, file_path: str) -> str:
-        """Calculates SHA-256 for a single file"""
-        hash_sha256 = hashlib.sha256()
-        with open(file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_sha256.update(chunk)
-        return hash_sha256.hexdigest()
+        """Calculates SHA-256 for a single file using Rust module"""
+        return hash_utils.calculate_sha256(file_path)
 
     def _find_duplicates(self, file_hashes: Dict[str, str]) -> Dict[str, List[str]]:
         """Finds duplicates based on SHA-256"""

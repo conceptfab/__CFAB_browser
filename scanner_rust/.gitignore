@@ -4,7 +4,6 @@
 # Ignoruj pliki binarne
 *.dll
 *.so
-*.pyd
 *.exe
 
 # Ignoruj pliki tymczasowe
