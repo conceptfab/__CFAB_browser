@@ -10,12 +10,18 @@ from typing import Dict, List
 from PyQt6.QtCore import pyqtSignal
 
 from .base_worker import BaseWorker
-from core.__rust import hash_utils
+from core.__rust import hash_utils  # pyright: ignore
 
 # Log informacyjny o załadowaniu modułu Rust
 try:
     hash_utils_location = hash_utils.__file__
-    print(f"🦀 RUST HASH_UTILS: Używam LOKALNEJ wersji z: {hash_utils_location}")
+    
+    # Pobierz informacje o kompilacji
+    build_info = hash_utils.get_build_info()
+    build_timestamp = build_info.get('build_timestamp', 'unknown')
+    module_number = build_info.get('module_number', '2')
+    
+    print(f"🦀 RUST HASH_UTILS: Używam LOKALNEJ wersji z: {hash_utils_location} [build: {build_timestamp}, module: {module_number}]")
 except AttributeError:
     print(f"🦀 RUST HASH_UTILS: Moduł załadowany (brak informacji o lokalizacji)")
 
@@ -106,7 +112,7 @@ class DuplicateFinderWorker(BaseWorker):
 
     def _calculate_sha256(self, file_path: str) -> str:
         """Calculates SHA-256 for a single file using Rust module"""
-        return hash_utils.calculate_sha256(file_path)
+        return hash_utils.calculate_sha256(file_path)  # type: ignore
 
     def _find_duplicates(self, file_hashes: Dict[str, str]) -> Dict[str, List[str]]:
         """Finds duplicates based on SHA-256"""

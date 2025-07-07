@@ -94,9 +94,11 @@ impl ThumbnailGenerator {
         
         let resized = img.resize(new_width, new_height, filter);
 
-        // Bezpieczne przycięcie do kwadratu
-        let crop_x = if new_width > size { (new_width - size) / 2 } else { 0 };
-        let crop_y = if new_height > size { (new_height - size) / 2 } else { 0 };
+        // POPRAWIONE przycięcie do kwadratu:
+        // - Wysokie obrazy: przycinane od góry (crop_y = 0)
+        // - Szerokie obrazy: przycinane od lewej strony (crop_x = 0)
+        let crop_x = if new_width > size { 0 } else { 0 };
+        let crop_y = if new_height > size { 0 } else { 0 };
         let crop_width = new_width.min(size);
         let crop_height = new_height.min(size);
         

@@ -1,6 +1,9 @@
 use pyo3::prelude::*;
 use image::{imageops::FilterType, DynamicImage, GenericImageView, RgbImage, Rgb};
 
+mod build_info;
+use build_info::{get_build_info, get_build_number, get_build_datetime, get_git_commit, get_module_number, get_module_info, get_log_prefix, format_log_message};
+
 /// Resizes an image based on specific rules.
 #[pyfunction]
 fn resize_image(py: Python, file_path: String) -> PyResult<bool> {
@@ -88,7 +91,19 @@ fn calculate_new_size(width: u32, height: u32) -> (u32, u32) {
 
 #[pymodule]
 fn image_tools(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // Dodaj funkcje główne
     m.add_function(wrap_pyfunction!(resize_image, m)?)?;
     m.add_function(wrap_pyfunction!(convert_to_webp, m)?)?;
+    
+    // Dodaj funkcje informacji o kompilacji
+    m.add_function(wrap_pyfunction!(get_build_info, m)?)?;
+    m.add_function(wrap_pyfunction!(get_build_number, m)?)?;
+    m.add_function(wrap_pyfunction!(get_build_datetime, m)?)?;
+    m.add_function(wrap_pyfunction!(get_git_commit, m)?)?;
+    m.add_function(wrap_pyfunction!(get_module_number, m)?)?;
+    m.add_function(wrap_pyfunction!(get_module_info, m)?)?;
+    m.add_function(wrap_pyfunction!(get_log_prefix, m)?)?;
+    m.add_function(wrap_pyfunction!(format_log_message, m)?)?;
+    
     Ok(())
 } 

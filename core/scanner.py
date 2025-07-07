@@ -19,16 +19,28 @@ if rust_dir not in sys.path:
 try:
     import scanner_rust
     scanner_location = scanner_rust.__file__
+    
+    # Pobierz informacje o kompilacji
+    build_info = scanner_rust.get_build_info()
+    build_timestamp = build_info.get('build_timestamp', 'unknown')
+    module_number = build_info.get('module_number', '1')
+    
     logger.info(f"🦀 ✅ SUKCES: Załadowano LOKALNY silnik Rust scanner z: {scanner_location}")
-    print(f"🦀 RUST SCANNER: Używam LOKALNEJ wersji z: {scanner_location}")
+    print(f"🦀 RUST SCANNER: Używam LOKALNEJ wersji z: {scanner_location} [build: {build_timestamp}, module: {module_number}]")
 except ImportError as e:
     # Przywróć oryginalną ścieżkę w przypadku błędu
     sys.path = original_path
     try:
         import scanner_rust
         scanner_location = scanner_rust.__file__
+        
+        # Pobierz informacje o kompilacji
+        build_info = scanner_rust.get_build_info()
+        build_timestamp = build_info.get('build_timestamp', 'unknown')
+        module_number = build_info.get('module_number', '1')
+        
         logger.warning(f"🦀 ⚠️ FALLBACK: Używam GLOBALNEGO silnika Rust scanner z: {scanner_location}")
-        print(f"🦀 RUST SCANNER: FALLBACK - używam globalnej wersji z: {scanner_location}")
+        print(f"🦀 RUST SCANNER: FALLBACK - używam globalnej wersji z: {scanner_location} [build: {build_timestamp}, module: {module_number}]")
     except ImportError:
         logger.error(f"🦀 ❌ BŁĄD: Nie można załadować żadnej wersji scanner_rust: {e}")
         raise ImportError("Nie można załadować Rustowego backendu (scanner_rust): {}".format(e))

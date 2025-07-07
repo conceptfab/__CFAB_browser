@@ -36,8 +36,14 @@ pub struct ScanResult {
 /// Niesparowane pliki
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnpairedFiles {
+    #[serde(rename = "unpaired_archives")]
     pub archives: Vec<String>,
+    #[serde(rename = "unpaired_images")]
     pub images: Vec<String>,
+    #[serde(rename = "total_unpaired_archives")]
+    pub total_archives: usize,
+    #[serde(rename = "total_unpaired_images")]
+    pub total_images: usize,
 }
 
 /// Konfiguracja rozszerzeń plików

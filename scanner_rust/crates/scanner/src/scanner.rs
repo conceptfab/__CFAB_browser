@@ -111,14 +111,14 @@ impl RustAssetRepository {
                             // Zapisz asset do pliku
                             let asset_file_path = folder_path.join(format!("{}.asset", name));
                             if let Err(e) = self.asset_builder.save_asset_to_file(&asset, &asset_file_path) {
-                                eprintln!("🦀 Error saving asset {}: {:?}", name, e);
+                                eprintln!("🦀 Error saving asset {}: {:?} [build: {}, module: 1]", name, e, env!("VERGEN_BUILD_TIMESTAMP"));
                                 return None;
                             }
 
                             Some(asset)
                         }
                         Err(e) => {
-                            eprintln!("🦀 Error creating asset {}: {:?}", name, e);
+                            eprintln!("🦀 Error creating asset {}: {:?} [build: {}, module: 1]", name, e, env!("VERGEN_BUILD_TIMESTAMP"));
                             None
                         }
                     }
@@ -224,7 +224,7 @@ impl RustAssetRepository {
                         assets.push(py_dict.into());
                     }
                     Err(e) => {
-                        eprintln!("🦀 Error loading asset from {:?}: {:?}", path, e);
+                        eprintln!("🦀 Error loading asset from {:?}: {:?} [build: {}, module: 1]", path, e, env!("VERGEN_BUILD_TIMESTAMP"));
                     }
                 }
             }
@@ -292,24 +292,30 @@ impl RustAssetRepository {
         let mut unpaired_files = UnpairedFiles {
             archives: Vec::new(),
             images: Vec::new(),
+            total_archives: 0,
+            total_images: 0,
         };
 
         // Znajdź niesparowane archiwum
         for (name, path) in archive_by_name {
             if !common_names.contains(name) {
-                unpaired_files.archives.push(path.to_string_lossy().to_string());
+                unpaired_files.archives.push(path.file_name().unwrap_or_default().to_string_lossy().to_string());
             }
         }
 
         // Znajdź niesparowane obrazy
         for (name, path) in image_by_name {
             if !common_names.contains(name) {
-                unpaired_files.images.push(path.to_string_lossy().to_string());
+                unpaired_files.images.push(path.file_name().unwrap_or_default().to_string_lossy().to_string());
             }
         }
 
+        // Ustaw liczniki
+        unpaired_files.total_archives = unpaired_files.archives.len();
+        unpaired_files.total_images = unpaired_files.images.len();
+
         // Zapisz do pliku JSON
-        let json_path = folder_path.join("unpaired_files.json");
+        let json_path = folder_path.join("unpair_files.json");
         let json_content = serde_json::to_string_pretty(&unpaired_files)?;
         std::fs::write(&json_path, json_content)?;
 

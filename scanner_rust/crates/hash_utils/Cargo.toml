@@ -1,7 +1,10 @@
 [package]
 name = "hash_utils"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+
+[build-dependencies]
+vergen = "7.5.1"
 
 [dependencies]
 pyo3 = { workspace = true }

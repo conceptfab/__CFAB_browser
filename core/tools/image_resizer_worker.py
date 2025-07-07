@@ -9,12 +9,18 @@ from typing import List
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from .base_worker import BaseWorker
-from core.__rust import image_tools
+from core.__rust import image_tools  # pyright: ignore
 
 # Log informacyjny o załadowaniu modułu Rust
 try:
     image_tools_location = image_tools.__file__
-    print(f"🦀 RUST IMAGE_TOOLS: Używam LOKALNEJ wersji z: {image_tools_location}")
+    
+    # Pobierz informacje o kompilacji
+    build_info = image_tools.get_build_info()
+    build_timestamp = build_info.get('build_timestamp', 'unknown')
+    module_number = build_info.get('module_number', '3')
+    
+    print(f"🦀 RUST IMAGE_TOOLS: Używam LOKALNEJ wersji z: {image_tools_location} [build: {build_timestamp}, module: {module_number}]")
 except AttributeError:
     print(f"🦀 RUST IMAGE_TOOLS: Moduł załadowany (brak informacji o lokalizacji)")
 
