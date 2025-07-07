@@ -80,29 +80,42 @@ class AssetGridModel(QObject):
                 self.scan_error.emit(error_msg)
                 return
 
+            # Początek - inicjalizacja (0-10%)
+            self.scan_progress.emit(0, 100, "Inicjalizacja skanowania...")
+
             # WCZYTAJ OD NOWA - najpierw skanuj i utwórz assety
             asset_repository = AssetRepository()
             
-            # Skanuj folder i utwórz nowe assety
+            # Skanuj folder i utwórz nowe assety (10-80%)
             def progress_callback(current, total, message):
                 if total > 0:
-                    # Map scan progress to the 10-90% range
-                    progress_percent = 10 + int((current / total) * 80)
-                    self.scan_progress.emit(progress_percent, 100, message)
+                    # Map scan progress to the 10-80% range
+                    progress_percent = 10 + int((current / total) * 70)
+                    self.scan_progress.emit(progress_percent, 100, f"Skanowanie: {message}")
                 else:
-                    self.scan_progress.emit(50, 100, message)
+                    self.scan_progress.emit(40, 100, f"Skanowanie: {message}")
 
+            self.scan_progress.emit(10, 100, "Rozpoczynanie skanowania plików...")
+            
             scanned_assets = asset_repository.find_and_create_assets(
-                folder_path, progress_callback, use_async_thumbnails=False
+                folder_path, progress_callback
             )
             logger.debug("Skanowanie zakończone, znaleziono %d assetów", len(scanned_assets))
 
+            # Ładowanie assetów (80-95%)
+            self.scan_progress.emit(80, 100, "Ładowanie assetów z plików...")
+            
             # WCZYTAJ OD NOWA - teraz załaduj wszystkie assety z plików .asset
             all_assets = asset_repository.load_existing_assets(folder_path)
             logger.debug("WCZYTANO OD NOWA %d assetów z plików .asset", len(all_assets))
 
+            # Finalizacja (95-100%)
+            self.scan_progress.emit(95, 100, "Finalizowanie...")
+            
             duration = time.time() - start_time
             logger.debug(f"WCZYTYWANIE OD NOWA zakończone, łącznie {len(all_assets)} assetów")
+            
+            self.scan_progress.emit(100, 100, "Zakończono!")
             self.scan_completed.emit(all_assets, duration, "scan_folder")
 
         except Exception as e:

@@ -2,32 +2,53 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::fs;
 use anyhow::Result;
+use rayon::prelude::*;
 
-/// Sprawdza czy plik ma prawidłowe rozszerzenie
+/// Sprawdza czy plik ma prawidłowe rozszerzenie (case-insensitive)
 pub fn has_valid_extension(file_path: &Path, extensions: &HashSet<String>) -> bool {
     if let Some(ext) = file_path.extension() {
         if let Some(ext_str) = ext.to_str() {
-            return extensions.contains(&ext_str.to_lowercase());
+            let ext_lower = ext_str.to_lowercase();
+            return extensions.contains(&ext_lower);
         }
     }
     false
 }
 
-/// Pobiera pliki z określonymi rozszerzeniami
+/// Pobiera pliki z określonymi rozszerzeniami z parallel processing dla dużych folderów
 pub fn get_files_by_extensions(
     folder_path: &Path,
     extensions: &HashSet<String>
 ) -> Result<Vec<PathBuf>> {
-    let mut files = Vec::new();
-
-    for entry in fs::read_dir(folder_path)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        if path.is_file() && has_valid_extension(&path, extensions) {
-            files.push(path);
-        }
-    }
+    let entries: Result<Vec<_>, _> = std::fs::read_dir(folder_path)?
+        .collect();
+    
+    let entries = entries?;
+    
+    // Używaj parallel processing dla dużych folderów
+    let files: Vec<PathBuf> = if entries.len() > 1000 {
+        entries.into_par_iter()
+            .filter_map(|entry| {
+                let path = entry.path();
+                if path.is_file() && has_valid_extension(&path, extensions) {
+                    Some(path)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    } else {
+        entries.into_iter()
+            .filter_map(|entry| {
+                let path = entry.path();
+                if path.is_file() && has_valid_extension(&path, extensions) {
+                    Some(path)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    };
 
     Ok(files)
 }

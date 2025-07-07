@@ -128,7 +128,7 @@ class ImageResizerWorker(BaseWorker):
 
     def _resize_image(self, file_path: str) -> bool:
         """Resizes a single image using Rust module"""
-        logger.info(f"[Resize] Calling Rust resize for: {file_path}")
+        logger.info(f"🦀 [Resize] Calling Rust resize for: {file_path}")
         resized = image_tools.resize_image(file_path)
-        logger.info(f"[Resize] Rust module returned: {resized}")
+        logger.info(f"🦀 [Resize] Rust module returned: {resized}")
         return resized 

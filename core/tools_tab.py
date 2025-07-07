@@ -2,7 +2,7 @@ import logging
 import os
 import subprocess
 import sys
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (

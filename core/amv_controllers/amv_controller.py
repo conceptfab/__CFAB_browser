@@ -100,9 +100,11 @@ class AmvController(QObject):
 
     def _on_scan_progress(self, current: int, total: int, message: str):
         """Handles scan progress."""
-        progress = int((current / total) * 100) if total > 0 else 0
+        # Wartość 'current' jest już zmapowana w AssetGridModel (10-90% + końcowe kroki)
+        # Nie przeliczamy ponownie, tylko używamy bezpośrednio
+        progress = current
         self.model.control_panel_model.set_progress(progress)
-        logger.debug(f"Scan progress: {progress}% - {message}")
+        logger.debug(f"🦀 Scan progress: {progress}% - {message}")
         # Update button states during the scan
         self.control_panel_controller.update_button_states()
 

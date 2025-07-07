@@ -1,4 +1,3 @@
-import importlib.util
 import os
 import sys
 import logging
@@ -20,7 +19,7 @@ if rust_dir not in sys.path:
 try:
     import scanner_rust
     scanner_location = scanner_rust.__file__
-    logger.info(f"✅ SUKCES: Załadowano LOKALNY silnik Rust scanner z: {scanner_location}")
+    logger.info(f"🦀 ✅ SUKCES: Załadowano LOKALNY silnik Rust scanner z: {scanner_location}")
     print(f"🦀 RUST SCANNER: Używam LOKALNEJ wersji z: {scanner_location}")
 except ImportError as e:
     # Przywróć oryginalną ścieżkę w przypadku błędu
@@ -28,10 +27,10 @@ except ImportError as e:
     try:
         import scanner_rust
         scanner_location = scanner_rust.__file__
-        logger.warning(f"⚠️ FALLBACK: Używam GLOBALNEGO silnika Rust scanner z: {scanner_location}")
+        logger.warning(f"🦀 ⚠️ FALLBACK: Używam GLOBALNEGO silnika Rust scanner z: {scanner_location}")
         print(f"🦀 RUST SCANNER: FALLBACK - używam globalnej wersji z: {scanner_location}")
     except ImportError:
-        logger.error(f"❌ BŁĄD: Nie można załadować żadnej wersji scanner_rust: {e}")
+        logger.error(f"🦀 ❌ BŁĄD: Nie można załadować żadnej wersji scanner_rust: {e}")
         raise ImportError("Nie można załadować Rustowego backendu (scanner_rust): {}".format(e))
 
 class AssetRepository:
@@ -42,7 +41,7 @@ class AssetRepository:
         self._rust_repo = scanner_rust.RustAssetRepository()
         self.use_rust = True
 
-    def find_and_create_assets(self, folder_path, progress_callback=None, use_async_thumbnails=False):
+    def find_and_create_assets(self, folder_path, progress_callback=None):
         return self._rust_repo.find_and_create_assets(folder_path, progress_callback)
 
     def load_existing_assets(self, folder_path):

@@ -6,7 +6,7 @@ Displays thumbnail, filename, stars, and checkbox for the asset.
 import logging
 import os
 
-from PyQt6.QtCore import QMimeData, QPoint, Qt, QThreadPool, pyqtSignal
+from PyQt6.QtCore import QMimeData, Qt, QThreadPool, pyqtSignal
 from PyQt6.QtGui import QColor, QDrag, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,

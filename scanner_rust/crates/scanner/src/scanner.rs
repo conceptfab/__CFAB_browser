@@ -3,7 +3,7 @@ use pyo3::types::PyDict;
 use pyo3::exceptions::PyRuntimeError;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use rayon::prelude::*;
+
 use crate::types::*;
 use crate::file_utils::*;
 use crate::asset_builder::AssetBuilder;
@@ -53,9 +53,8 @@ impl RustAssetRepository {
 
         // Komunikat początkowy - skanowanie plików
         if let Some(ref callback) = progress_callback {
-            if let Err(e) = callback.call1(py, (0, 100, "Scanning files...".to_string())) {
-                eprintln!("Progress callback error: {:?}", e);
-            }
+            callback.call1(py, (0, 100, "Scanning files...".to_string()))
+                .map_err(|e| py_runtime_error!("Progress callback failed: {}", e))?;
         }
 
         // Skanowanie i grupowanie plików
@@ -120,7 +119,8 @@ impl RustAssetRepository {
                         // Zapisz asset do pliku
                         let asset_file_path = folder_path.join(format!("{}.asset", name));
                         if let Err(e) = self.asset_builder.save_asset_to_file(&asset, &asset_file_path) {
-                            eprintln!("Error saving asset {}: {:?}", name, e);
+                            // Loguj błąd ale kontynuuj z następnym assetem
+                            eprintln!("🦀 Error saving asset {}: {:?}", name, e);
                             continue;
                         }
 
@@ -140,7 +140,7 @@ impl RustAssetRepository {
                         created_assets.push(py_dict.into());
                     }
                     Err(e) => {
-                        eprintln!("Error creating asset {}: {:?}", name, e);
+                        eprintln!("🦀 Error creating asset {}: {:?}", name, e);
                     }
                 }
             }
@@ -213,7 +213,7 @@ impl RustAssetRepository {
                         assets.push(py_dict.into());
                     }
                     Err(e) => {
-                        eprintln!("Error loading asset from {:?}: {:?}", path, e);
+                        eprintln!("🦀 Error loading asset from {:?}: {:?}", path, e);
                     }
                 }
             }

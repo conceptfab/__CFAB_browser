@@ -5,7 +5,7 @@ Converts image files to WebP format
 
 import logging
 import os
-from typing import List, Tuple
+from typing import List
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from .base_worker import BaseWorker
@@ -149,7 +149,7 @@ class WebPConverterWorker(BaseWorker):
 
     def _convert_to_webp(self, input_path: str, output_path: str) -> bool:
         """Converts a single file to WebP using Rust module"""
-        logger.info(f"[WebP] Calling Rust convert for: {input_path}")
+        logger.info(f"🦀 [WebP] Calling Rust convert for: {input_path}")
         converted = image_tools.convert_to_webp(input_path, output_path)
-        logger.info(f"[WebP] Rust module returned: {converted}")
+        logger.info(f"🦀 [WebP] Rust module returned: {converted}")
         return converted 

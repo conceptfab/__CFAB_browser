@@ -28,7 +28,7 @@ def run_command(command, cwd, manifest_path):
 
 def main():
     """Główna funkcja budująca."""
-    print("--- Rozpoczęcie budowania modułów Rust ---")
+    print("🦀 --- Rozpoczęcie budowania modułów Rust ---")
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
     # Tworzenie docelowego folderu, jeśli nie istnieje
@@ -36,7 +36,7 @@ def main():
     os.makedirs(target_root_dir, exist_ok=True)
     
     for module in MODULES:
-        print(f"\n--- Budowanie modułu: {module} ---")
+        print(f"\n🦀 --- Budowanie modułu: {module} ---")
         module_path = os.path.join(script_dir, CRATES_DIR, module)
         manifest_path = os.path.join(module_path, "Cargo.toml")
         
@@ -53,7 +53,7 @@ def main():
             raise FileNotFoundError(f"Nie znaleziono pliku .whl dla modułu {module}")
         latest_wheel = sorted(wheel_files, key=lambda f: os.path.getmtime(os.path.join(wheels_dir, f)), reverse=True)[0]
         wheel_path = os.path.join(wheels_dir, latest_wheel)
-        print(f"Znaleziono koło: {wheel_path}")
+        print(f"🦀 Znaleziono koło: {wheel_path}")
 
         # 3. Rozpakowanie i przeniesienie .pyd
         pyd_final_name = f"{module if module != 'scanner' else 'scanner_rust'}.pyd"
@@ -76,14 +76,14 @@ def main():
             raise FileNotFoundError(f"Nie znaleziono pliku .pyd w kole dla modułu {module}")
         
         source_pyd = pyd_files[0]  # Weź pierwszy znaleziony plik .pyd
-        print(f"Przenoszenie {source_pyd} do {target_pyd_path}")
+        print(f"🦀 Przenoszenie {source_pyd} do {target_pyd_path}")
         shutil.move(source_pyd, target_pyd_path)
         
         # 4. Czyszczenie
         shutil.rmtree(temp_unpack_dir)
-        print(f"Pomyślnie zbudowano i przeniesiono moduł {module}.")
+        print(f"🦀 Pomyślnie zbudowano i przeniesiono moduł {module}.")
 
-    print("\n--- Wszystkie moduły zbudowane pomyślnie! ---")
+    print("\n🦀 --- Wszystkie moduły zbudowane pomyślnie! ---")
 
 if __name__ == "__main__":
     main() 

@@ -41,7 +41,7 @@ def create_test_data(base_path: str, num_files: int = 100) -> str:
 
 def benchmark_rust_scanner(test_folder: str):
     """Benchmark tylko Rust scanner"""
-    print("\n=== Rust Scanner Benchmark ===")
+    print("\n🦀 === Rust Scanner Benchmark ===")
     
     try:
         # Import Rust scanner
@@ -54,41 +54,41 @@ def benchmark_rust_scanner(test_folder: str):
         rust_results = rust_scanner.find_and_create_assets(test_folder)
         rust_time = time.time() - start_time
 
-        print(f"Czas Rust: {rust_time:.2f}s")
-        print(f"Znalezione asset-y: {len(rust_results)}")
+        print(f"🦀 Czas Rust: {rust_time:.2f}s")
+        print(f"🦀 Znalezione asset-y: {len(rust_results)}")
         
         # Test ładowania
         start_time = time.time()
         loaded_assets = rust_scanner.load_existing_assets(test_folder)
         load_time = time.time() - start_time
         
-        print(f"Czas ładowania: {load_time:.2f}s")
-        print(f"Załadowane asset-y: {len(loaded_assets)}")
+        print(f"🦀 Czas ładowania: {load_time:.2f}s")
+        print(f"🦀 Załadowane asset-y: {len(loaded_assets)}")
         
         # Test skanowania plików
         start_time = time.time()
         archives, images = rust_scanner.scan_folder_for_files(test_folder)
         scan_time = time.time() - start_time
         
-        print(f"Czas skanowania plików: {scan_time:.2f}s")
-        print(f"Znalezione archiwa: {len(archives)}")
-        print(f"Znalezione obrazy: {len(images)}")
+        print(f"🦀 Czas skanowania plików: {scan_time:.2f}s")
+        print(f"🦀 Znalezione archiwa: {len(archives)}")
+        print(f"🦀 Znalezione obrazy: {len(images)}")
         
         return rust_time, load_time, scan_time
         
     except ImportError as e:
-        print(f"Nie można załadować Rust scanner: {e}")
+        print(f"🦀 ❌ Nie można załadować Rust scanner: {e}")
         print("Upewnij się, że scanner jest zbudowany (uruchom build.bat)")
         return None, None, None
     except Exception as e:
-        print(f"Błąd podczas benchmarku: {e}")
+        print(f"🦀 ❌ Błąd podczas benchmarku: {e}")
         return None, None, None
 
 def main():
     """Główna funkcja benchmarku"""
     logging.basicConfig(level=logging.INFO)
     
-    print("=== Benchmark Rust Scanner ===")
+    print("🦀 === Benchmark Rust Scanner ===")
     print("Tworzenie danych testowych...")
     
     # Ilość plików do testowania

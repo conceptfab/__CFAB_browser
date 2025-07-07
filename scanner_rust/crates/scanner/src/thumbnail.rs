@@ -1,7 +1,7 @@
 use image::{DynamicImage, imageops::FilterType, GenericImageView};
 use std::path::Path;
 use std::fs;
-use std::time::SystemTime;
+
 use std::sync::OnceLock;
 use anyhow::{Result, anyhow};
 
@@ -63,7 +63,7 @@ impl ThumbnailGenerator {
     }
 
     /// KRYTYCZNA FUNKCJA: Przeskalowanie do kwadratu z przycinaniem
-    /// IDENTYCZNA LOGIKA JAK W PYTHONIE - NIE ZMIENIAĆ!
+    /// POPRAWIONA WERSJA - BEZPIECZNE PRZYCINANIE
     fn resize_to_square(&self, img: DynamicImage, size: u32) -> Result<DynamicImage> {
         if size == 0 {
             return Err(anyhow!("Rozmiar miniaturki nie może być zerem"));
@@ -75,28 +75,28 @@ impl ThumbnailGenerator {
             return Err(anyhow!("Obraz ma nieprawidłowe wymiary: {}x{}", width, height));
         }
         
-        // Oblicz współczynnik skalowania
+        // Oblicz współczynnik skalowania tak, aby krótszy bok miał rozmiar 'size'
         let scale = size as f32 / (width.min(height) as f32);
-        let new_width = (width as f32 * scale) as u32;
-        let new_height = (height as f32 * scale) as u32;
+        let new_width = (width as f32 * scale).round() as u32;
+        let new_height = (height as f32 * scale).round() as u32;
 
-        // Przeskaluj używając Lanczos (jak w Pythonie)
+        // Przeskaluj używając Lanczos
         let resized = img.resize(new_width, new_height, FilterType::Lanczos3);
 
-        // Przyciąć do kwadratu zgodnie z wymaganiami:
-        // - Wysokie obrazy: przycięcie od GÓRY (górny lewy róg)
-        // - Szerokie obrazy: przycięcie od LEWEJ (górny lewy róg)
-        let result = if new_width > size {
-            // Szerokie obrazy - przycinaj od lewej strony (górny lewy róg)
-            resized.crop_imm(0, 0, size, size)
-        } else if new_height > size {
-            // Wysokie obrazy - przycinaj od góry (górny lewy róg)  
-            resized.crop_imm(0, 0, size, size)
-        } else {
-            resized
-        };
+        // Bezpieczne przycięcie do kwadratu
+        let crop_x = if new_width > size { (new_width - size) / 2 } else { 0 };
+        let crop_y = if new_height > size { (new_height - size) / 2 } else { 0 };
+        let crop_width = new_width.min(size);
+        let crop_height = new_height.min(size);
         
-        Ok(result)
+        let result = resized.crop_imm(crop_x, crop_y, crop_width, crop_height);
+        
+        // Jeśli wynik nie jest kwadratem o żądanym rozmiarze, dopasuj
+        if result.width() != size || result.height() != size {
+            Ok(result.resize_exact(size, size, FilterType::Lanczos3))
+        } else {
+            Ok(result)
+        }
     }
 
     /// Zapisz miniaturkę jako WebP z kontrolą jakości (ZGODNIE Z PYTHONEM)

@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use image::{imageops::FilterType, DynamicImage, GenericImageView};
+use image::{imageops::FilterType, DynamicImage, GenericImageView, RgbImage, Rgb};
 
 /// Resizes an image based on specific rules.
 #[pyfunction]
@@ -31,11 +31,26 @@ fn convert_to_webp(py: Python, input_path: String, output_path: String) -> PyRes
         let mut img = image::open(&input_path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to open image {}: {}", input_path, e)))?;
 
+        // Poprawna konwersja obrazów z alpha channel
         if img.color().has_alpha() {
-            let rgb_img = DynamicImage::new_rgb8(img.width(), img.height());
+            // Konwertuj RGBA do RGB z białym tłem
+            let rgb_img = DynamicImage::ImageRgb8({
+                let rgba = img.to_rgba8();
+                let mut rgb_buffer = image::RgbImage::new(img.width(), img.height());
+                
+                for (x, y, pixel) in rgba.enumerate_pixels() {
+                    let alpha = pixel[3] as f32 / 255.0;
+                    let r = (pixel[0] as f32 * alpha + 255.0 * (1.0 - alpha)) as u8;
+                    let g = (pixel[1] as f32 * alpha + 255.0 * (1.0 - alpha)) as u8;
+                    let b = (pixel[2] as f32 * alpha + 255.0 * (1.0 - alpha)) as u8;
+                    rgb_buffer.put_pixel(x, y, image::Rgb([r, g, b]));
+                }
+                
+                rgb_buffer
+            });
             img = rgb_img;
         } else if img.color().channel_count() != 3 {
-             img = DynamicImage::ImageRgb8(img.to_rgb8());
+            img = DynamicImage::ImageRgb8(img.to_rgb8());
         }
 
         img.save_with_format(&output_path, image::ImageFormat::WebP)
