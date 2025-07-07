@@ -56,6 +56,9 @@ class AssetGridController(QObject):
         """Handles asset list changes"""
         if assets is None or len(assets) == 0:  # More specific check for None
             self.set_original_assets([])
+            self.clear_asset_tiles()  # Ensure gallery is cleared
+            self.view.update_gallery_placeholder("No assets in this folder.")
+            self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
             return
         self.set_original_assets(assets)
         self.rebuild_asset_grid(assets)
@@ -93,6 +96,11 @@ class AssetGridController(QObject):
         Intelligently synchronizes the grid with the new asset list, minimizing
         UI operations to eliminate flickering and loading errors.
         """
+        # Check if assets list is empty
+        if not assets:
+            self._finalize_grid_update(empty=True)
+            return
+            
         # First, extract the folder tile (is_special_folder), sort the rest alphabetically
         folder_tile = [a for a in assets if a.get("type") == "special_folder"]
         other_tiles = [a for a in assets if a.get("type") != "special_folder"]
@@ -113,13 +121,17 @@ class AssetGridController(QObject):
             self._remove_unnecessary_tiles(ids_to_remove, current_tile_map)
             self._update_existing_tiles(assets, ids_to_update, current_tile_map)
             self._add_new_tiles(assets, ids_to_add, current_tile_map)
-            if not new_ids:
+            if not new_ids and not current_ids:
+                # No assets at all - show empty state
                 self._finalize_grid_update(empty=True)
                 return
             self._reorganize_layout(assets, current_tile_map)
             self._finalize_grid_update()
 
     def _prepare_asset_maps(self, assets):
+        if not assets:
+            return {}, {}, set(), set(), set(), set(), set()
+            
         new_asset_map = {asset["name"]: asset for asset in assets}
         current_tile_map = {tile.asset_id: tile for tile in self.asset_tiles}
         new_ids = set(new_asset_map.keys())
@@ -138,12 +150,18 @@ class AssetGridController(QObject):
         )
 
     def _remove_unnecessary_tiles(self, ids_to_remove, current_tile_map):
+        if not ids_to_remove:
+            return
+            
         for asset_id in ids_to_remove:
             tile = current_tile_map.pop(asset_id)
             self.tile_pool.release(tile)
             self.asset_tiles.remove(tile)
 
     def _update_existing_tiles(self, assets, ids_to_update, current_tile_map):
+        if not assets or not ids_to_update:
+            return
+            
         for i, asset in enumerate(assets):
             asset_id = asset["name"]
             if asset_id in ids_to_update:
@@ -152,6 +170,9 @@ class AssetGridController(QObject):
                 tile.update_asset_data(tile_model, i + 1, len(assets))
 
     def _add_new_tiles(self, assets, ids_to_add, current_tile_map):
+        if not assets or not ids_to_add:
+            return
+            
         thumb_size = self.model.control_panel_model.get_thumbnail_size()
         for i, asset in enumerate(assets):
             asset_id = asset["name"]
@@ -165,13 +186,23 @@ class AssetGridController(QObject):
                 current_tile_map[asset_id] = tile
 
     def _reorganize_layout(self, assets, current_tile_map):
-        self.view.update_gallery_placeholder("")
+        if not assets:
+            self.view.update_gallery_placeholder("No assets in this folder.")
+            self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
+            return
+            
         cols = self.model.asset_grid_model.get_columns()
         sorted_tiles = [
             current_tile_map[asset["name"]]
             for asset in assets
             if asset["name"] in current_tile_map
         ]
+        
+        # Check if we have any tiles to display
+        if not sorted_tiles:
+            self.view.update_gallery_placeholder("No assets in this folder.")
+            self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
+            return
         
         # OPTIMIZATION: Check if layout actually needs rebuilding using hash
         new_layout_hash = hash(tuple(asset["name"] for asset in assets))
@@ -181,6 +212,9 @@ class AssetGridController(QObject):
             return
         
         self._last_layout_hash = new_layout_hash
+        
+        # Clear placeholder and show gallery
+        self.view.update_gallery_placeholder("")
         
         # Full rebuild only when necessary
         logger.debug("Layout changed - performing full rebuild")
@@ -192,13 +226,19 @@ class AssetGridController(QObject):
             row, col = divmod(i, cols)
             self.view.gallery_layout.addWidget(tile, row, col)
             tile.show()
+        
+        # Ensure gallery is shown after rebuild
+        self.view.stacked_layout.setCurrentIndex(0)
 
     def _finalize_grid_update(self, empty=False):
         if empty:
             self.view.update_gallery_placeholder("No assets in this folder.")
+            self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
+            self.controller.control_panel_controller.update_button_states()
             update_main_window_status(self.view)
             return
-        self.view.stacked_layout.setCurrentIndex(0)
+        self.view.update_gallery_placeholder("")  # Clear placeholder
+        self.view.stacked_layout.setCurrentIndex(0)  # Show gallery
         self.controller.control_panel_controller.update_button_states()
         update_main_window_status(self.view)
 
@@ -281,7 +321,7 @@ class AssetGridController(QObject):
         self.controller.control_panel_controller.update_button_states()
 
     def clear_asset_tiles(self):
-        """OPTIMIZATION: Returns all active tiles to the pool without clearing the gallery."""
+        """OPTIMIZATION: Returns all active tiles to the pool and clears the gallery layout."""
         try:
             logger.debug(f"OPTIMIZATION: Returning {len(self.asset_tiles)} tiles to the pool")
             
@@ -291,13 +331,20 @@ class AssetGridController(QObject):
                 self.asset_tiles.clear()
                 return
             
+            # Clear the gallery layout first
+            while self.view.gallery_layout.count():
+                item = self.view.gallery_layout.takeAt(0)
+                if item.widget():
+                    item.widget().hide()
+            
+            # Return tiles to pool
             for tile_view in self.asset_tiles:
                 # Check if the tile is not already in the pool
                 if hasattr(tile_view, 'isVisible') and tile_view.isVisible():
                     self.tile_pool.release(tile_view)
                 
             self.asset_tiles.clear()
-            logger.debug("OPTIMIZATION: All tiles returned to the pool")
+            logger.debug("OPTIMIZATION: All tiles returned to the pool and layout cleared")
             
         except Exception as e:
             logger.error(f"Error while returning tiles to the pool: {e}")

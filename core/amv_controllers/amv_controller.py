@@ -94,6 +94,7 @@ class AmvController(QObject):
     def _on_scan_started(self, folder_path: str):
         logger.info(f"Controller: Scan started for: {folder_path}")
         self.view.update_gallery_placeholder("Scanning folder...")
+        self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
         self.model.control_panel_model.set_progress(0)
         # Update button states at the start of the scan
         self.control_panel_controller.update_button_states()
@@ -105,6 +106,12 @@ class AmvController(QObject):
         progress = current
         self.model.control_panel_model.set_progress(progress)
         logger.debug(f"🦀 Scan progress: {progress}% - {message}")
+        
+        # Keep placeholder visible during scan
+        if progress < 100:
+            self.view.update_gallery_placeholder(f"Scanning... {progress}%")
+            self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
+        
         # Update button states during the scan
         self.control_panel_controller.update_button_states()
 
@@ -124,7 +131,10 @@ class AmvController(QObject):
                 operation_type,
             )
             self.model.control_panel_model.set_progress(100)
+            
+            # Clear placeholder and ensure gallery is shown
             self.view.update_gallery_placeholder("")
+            self.view.stacked_layout.setCurrentIndex(0)  # Show gallery
 
             # Instead of resetting filters, apply the current filter to the new data
             self.model.asset_grid_model.set_assets(assets)
@@ -133,6 +143,7 @@ class AmvController(QObject):
         logger.error(f"Controller: Scan error: {error_msg}")
         self.model.control_panel_model.set_progress(0)
         self.view.update_gallery_placeholder(f"Scan error: {error_msg}")
+        self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
         # Update button states after a scan error
         self.control_panel_controller.update_button_states()
 
