@@ -3,6 +3,7 @@ use pyo3::types::PyDict;
 use pyo3::exceptions::PyRuntimeError;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use rayon::prelude::*;
 
 use crate::types::*;
 use crate::file_utils::*;
@@ -51,15 +52,20 @@ impl RustAssetRepository {
             ));
         }
 
-        // Komunikat początkowy - skanowanie plików
+        // Komunikat początkowy - skanowanie plików (0-10%)
         if let Some(ref callback) = progress_callback {
             callback.call1(py, (0, 100, "Scanning files...".to_string()))
                 .map_err(|e| py_runtime_error!("Progress callback failed: {}", e))?;
         }
 
-        // Skanowanie i grupowanie plików
+        // Skanowanie i grupowanie plików (10-20%)
         let (archive_by_name, image_by_name) = self.scan_and_group_files(folder_path)
             .map_err(|e| py_runtime_error!("Scan error: {}", e))?;
+
+        if let Some(ref callback) = progress_callback {
+            callback.call1(py, (20, 100, "Files scanned".to_string()))
+                .map_err(|e| py_runtime_error!("Progress callback failed: {}", e))?;
+        }
 
         // Znajdź wspólne nazwy
         let common_names: HashSet<String> = archive_by_name
@@ -78,75 +84,74 @@ impl RustAssetRepository {
             return Ok(Vec::new());
         }
 
-        // Tworzenie asset-ów z szczegółowym progress callback
-        let mut created_assets = Vec::new();
-        let total_assets = common_names.len();
-
-        for (i, name) in common_names.iter().enumerate() {
-            let current_progress = ((i as f32 / total_assets as f32) * 80.0) as i32 + 10; // 10-90% range
-            
-            // Komunikat o tworzeniu assetu
-            if let Some(ref callback) = progress_callback {
-                if let Err(e) = callback.call1(py, (current_progress, 100, format!("Creating asset: {}", name))) {
-                    eprintln!("Progress callback error: {:?}", e);
-                }
-            }
-
-            if let (Some(archive_path), Some(image_path)) =
-                (archive_by_name.get(name), image_by_name.get(name)) {
-
-                // Komunikat o generowaniu miniaturki
-                if let Some(ref callback) = progress_callback {
-                    if let Err(e) = callback.call1(py, (current_progress + 1, 100, format!("Generating thumbnail for: {}", name))) {
-                        eprintln!("Progress callback error: {:?}", e);
-                    }
-                }
-
-                match self.asset_builder.create_single_asset(
-                    name,
-                    archive_path,
-                    image_path,
-                    folder_path
-                ) {
-                    Ok(asset) => {
-                        // Komunikat o zapisywaniu assetu
-                        if let Some(ref callback) = progress_callback {
-                            if let Err(e) = callback.call1(py, (current_progress + 2, 100, format!("Saving asset: {}", name))) {
-                                eprintln!("Progress callback error: {:?}", e);
-                            }
-                        }
-
-                        // Zapisz asset do pliku
-                        let asset_file_path = folder_path.join(format!("{}.asset", name));
-                        if let Err(e) = self.asset_builder.save_asset_to_file(&asset, &asset_file_path) {
-                            // Loguj błąd ale kontynuuj z następnym assetem
-                            eprintln!("🦀 Error saving asset {}: {:?}", name, e);
-                            continue;
-                        }
-
-                        // Konwersja do PyObject
-                        let py_dict = PyDict::new_bound(py);
-                        py_dict.set_item("type", &asset.asset_type)?;
-                        py_dict.set_item("name", &asset.name)?;
-                        py_dict.set_item("archive", &asset.archive)?;
-                        py_dict.set_item("preview", &asset.preview)?;
-                        py_dict.set_item("size_mb", asset.size_mb)?;
-                        py_dict.set_item("thumbnail", &asset.thumbnail)?;
-                        py_dict.set_item("stars", &asset.stars)?;
-                        py_dict.set_item("color", &asset.color)?;
-                        py_dict.set_item("textures_in_the_archive", asset.textures_in_archive)?;
-                        py_dict.set_item("meta", asset.meta.to_string())?;
-
-                        created_assets.push(py_dict.into());
-                    }
-                    Err(e) => {
-                        eprintln!("🦀 Error creating asset {}: {:?}", name, e);
-                    }
-                }
-            }
+        // Przygotuj nazwy do równoległego przetwarzania
+        let names_vec: Vec<_> = common_names.into_iter().collect();
+        let total_assets = names_vec.len();
+        
+        // Progress tracking bez callback w parallel code
+        if let Some(ref callback) = progress_callback {
+            callback.call1(py, (25, 100, format!("Processing {} assets...", total_assets)))
+                .map_err(|e| py_runtime_error!("Progress callback failed: {}", e))?;
         }
 
-        // Komunikat o dodawaniu folderów specjalnych
+        // Parallel processing bez Python objektów
+        let created_assets: Vec<_> = names_vec
+            .par_iter()
+            .filter_map(|name| {
+                if let (Some(archive_path), Some(image_path)) =
+                    (archive_by_name.get(name), image_by_name.get(name)) {
+
+                    match self.asset_builder.create_single_asset(
+                        name,
+                        archive_path,
+                        image_path,
+                        folder_path
+                    ) {
+                        Ok(asset) => {
+                            // Zapisz asset do pliku
+                            let asset_file_path = folder_path.join(format!("{}.asset", name));
+                            if let Err(e) = self.asset_builder.save_asset_to_file(&asset, &asset_file_path) {
+                                eprintln!("🦀 Error saving asset {}: {:?}", name, e);
+                                return None;
+                            }
+
+                            Some(asset)
+                        }
+                        Err(e) => {
+                            eprintln!("🦀 Error creating asset {}: {:?}", name, e);
+                            None
+                        }
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Progress update (80%)
+        if let Some(ref callback) = progress_callback {
+            callback.call1(py, (80, 100, format!("Created {} assets, converting...", created_assets.len())))
+                .map_err(|e| py_runtime_error!("Progress callback failed: {}", e))?;
+        }
+
+        // Convert assets to Python objects (sequential, but fast)
+        let mut py_assets = Vec::new();
+        for asset in created_assets {
+            let py_dict = PyDict::new_bound(py);
+            py_dict.set_item("type", &asset.asset_type)?;
+            py_dict.set_item("name", &asset.name)?;
+            py_dict.set_item("archive", &asset.archive)?;
+            py_dict.set_item("preview", &asset.preview)?;
+            py_dict.set_item("size_mb", asset.size_mb)?;
+            py_dict.set_item("thumbnail", &asset.thumbnail)?;
+            py_dict.set_item("stars", &asset.stars)?;
+            py_dict.set_item("color", &asset.color)?;
+            py_dict.set_item("textures_in_the_archive", asset.textures_in_archive)?;
+            py_dict.set_item("meta", asset.meta.to_string())?;
+            py_assets.push(py_dict.into());
+        }
+
+        // Komunikat o dodawaniu folderów specjalnych (95%)
         if let Some(ref callback) = progress_callback {
             if let Err(e) = callback.call1(py, (95, 100, "Adding special folders...".to_string())) {
                 eprintln!("Progress callback error: {:?}", e);
@@ -162,21 +167,27 @@ impl RustAssetRepository {
             py_dict.set_item("type", &special_folder.folder_type)?;
             py_dict.set_item("name", &special_folder.name)?;
             py_dict.set_item("folder_path", &special_folder.folder_path)?;
-            created_assets.push(py_dict.into());
+            py_assets.push(py_dict.into());
         }
 
-        // Utwórz plik z niesparowanymi plikami
-        self.create_unpaired_files_json(folder_path, &archive_by_name, &image_by_name, &common_names)
-            .map_err(|e| py_runtime_error!("Error creating unpaired files: {}", e))?;
-
-        // Komunikat końcowy
+        // Utwórz plik z niesparowanymi plikami (97%)
         if let Some(ref callback) = progress_callback {
-            if let Err(e) = callback.call1(py, (100, 100, format!("Scan completed - {} assets created", created_assets.len()))) {
+            if let Err(e) = callback.call1(py, (97, 100, "Creating unpaired files list...".to_string())) {
                 eprintln!("Progress callback error: {:?}", e);
             }
         }
 
-        Ok(created_assets)
+        self.create_unpaired_files_json(folder_path, &archive_by_name, &image_by_name, &HashSet::from_iter(names_vec.iter().cloned()))
+            .map_err(|e| py_runtime_error!("Error creating unpaired files: {}", e))?;
+
+        // Komunikat końcowy (100%)
+        if let Some(ref callback) = progress_callback {
+            if let Err(e) = callback.call1(py, (100, 100, format!("Scan completed - {} assets created", py_assets.len()))) {
+                eprintln!("Progress callback error: {:?}", e);
+            }
+        }
+
+        Ok(py_assets)
     }
 
     /// Ładuje istniejące asset-y z folderu

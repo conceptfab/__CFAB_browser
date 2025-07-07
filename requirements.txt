@@ -1,4 +1,18 @@
+# Core GUI framework
 PyQt6>=6.0.0
+
+# Image processing (replaced by Rust for thumbnails, but still needed for some operations)
 Pillow>=8.0.0
+
+# Fast JSON processing
 orjson>=3.0.0
+
+# System monitoring
 psutil>=5.8.0
+
+# Rust module dependencies (for development/build)
+maturin>=1.0,<2.0
+
+# Optional: for better performance with Rust modules
+setuptools>=65.0.0
+wheel>=0.40.0
