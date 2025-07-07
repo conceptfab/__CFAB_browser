@@ -3,6 +3,7 @@ WorkerManager - Common class for managing workers
 """
 
 import logging
+from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -43,4 +44,60 @@ class WorkerManager:
         """Common logic for resetting button state"""
         if button:
             button.setText(original_text)
-            parent_instance._update_button_states() 
+            parent_instance._update_button_states()
+    
+    @staticmethod
+    def start_worker_lifecycle(worker, button, original_text, parent_instance):
+        """Unified worker lifecycle management"""
+        try:
+            # Disable button during operation
+            button.setEnabled(False)
+            button.setText(f"{original_text}...")
+
+            # Connect signals
+            worker.progress_updated.connect(
+                lambda c, t, m: WorkerManager.handle_progress(button, c, t, m)
+            )
+            worker.finished.connect(
+                lambda m: WorkerManager.handle_finished(button, m, original_text, parent_instance)
+            )
+            worker.error_occurred.connect(
+                lambda e: WorkerManager.handle_error(button, e, original_text, parent_instance)
+            )
+
+            # Start worker
+            worker.start()
+
+            logger.info(f"Operation started in folder: {parent_instance.current_working_directory}")
+
+        except Exception as e:
+            logger.error(f"Error starting operation: {e}")
+            parent_instance.show_error_message.emit("Error", f"Cannot start operation: {e}")
+            WorkerManager.reset_button_state(button, original_text, parent_instance)
+    
+    @staticmethod
+    def create_worker_with_confirmation(
+        operation_name: str, 
+        description: str, 
+        worker_factory: Callable,
+        parent_instance,
+        button
+    ):
+        """Universal method for creating workers with confirmation"""
+        if not parent_instance._validate_working_directory():
+            return None
+
+        from PyQt6.QtWidgets import QMessageBox
+        
+        reply = QMessageBox.question(
+            parent_instance,
+            f"Confirm {operation_name.lower()}",
+            f"Are you sure you want to {operation_name.lower()} in folder:\n{parent_instance.current_working_directory}?\n\n{description}",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            return worker_factory()
+        
+        return None 

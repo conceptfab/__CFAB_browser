@@ -177,19 +177,7 @@ class FileOperationController(QObject):
             if not self._validate_optimization_inputs(success_messages):
                 return
             
-            # Synchronizacja dostępu do asset_tiles
-            from PyQt6.QtCore import QMutexLocker
-            if hasattr(self.controller.asset_grid_controller, '_tiles_mutex'):
-                with QMutexLocker(self.controller.asset_grid_controller._tiles_mutex):
-                    self._update_asset_model_fast(success_messages)
-                    self._remove_tiles_from_view_fast(success_messages)
-                    self._update_controller_asset_list(success_messages)
-            else:
-                # Fallback bez mutex jeśli nie istnieje
-                self._update_asset_model_fast(success_messages)
-                self._remove_tiles_from_view_fast(success_messages)
-                self._update_controller_asset_list(success_messages)
-            
+            self._execute_asset_removal_with_sync(success_messages)
             self._update_gallery_placeholder_state()
 
             logger.debug(f"OPTYMALIZACJA: Usunięto {len(success_messages)} assetów bez przebudowy galerii")
@@ -197,6 +185,23 @@ class FileOperationController(QObject):
         except Exception as e:
             logger.error(f"Błąd podczas optymalizowanego usuwania assetów: {e}")
             self._fallback_refresh_gallery()
+    
+    def _execute_asset_removal_with_sync(self, success_messages: list):
+        """Execute asset removal with proper synchronization"""
+        from PyQt6.QtCore import QMutexLocker
+        
+        if hasattr(self.controller.asset_grid_controller, '_tiles_mutex'):
+            with QMutexLocker(self.controller.asset_grid_controller._tiles_mutex):
+                self._perform_asset_removal_operations(success_messages)
+        else:
+            # Fallback bez mutex jeśli nie istnieje
+            self._perform_asset_removal_operations(success_messages)
+    
+    def _perform_asset_removal_operations(self, success_messages: list):
+        """Perform all asset removal operations in sequence"""
+        self._update_asset_model_fast(success_messages)
+        self._remove_tiles_from_view_fast(success_messages)
+        self._update_controller_asset_list(success_messages)
     
     def _validate_optimization_inputs(self, success_messages: list) -> bool:
         """Waliduje dane wejściowe dla optymalizacji"""
@@ -251,46 +256,64 @@ class FileOperationController(QObject):
     def _remove_tiles_from_view_fast(self, asset_ids_to_remove: list):
         """OPTYMALIZACJA: Szybkie usuwanie kafelków bez reorganizacji layoutu"""
         try:
-            # Walidacja danych wejściowych
-            if not asset_ids_to_remove:
-                logger.debug("OPTYMALIZACJA: Brak ID assetów do usunięcia")
+            if not self._validate_tile_removal_inputs(asset_ids_to_remove):
                 return
             
-            if not hasattr(self.view, 'gallery_container_widget'):
-                logger.warning("OPTYMALIZACJA: Brak gallery_container_widget w widoku")
-                return
-            
-            # Wyłącz aktualizacje widoku dla lepszej wydajności
-            self.view.gallery_container_widget.setUpdatesEnabled(False)
-            
-            # Znajdź i usuń kafelki
-            tiles_removed = 0
-            asset_tiles = self.controller.asset_grid_controller.get_asset_tiles()
-            
-            for tile in asset_tiles:
-                if hasattr(tile, 'asset_id') and tile.asset_id in asset_ids_to_remove:
-                    # Usuń z layoutu
-                    if hasattr(self.view, 'gallery_layout'):
-                        self.view.gallery_layout.removeWidget(tile)
-                    
-                    # Zwróć do puli (zamiast deleteLater dla lepszej wydajności)
-                    if hasattr(self.controller.asset_grid_controller, 'tile_pool'):
-                        self.controller.asset_grid_controller.tile_pool.release(tile)
-                    
-                    tiles_removed += 1
-                    logger.debug(f"FAST REMOVE: {tile.asset_id}")
-
+            self._disable_view_updates()
+            tiles_removed = self._remove_tiles_from_layout(asset_ids_to_remove)
             logger.debug(f"OPTYMALIZACJA: Szybko usunięto {tiles_removed} kafelków z widoku")
 
         except Exception as e:
             logger.error(f"Błąd podczas szybkiego usuwania kafelków: {e}")
         finally:
-            # Ponownie włącz aktualizacje widoku
-            if hasattr(self.view, 'gallery_container_widget'):
-                self.view.gallery_container_widget.setUpdatesEnabled(True)
-                # Jednorazowa aktualizacja layoutu
-                if hasattr(self.view, 'gallery_layout'):
-                    self.view.gallery_layout.update()
+            self._enable_view_updates()
+    
+    def _validate_tile_removal_inputs(self, asset_ids_to_remove: list) -> bool:
+        """Validate inputs for tile removal operation"""
+        if not asset_ids_to_remove:
+            logger.debug("OPTYMALIZACJA: Brak ID assetów do usunięcia")
+            return False
+        
+        if not hasattr(self.view, 'gallery_container_widget'):
+            logger.warning("OPTYMALIZACJA: Brak gallery_container_widget w widoku")
+            return False
+        
+        return True
+    
+    def _disable_view_updates(self):
+        """Disable view updates for better performance"""
+        self.view.gallery_container_widget.setUpdatesEnabled(False)
+    
+    def _enable_view_updates(self):
+        """Re-enable view updates and refresh layout"""
+        if hasattr(self.view, 'gallery_container_widget'):
+            self.view.gallery_container_widget.setUpdatesEnabled(True)
+            # Jednorazowa aktualizacja layoutu
+            if hasattr(self.view, 'gallery_layout'):
+                self.view.gallery_layout.update()
+    
+    def _remove_tiles_from_layout(self, asset_ids_to_remove: list) -> int:
+        """Remove tiles from layout and return count of removed tiles"""
+        tiles_removed = 0
+        asset_tiles = self.controller.asset_grid_controller.get_asset_tiles()
+        
+        for tile in asset_tiles:
+            if hasattr(tile, 'asset_id') and tile.asset_id in asset_ids_to_remove:
+                self._remove_single_tile(tile)
+                tiles_removed += 1
+                logger.debug(f"FAST REMOVE: {tile.asset_id}")
+        
+        return tiles_removed
+    
+    def _remove_single_tile(self, tile):
+        """Remove single tile from layout and return to pool"""
+        # Usuń z layoutu
+        if hasattr(self.view, 'gallery_layout'):
+            self.view.gallery_layout.removeWidget(tile)
+        
+        # Zwróć do puli (zamiast deleteLater dla lepszej wydajności)
+        if hasattr(self.controller.asset_grid_controller, 'tile_pool'):
+            self.controller.asset_grid_controller.tile_pool.release(tile)
 
     def _refresh_folder_structure_delayed(self):
         """OPTYMALIZACJA: Odłożone odświeżanie struktury folderów"""

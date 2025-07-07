@@ -696,25 +696,7 @@ class MainWindow(QMainWindow):
             if asset.get("type") != "special_folder"
         ]
     
-    def _count_visible_assets(self, grid_controller) -> int:
-        """
-        DEPRECATED: Use SelectionCounter.count_visible_assets() instead.
-        This method is kept for backward compatibility only.
-        """
-        logger.warning("Using deprecated _count_visible_assets - use SelectionCounter instead")
-        if self.selection_counter:
-            return self.selection_counter.count_visible_assets()
-        return 0
-    
-    def _count_total_assets(self, grid_controller) -> int:
-        """
-        DEPRECATED: Use SelectionCounter.count_total_assets() instead.
-        This method is kept for backward compatibility only.
-        """
-        logger.warning("Using deprecated _count_total_assets - use SelectionCounter instead")
-        if self.selection_counter:
-            return self.selection_counter.count_total_assets()
-        return 0
+
 
     def _calculate_asset_counts(self, controller_data: dict) -> AssetCounts:
         """Calculate visible and total asset counts using SelectionCounter"""
@@ -849,27 +831,7 @@ class MainWindow(QMainWindow):
             total=summary['total']
         )
     
-    def _count_filtered_assets(self, controller) -> tuple:
-        """
-        DEPRECATED: Use SelectionCounter methods instead.
-        This method is kept for backward compatibility only.
-        """
-        logger.warning("Using deprecated _count_filtered_assets - use SelectionCounter instead")
-        if self.selection_counter:
-            visible_count = self.selection_counter.count_visible_assets()
-            selected_count = self.selection_counter.count_selected_assets()
-            return (visible_count, selected_count)
-        return (0, 0)
-    
-    def _count_original_assets(self, controller) -> int:
-        """
-        DEPRECATED: Use SelectionCounter.count_total_assets() instead.
-        This method is kept for backward compatibility only.
-        """
-        logger.warning("Using deprecated _count_original_assets - use SelectionCounter instead")
-        if self.selection_counter:
-            return self.selection_counter.count_total_assets()
-        return 0
+
 
 
 if __name__ == "__main__":

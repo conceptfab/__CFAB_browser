@@ -126,8 +126,7 @@ class PairingModel:
 
     def delete_unpaired_archives(self):
         """Deletes all unpaired archives from disk and updates the list."""
-        if not self.work_folder:
-            logger.error("Cannot delete archives, work folder path is not set.")
+        if not self._validate_work_folder():
             return False
 
         work_folder = self.work_folder
@@ -135,20 +134,10 @@ class PairingModel:
         failed_count = 0
 
         for archive_name in self.unpaired_archives[:]:  # Iterate over a copy
-            try:
-                file_path = os.path.join(work_folder, archive_name)
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    logger.info(f"Deleted unpaired archive: {file_path}")
-                    self.unpaired_archives.remove(archive_name)
-                    deleted_count += 1
-                else:
-                    logger.warning(
-                        f"Archive not found for deletion, removing from list: {file_path}"
-                    )
-                    self.unpaired_archives.remove(archive_name)
-            except Exception as e:
-                logger.error(f"Failed to delete archive {archive_name}: {e}")
+            success = self._delete_single_archive(work_folder, archive_name)
+            if success:
+                deleted_count += 1
+            else:
                 failed_count += 1
 
         self.save_unpair_files()
@@ -159,8 +148,7 @@ class PairingModel:
 
     def delete_unpaired_images(self):
         """Deletes all unpaired images from disk and updates the list."""
-        if not self.work_folder:
-            logger.error("Cannot delete images, work folder path is not set.")
+        if not self._validate_work_folder():
             return False
 
         work_folder = self.work_folder
@@ -168,20 +156,10 @@ class PairingModel:
         failed_count = 0
 
         for image_name in self.unpaired_images[:]:  # Iterate over a copy
-            try:
-                file_path = os.path.join(work_folder, image_name)
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    logger.info(f"Deleted unpaired image: {file_path}")
-                    self.unpaired_images.remove(image_name)
-                    deleted_count += 1
-                else:
-                    logger.warning(
-                        f"Image not found for deletion, removing from list: {file_path}"
-                    )
-                    self.unpaired_images.remove(image_name)
-            except Exception as e:
-                logger.error(f"Failed to delete image {image_name}: {e}")
+            success = self._delete_single_image(work_folder, image_name)
+            if success:
+                deleted_count += 1
+            else:
                 failed_count += 1
 
         self.save_unpair_files()
@@ -189,6 +167,68 @@ class PairingModel:
             f"Image deletion complete. Deleted: {deleted_count}, Failed: {failed_count}."
         )
         return failed_count == 0
+    
+    def _validate_work_folder(self) -> bool:
+        """Validate that work folder is set and exists"""
+        if not self.work_folder:
+            logger.error("Cannot delete files, work folder path is not set.")
+            return False
+        
+        if not os.path.exists(self.work_folder):
+            logger.error(f"Work folder does not exist: {self.work_folder}")
+            return False
+        
+        return True
+    
+    def _delete_single_archive(self, work_folder: str, archive_name: str) -> bool:
+        """Delete single archive file with proper error handling"""
+        try:
+            file_path = os.path.join(work_folder, archive_name)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"Deleted unpaired archive: {file_path}")
+                self.unpaired_archives.remove(archive_name)
+                return True
+            else:
+                logger.warning(
+                    f"Archive not found for deletion, removing from list: {file_path}"
+                )
+                self.unpaired_archives.remove(archive_name)
+                return True  # Not an error, just file doesn't exist
+        except PermissionError as e:
+            logger.error(f"Permission denied deleting archive {archive_name}: {e}")
+            return False
+        except OSError as e:
+            logger.error(f"OS error deleting archive {archive_name}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error deleting archive {archive_name}: {e}")
+            return False
+    
+    def _delete_single_image(self, work_folder: str, image_name: str) -> bool:
+        """Delete single image file with proper error handling"""
+        try:
+            file_path = os.path.join(work_folder, image_name)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"Deleted unpaired image: {file_path}")
+                self.unpaired_images.remove(image_name)
+                return True
+            else:
+                logger.warning(
+                    f"Image not found for deletion, removing from list: {file_path}"
+                )
+                self.unpaired_images.remove(image_name)
+                return True  # Not an error, just file doesn't exist
+        except PermissionError as e:
+            logger.error(f"Permission denied deleting image {image_name}: {e}")
+            return False
+        except OSError as e:
+            logger.error(f"OS error deleting image {image_name}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error deleting image {image_name}: {e}")
+            return False
 
     def create_asset_from_pair(self, archive_full_path: str, preview_full_path: str):
         archive_name_without_ext = os.path.splitext(

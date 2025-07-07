@@ -86,69 +86,35 @@ class ToolsTab(QWidget):
         return True
 
     def _handle_worker_lifecycle(self, worker, button, original_text):
-        """Unified worker lifecycle handling"""
-        try:
-            # Disable button during operation
-            button.setEnabled(False)
-            button.setText(f"{original_text}...")
-
-            # Connect signals
-            worker.progress_updated.connect(
-                lambda c, t, m: self._handle_worker_progress(button, c, t, m)
-            )
-            worker.finished.connect(
-                lambda m: self._handle_worker_finished(button, m, original_text)
-            )
-            worker.error_occurred.connect(
-                lambda e: self._handle_worker_error(button, e, original_text)
-            )
-
-            # Start worker
-            worker.start()
-
-            logger.info(
-                f"Operation started in folder: {self.current_working_directory}"
-            )
-
-        except Exception as e:
-            logger.error(f"Error starting operation: {e}")
-            QMessageBox.critical(self, "Error", f"Cannot start operation: {e}")
-            self._reset_button_state(button, original_text)
+        """Unified worker lifecycle handling using WorkerManager"""
+        WorkerManager.start_worker_lifecycle(worker, button, original_text, self)
 
     def _start_operation_with_confirmation(
         self, operation_name: str, description: str, worker_factory
     ):
-        """Universal method for starting operations with confirmation"""
-        if not self._validate_working_directory():
-            return
+        """Universal method for starting operations with confirmation using WorkerManager"""
+        # Map operation names to button names and class fields
+        button_mapping = {
+            "webp conversion": ("webp_button", "webp_converter"),
+            "asset rebuild": ("rebuild_button", "asset_rebuilder"),
+            "image resizing": ("image_resizer_button", "image_resizer"),
+            "file name shortening": ("file_renamer_button", "file_renamer"),
+            "remove prefix/suffix": ("remove_button", "remove_worker"),
+        }
 
-        reply = QMessageBox.question(
-            self,
-            f"Confirm {operation_name.lower()}",
-            f"Are you sure you want to {operation_name.lower()} in folder:\n{self.current_working_directory}?\n\n{description}",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+        button_name, worker_attr = button_mapping.get(
+            operation_name.lower(), ("webp_button", "webp_converter")
         )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            worker = worker_factory()
-
-            # Map operation names to button names and class fields
-            button_mapping = {
-                "webp conversion": ("webp_button", "webp_converter"),
-                "asset rebuild": ("rebuild_button", "asset_rebuilder"),
-                "image resizing": ("image_resizer_button", "image_resizer"),
-                "file name shortening": ("file_renamer_button", "file_renamer"),
-                "remove prefix/suffix": ("remove_button", "remove_worker"),
-            }
-
-            button_name, worker_attr = button_mapping.get(
-                operation_name.lower(), ("webp_button", "webp_converter")
-            )
-            logger.debug(
-                f"Mapping operation '{operation_name}' to button '{button_name}' and field '{worker_attr}'"
-            )
-            button = getattr(self, button_name)
+        logger.debug(
+            f"Mapping operation '{operation_name}' to button '{button_name}' and field '{worker_attr}'"
+        )
+        button = getattr(self, button_name)
+        
+        worker = WorkerManager.create_worker_with_confirmation(
+            operation_name, description, worker_factory, self, button
+        )
+        
+        if worker:
             setattr(self, worker_attr, worker)
             self._handle_worker_lifecycle(worker, button, button.text())
 

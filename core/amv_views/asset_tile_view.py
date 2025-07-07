@@ -166,67 +166,76 @@ class AssetTileView(QFrame):
         self._setup_ui_without_styles()
 
     def _setup_ui_without_styles(self):
-        # Najpierw utwórz miniaturkę!
+        """Setup UI elements without applying styles"""
+        self._create_thumbnail_container()
+        self._calculate_tile_dimensions()
+        self._setup_main_layout()
+        self._setup_thumbnail_section()
+        self._setup_filename_section()
+        self._setup_bottom_row_section()
+        self._finalize_ui_setup()
+    
+    def _create_thumbnail_container(self):
+        """Create and configure thumbnail container"""
         self.thumbnail_container = QLabel()
-        self.thumbnail_container.setObjectName(
-            "AssetTileThumbnail"
-        )  # Miniaturka (góra)
+        self.thumbnail_container.setObjectName("AssetTileThumbnail")
         thumb_size = self.thumbnail_size
         self.thumbnail_container.setFixedSize(thumb_size, thumb_size)
         self.thumbnail_container.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
         self.thumbnail_container.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.thumbnail_container.setAlignment(
-            Qt.AlignmentFlag.AlignCenter
-        )  # Zapewnia centrowanie zawartości
-        self.thumbnail_container.setContentsMargins(
-            0, 0, 0, 0
-        )  # Usuwa wszelkie wewnętrzne marginesy
+        self.thumbnail_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.thumbnail_container.setContentsMargins(0, 0, 0, 0)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-
-        # Bardziej precyzyjne obliczanie rozmiaru
+    
+    def _calculate_tile_dimensions(self):
+        """Calculate tile dimensions based on content"""
         tile_padding = 6  # z CSS
         tile_border = 1  # z CSS
-
+        
         # Oblicz szerokość na podstawie kolumn
         # ikona(60) + nazwa(136) + rozmiar(60)
         filename_width = 60 + 136 + 60  # 256px
         tile_width = max(self.thumbnail_size, filename_width)
         tile_height = self.thumbnail_size + 60 + (2 * tile_padding) + (2 * tile_border)
         self.setFixedSize(tile_width, tile_height)
-
-        # GŁÓWNY LAYOUT
+    
+    def _setup_main_layout(self):
+        """Setup main layout and content container"""
         layout = QVBoxLayout(self)
         layout.setSpacing(0)
         layout.setContentsMargins(10, 10, 10, 6)
-
-        # GŁÓWNY KONTENER dla wszystkich elementów kafelka
+        
         self.main_content_container = QWidget()
         self.main_content_container.setObjectName("AssetTileMainContent")
-
-        # Layout dla głównego kontenera
+        
         main_content_layout = QVBoxLayout(self.main_content_container)
         main_content_layout.setSpacing(0)
         main_content_layout.setContentsMargins(0, 0, 0, 0)
-
-        # MINIATURKA - w głównym kontenerze
+        
+        self._main_content_layout = main_content_layout
+        self._main_layout = layout
+    
+    def _setup_thumbnail_section(self):
+        """Setup thumbnail section in main content"""
         self.thumbnail_container.setContentsMargins(0, 0, 0, 0)
-        main_content_layout.addWidget(
+        self._main_content_layout.addWidget(
             self.thumbnail_container, 0, Qt.AlignmentFlag.AlignCenter
         )
-        main_content_layout.addSpacing(0)  # Odstęp przed nazwą pliku
-
-        # Pasek z nazwą pliku, ikonką tekstury i rozmiarem
+        self._main_content_layout.addSpacing(0)  # Odstęp przed nazwą pliku
+    
+    def _setup_filename_section(self):
+        """Setup filename section with texture icon, name and size"""
         filename_container = QHBoxLayout()
         filename_container.setContentsMargins(0, 0, 0, 0)
         filename_container.setSpacing(0)
-
+        
         # Ustaw stałe szerokości dla kolumn
         self.texture_icon.setFixedWidth(60)
         self.name_label.setFixedWidth(136)
         self.size_label.setFixedWidth(60)
-
+        
         filename_container.addWidget(
             self.texture_icon,
             0,
@@ -238,19 +247,20 @@ class AssetTileView(QFrame):
             0,
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
         )
+        
         filename_bg = QWidget()
-        filename_bg.setObjectName("AssetTileFilenameContainer")  # Kontener nazwy pliku
+        filename_bg.setObjectName("AssetTileFilenameContainer")
         filename_bg.setLayout(filename_container)
-        main_content_layout.addWidget(filename_bg)
-
-        # Pasek z numerem, gwiazdkami i checkboxem w jednej linii
+        self._main_content_layout.addWidget(filename_bg)
+    
+    def _setup_bottom_row_section(self):
+        """Setup bottom row with tile number, stars and checkbox"""
         bottom_row_bg = QWidget()
-        bottom_row_bg.setObjectName(
-            "AssetTileBottomRow"
-        )  # Dolny pasek (numer+gwiazdki+checkbox)
+        bottom_row_bg.setObjectName("AssetTileBottomRow")
         bottom_row_layout = QHBoxLayout(bottom_row_bg)
-        bottom_row_layout.setContentsMargins(0, 0, 0, 0)  # Margines dolny 6px
+        bottom_row_layout.setContentsMargins(0, 0, 0, 0)
         bottom_row_layout.setSpacing(0)
+        
         # NR do lewej
         bottom_row_layout.addWidget(
             self.tile_number_label, 0, Qt.AlignmentFlag.AlignVCenter
@@ -264,14 +274,17 @@ class AssetTileView(QFrame):
         bottom_row_layout.addStretch()
         # Checkbox do prawej
         bottom_row_layout.addWidget(self.checkbox, 0, Qt.AlignmentFlag.AlignVCenter)
-        main_content_layout.addWidget(bottom_row_bg)
-
+        
+        self._main_content_layout.addWidget(bottom_row_bg)
+    
+    def _finalize_ui_setup(self):
+        """Finalize UI setup and apply initial state"""
         # Dodaj główny kontener do głównego layoutu
-        layout.addWidget(self.main_content_container)
-
+        self._main_layout.addWidget(self.main_content_container)
+        
         self.setAcceptDrops(False)  # D&D będzie obsługiwane przez Controller
         self.setMouseTracking(True)
-
+        
         self.update_ui()
         # Ustaw początkowy stan checkboxa na podstawie SelectionModel
         self.checkbox.setChecked(self.selection_model.is_selected(self.asset_id))
