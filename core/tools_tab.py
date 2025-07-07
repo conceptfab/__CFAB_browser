@@ -413,13 +413,13 @@ class ToolsTab(QWidget):
             
             # Check if the operation did not change files
             if any(skip_msg in message for skip_msg in skip_messages):
-                logger.debug(f"Operacja '{operation_name}' nie zmieniła plików: {message}")
+                logger.debug(f"Operation '{operation_name}' did not change files: {message}")
                 return
             
-            # Sprawdź czy operacja zmieniła pliki
+            # Check if operation changed files
             if any(success_msg in message for success_msg in success_messages):
                 operation_modified_files = True
-                logger.debug(f"Operacja '{operation_name}' zmieniła pliki: {message}")
+                logger.debug(f"Operation '{operation_name}' changed files: {message}")
             
             # If the operation changed files, emit a refresh signal
             if operation_modified_files and self.current_working_directory:
@@ -733,7 +733,7 @@ class ToolsTab(QWidget):
         button_layout.addWidget(ok_button)
         layout.addLayout(button_layout)
 
-        # Wyświetl dialog
+        # Show dialog
         result = dialog.exec()
 
         if result == QDialog.DialogCode.Accepted:
@@ -751,7 +751,7 @@ class ToolsTab(QWidget):
             self._start_remove(text_to_remove, selected_mode)
 
     def _start_remove(self, text_to_remove: str, mode: str): # Starts removing prefix/suffix from file names
-        """Rozpoczyna usuwanie prefixu/suffixu z nazw plików"""
+        """Starts removing prefix/suffix from file names"""
         try:
             # Disable button during removal
             self.remove_button.setEnabled(False)
@@ -783,16 +783,16 @@ class ToolsTab(QWidget):
             self.remove_worker.start()
 
             logger.info(
-                f"Rozpoczęto usuwanie {mode} w folderze: {self.current_working_directory}"
+                f"Started removing {mode} in folder: {self.current_working_directory}"
             )
 
         except Exception as e:
-            logger.error(f"Błąd podczas rozpoczynania usuwania: {e}")
-            QMessageBox.critical(self, "Błąd", f"Nie można rozpocząć usuwania: {e}")
+            logger.error(f"Error starting removal: {e}")
+            QMessageBox.critical(self, "Error", f"Cannot start removal: {e}")
             self._reset_button_state(self.remove_button, "Remove prefix/suffix")
 
     def _on_find_duplicates_clicked(self):
-        """Obsługuje kliknięcie przycisku znajdowania duplikatów"""
+        """Handles find duplicates button click"""
         if not self._validate_working_directory():
             return
 
@@ -810,16 +810,16 @@ class ToolsTab(QWidget):
             self._start_find_duplicates()
 
     def _start_find_duplicates(self):
-        """Rozpoczyna szukanie duplikatów"""
+        """Starts finding duplicates"""
         try:
-            # Wyłącz przycisk podczas operacji
+            # Disable button during operation
             self.find_duplicates_button.setEnabled(False)
             self.find_duplicates_button.setText("Searching...")
 
-            # Utwórz worker do szukania duplikatów
+            # Create worker for finding duplicates
             self.duplicate_finder = DuplicateFinderWorker(self.current_working_directory)
 
-            # Połącz sygnały
+            # Connect signals
             self.duplicate_finder.progress_updated.connect(
                 lambda c, t, m: self._handle_worker_progress(
                     self.find_duplicates_button, c, t, m
@@ -830,7 +830,7 @@ class ToolsTab(QWidget):
                     self.find_duplicates_button, m, "Find Duplicates"
                 )
             )
-            # Dodatkowe połączenie dla odświeżenia drzewa folderów
+            # Additional connection for folder tree refresh
             self.duplicate_finder.finished.connect(
                 lambda m: self._handle_duplicates_finished(m)
             )
@@ -840,47 +840,47 @@ class ToolsTab(QWidget):
                 )
             )
 
-            # Uruchom worker
+            # Start worker
             self.duplicate_finder.start()
 
             logger.info(
-                f"Rozpoczęto szukanie duplikatów w folderze: {self.current_working_directory}"
+                f"Started finding duplicates in folder: {self.current_working_directory}"
             )
 
         except Exception as e:
-            logger.error(f"Błąd podczas rozpoczynania szukania duplikatów: {e}")
+            logger.error(f"Error starting duplicate search: {e}")
             QMessageBox.critical(self, "Error", f"Cannot start finding duplicates: {e}")
             self._reset_button_state(self.find_duplicates_button, "Find Duplicates")
 
     def _handle_duplicates_finished(self, message: str):
-        """Obsługuje zakończenie operacji znajdowania duplikatów"""
+        """Handles completion of duplicate finding operation"""
         try:
-            # Jeśli operacja przeniosła pliki (nie zawiera "No duplicates found" lub "No archive files")
+            # If operation moved files (doesn't contain "No duplicates found" or "No archive files")
             if "Moved" in message and "files to __duplicates__" in message:
-                # Emituj sygnał o zmianie struktury folderów
+                # Emit signal about folder structure change
                 self.folder_structure_changed.emit(self.current_working_directory)
-                logger.info(f"Emitowano sygnał folder_structure_changed dla: {self.current_working_directory}")
+                logger.info(f"Emitted folder_structure_changed signal for: {self.current_working_directory}")
         except Exception as e:
-            logger.error(f"Błąd w obsłudze zakończenia znajdowania duplikatów: {e}")
+            logger.error(f"Error handling duplicate finding completion: {e}")
 
     def _show_pairs_dialog(self, pairs):
-        """Wyświetla okno z listą par, które będą zmieniane"""
+        """Displays a window with a list of pairs to be renamed"""
         if not pairs:
             return
 
         dialog = QDialog(self)
-        dialog.setWindowTitle("Pary plików do zmiany nazw")
+        dialog.setWindowTitle("File pairs to rename")
         dialog.setModal(True)
         dialog.resize(600, 400)
 
         layout = QVBoxLayout(dialog)
 
-        # Nagłówek
-        header_label = QLabel(f"Znaleziono {len(pairs)} par plików do przetworzenia:")
+        # Header
+        header_label = QLabel(f"Found {len(pairs)} file pairs to process:")
         header_label.setProperty("class", "dialog-header")
         layout.addWidget(header_label)
 
-        # Lista par
+        # List of pairs
         list_widget = QListWidget()
         for archive_path, preview_path in pairs:
             archive_name = os.path.basename(archive_path)
@@ -892,7 +892,7 @@ class ToolsTab(QWidget):
 
         # Buttons
         button_layout = QHBoxLayout()
-        ok_button = QPushButton("Kontynuuj")
+        ok_button = QPushButton("Continue")
         cancel_button = QPushButton("Cancel")
 
         ok_button.clicked.connect(dialog.accept)
@@ -902,10 +902,10 @@ class ToolsTab(QWidget):
         button_layout.addWidget(cancel_button)
         layout.addLayout(button_layout)
 
-        # Display window
+        # Show dialog
         result = dialog.exec()
 
-        # Jeśli użytkownik anulował, zatrzymaj worker
+        # If user cancelled, stop worker
         if result == QDialog.DialogCode.Rejected:
             if hasattr(self, "file_renamer") and self.file_renamer:
                 self.file_renamer.quit()
@@ -913,27 +913,27 @@ class ToolsTab(QWidget):
                     self.file_renamer.terminate()
                     self.file_renamer.wait(2000)
         else:
-            # Użytkownik potwierdził - kontynuuj operację
+            # User confirmed - continue operation
             self.file_renamer.confirm_operation()
 
     def _show_pairs_dialog_shortener(self, pairs): # Displays a window with a list of pairs to be shortened
-        """Wyświetla okno z listą par, które będą skracane"""
+        """Displays a window with a list of pairs to be shortened"""
         if not pairs:
             return
 
         dialog = QDialog(self)
-        dialog.setWindowTitle("Pary plików do skrócenia nazw")
+        dialog.setWindowTitle("File pairs to shorten names")
         dialog.setModal(True)
         dialog.resize(600, 400)
 
         layout = QVBoxLayout(dialog)
 
-        # Nagłówek
-        header_label = QLabel(f"Znaleziono {len(pairs)} par plików do przetworzenia:")
+        # Header
+        header_label = QLabel(f"Found {len(pairs)} file pairs to process:")
         header_label.setProperty("class", "dialog-header")
         layout.addWidget(header_label)
 
-        # Lista par
+        # List of pairs
         list_widget = QListWidget()
         for archive_path, preview_path in pairs:
             archive_name = os.path.basename(archive_path)
@@ -945,7 +945,7 @@ class ToolsTab(QWidget):
 
         # Buttons
         button_layout = QHBoxLayout()
-        ok_button = QPushButton("Kontynuuj")
+        ok_button = QPushButton("Continue")
         cancel_button = QPushButton("Cancel")
 
         ok_button.clicked.connect(dialog.accept)
@@ -955,10 +955,10 @@ class ToolsTab(QWidget):
         button_layout.addWidget(cancel_button)
         layout.addLayout(button_layout)
 
-        # Display window
+        # Show dialog
         result = dialog.exec()
 
-        # Jeśli użytkownik anulował, zatrzymaj worker
+        # If user cancelled, stop worker
         if result == QDialog.DialogCode.Rejected:
             if hasattr(self, "file_shortener") and self.file_shortener:
                 self.file_shortener.quit()
@@ -966,11 +966,11 @@ class ToolsTab(QWidget):
                     self.file_shortener.terminate()
                     self.file_shortener.wait(2000)
         else:
-            # Użytkownik potwierdził - kontynuuj operację
+            # User confirmed - continue operation
             self.file_shortener.confirm_operation()
 
     def clear_working_directory(self):
-        """Czyści folder roboczy, dezaktywuje przyciski i czyści listy"""
+        """Clears working folder, deactivates buttons and clears lists"""
         self.current_working_directory = ""
         self.clear_lists()
         self._update_button_states()

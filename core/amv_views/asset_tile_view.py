@@ -33,13 +33,13 @@ class AssetTileView(QFrame):
 
     thumbnail_clicked = pyqtSignal(str, str, object)  # asset_id, asset_path, tile
     filename_clicked = pyqtSignal(str, str, object)  # asset_id, asset_path, tile
-    checkbox_state_changed = pyqtSignal(bool)  # Czy kafelek jest zaznaczony
-    drag_started = pyqtSignal(object)  # Dane assetu
+    checkbox_state_changed = pyqtSignal(bool)  # Whether the tile is selected
+    drag_started = pyqtSignal(object)  # Asset data
 
-    # Globalny QThreadPool do zarządzania workerami
+    # Global QThreadPool for managing workers
     thread_pool = QThreadPool()
     
-    # Stałe klasowe
+    # Class constants
     MARGINS_SIZE = 8
 
     def __init__(
@@ -48,15 +48,15 @@ class AssetTileView(QFrame):
         thumbnail_size: int,
         tile_number: int,
         total_tiles: int,
-        selection_model: SelectionModel,  # Dodaj selection_model
+        selection_model: SelectionModel,  # Add selection_model
     ):
         super().__init__()
         self.model = tile_model
         self.thumbnail_size = thumbnail_size
         self.tile_number = tile_number
         self.total_tiles = total_tiles
-        self.selection_model = selection_model  # Przypisz selection_model
-        self.asset_id = self.model.get_name()  # Użyj nazwy assetu jako ID
+        self.selection_model = selection_model  # Assign selection_model
+        self.asset_id = self.model.get_name()  # Use asset name as ID
         self.is_loading_thumbnail = False
         self.setObjectName("AssetTileViewFrame")  # Added object name
         self._setup_ui()
@@ -71,30 +71,30 @@ class AssetTileView(QFrame):
         Updates tile data for Object Pooling.
         Allows reuse of an existing AssetTileView instance.
         """
-        # Odłącz stare połączenie sygnału - bezpieczne odłączenie
+        # Disconnect old signal connection - safe disconnection
         if hasattr(self, "model") and self.model:
             try:
                 self.model.data_changed.disconnect(self.update_ui)
             except (TypeError, AttributeError):
-                pass  # Połączenie już nie istnieje
+                pass  # Connection already doesn't exist
 
-        # Zresetuj stan ładowania miniaturki
+        # Reset thumbnail loading state
         self.is_loading_thumbnail = False
 
-        # Zaktualizuj dane
+        # Update data
         self.model = tile_model
         self.tile_number = tile_number
         self.total_tiles = total_tiles
         self.asset_id = self.model.get_name()
 
-        # Podłącz nowe połączenie sygnału - tylko jeśli model istnieje
+        # Connect new signal connection - only if model exists
         if self.model:
             self.model.data_changed.connect(self.update_ui)
 
-        # Natychmiast zaktualizuj UI z nowymi danymi
+        # Immediately update UI with new data
         self.update_ui()
 
-        # DODANO: Ustaw początkowy stan checkboxa na podstawie SelectionModel
+        # ADDED: Set initial checkbox state based on SelectionModel
         if hasattr(self, "selection_model") and self.selection_model:
             is_selected = self.selection_model.is_selected(self.asset_id)
             self.set_checked(is_selected)
@@ -112,52 +112,52 @@ class AssetTileView(QFrame):
         logger.debug("AssetTileView reset for pool reuse with proper signal cleanup")
 
     def _setup_ui(self):
-        # Usunięto podwójne tworzenie thumbnail_container - przeniesione do _setup_ui_without_styles()
-        # Najpierw utwórz ikonę tekstury!
+        # Removed duplicate thumbnail_container creation - moved to _setup_ui_without_styles()
+        # First create texture icon!
         self.texture_icon = QLabel()
         self.texture_icon.setObjectName(
             "AssetTileTextureIcon"
-        )  # Ikona tekstury (16x16px)
+        )  # Texture icon (16x16px)
         self.texture_icon.setFixedSize(16, 16)
         self.texture_icon.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
         self.texture_icon.setVisible(False)
         self._load_texture_icon()
-        # Najpierw utwórz label na nazwę pliku!
+        # First create label for filename!
         self.name_label = QLabel()
-        self.name_label.setObjectName("AssetTileNameLabel")  # Nazwa pliku (centrum)
+        self.name_label.setObjectName("AssetTileNameLabel")  # Filename (center)
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.name_label.setWordWrap(True)
         self.name_label.setSizePolicy(
             QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred
         )
         self.name_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        # Dodaj label na rozmiar pliku
+        # Add label for file size
         self.size_label = QLabel()
-        self.size_label.setObjectName("AssetTileSizeLabel")  # Rozmiar pliku (prawy)
+        self.size_label.setObjectName("AssetTileSizeLabel")  # File size (right)
         self.size_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.size_label.setSizePolicy(
             QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
         )
-        # Dodaj label na numer kafelka
+        # Add label for tile number
         self.tile_number_label = QLabel()
         self.tile_number_label.setObjectName(
             "AssetTileNumberLabel"
-        )  # Numer kafelka (lewy)
+        )  # Tile number (left)
         self.tile_number_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.tile_number_label.setSizePolicy(
             QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred
         )
-        # Dodaj checkbox
+        # Add checkbox
         self.checkbox = QCheckBox()
-        self.checkbox.setObjectName("AssetTileCheckBox")  # Checkbox zaznaczenia (prawy)
-        # DODANO: Połączenie sygnału checkboxa
+        self.checkbox.setObjectName("AssetTileCheckBox")  # Selection checkbox (right)
+        # ADDED: Checkbox signal connection
         self.checkbox.stateChanged.connect(self._on_checkbox_state_changed)
-        # Dodaj gwiazdki (5)
+        # Add stars (5)
         self.star_checkboxes = [QCheckBox() for _ in range(5)]
         for i, star_cb in enumerate(self.star_checkboxes):
-            star_cb.setObjectName(f"AssetTileStar_{i+1}")  # Gwiazdki 1-5 (środek)
+            star_cb.setObjectName(f"AssetTileStar_{i+1}")  # Stars 1-5 (center)
             star_cb.setProperty("class", "star")
             star_cb.setText("★")
             star_cb.clicked.connect(
@@ -194,8 +194,8 @@ class AssetTileView(QFrame):
         tile_padding = 6  # z CSS
         tile_border = 1  # z CSS
         
-        # Oblicz szerokość na podstawie kolumn
-        # ikona(60) + nazwa(136) + rozmiar(60)
+        # Calculate width based on columns
+        # icon(60) + name(136) + size(60)
         filename_width = 60 + 136 + 60  # 256px
         tile_width = max(self.thumbnail_size, filename_width)
         tile_height = self.thumbnail_size + 60 + (2 * tile_padding) + (2 * tile_border)
@@ -223,7 +223,7 @@ class AssetTileView(QFrame):
         self._main_content_layout.addWidget(
             self.thumbnail_container, 0, Qt.AlignmentFlag.AlignCenter
         )
-        self._main_content_layout.addSpacing(0)  # Odstęp przed nazwą pliku
+        self._main_content_layout.addSpacing(0)  # Spacing before filename
     
     def _setup_filename_section(self):
         """Setup filename section with texture icon, name and size"""
@@ -231,7 +231,7 @@ class AssetTileView(QFrame):
         filename_container.setContentsMargins(0, 0, 0, 0)
         filename_container.setSpacing(0)
         
-        # Ustaw stałe szerokości dla kolumn
+        # Set fixed widths for columns
         self.texture_icon.setFixedWidth(60)
         self.name_label.setFixedWidth(136)
         self.size_label.setFixedWidth(60)
@@ -261,32 +261,32 @@ class AssetTileView(QFrame):
         bottom_row_layout.setContentsMargins(0, 0, 0, 0)
         bottom_row_layout.setSpacing(0)
         
-        # NR do lewej
+        # NR to left
         bottom_row_layout.addWidget(
             self.tile_number_label, 0, Qt.AlignmentFlag.AlignVCenter
         )
-        # Rozciągnij do środka
+        # Stretch to center
         bottom_row_layout.addStretch()
-        # Gwiazdki do środka
+        # Stars to center
         for star_cb in self.star_checkboxes:
             bottom_row_layout.addWidget(star_cb, 0, Qt.AlignmentFlag.AlignVCenter)
-        # Rozciągnij do prawej
+        # Stretch to right
         bottom_row_layout.addStretch()
-        # Checkbox do prawej
+        # Checkbox to right
         bottom_row_layout.addWidget(self.checkbox, 0, Qt.AlignmentFlag.AlignVCenter)
         
         self._main_content_layout.addWidget(bottom_row_bg)
     
     def _finalize_ui_setup(self):
         """Finalize UI setup and apply initial state"""
-        # Dodaj główny kontener do głównego layoutu
+        # Add main container to main layout
         self._main_layout.addWidget(self.main_content_container)
         
-        self.setAcceptDrops(False)  # D&D będzie obsługiwane przez Controller
+        self.setAcceptDrops(False)  # D&D will be handled by Controller
         self.setMouseTracking(True)
         
         self.update_ui()
-        # Ustaw początkowy stan checkboxa na podstawie SelectionModel
+        # Set initial checkbox state based on SelectionModel
         self.checkbox.setChecked(self.selection_model.is_selected(self.asset_id))
 
     def update_ui(self):
@@ -300,9 +300,9 @@ class AssetTileView(QFrame):
     def _setup_asset_tile_ui(self):
         if not hasattr(self, "model") or self.model is None:
             return
-        # Wyświetlanie nazwy i rozmiaru pliku
+        # Display filename and file size
         file_name = self.model.get_name()
-        # Ogranicz długość nazwy do 16 znaków
+        # Limit name length to 16 characters
         if len(file_name) > 16:
             display_name = file_name[:13] + "..."
         else:
@@ -314,7 +314,7 @@ class AssetTileView(QFrame):
         else:
             self.size_label.setText("")
         self.tile_number_label.setText(f"{self.tile_number} / {self.total_tiles}")
-        # Sprawdź czy gwiazdki mieszczą się na kafelku
+        # Check if stars fit on the tile
         stars_visible = self._check_stars_fit()
         for star_cb in self.star_checkboxes:
             star_cb.setVisible(stars_visible)
@@ -328,17 +328,17 @@ class AssetTileView(QFrame):
             self.texture_icon.setVisible(True)
             self._load_empty_texture_spacer()
         self.checkbox.setVisible(True)
-        # Krok 1: Spróbuj załadować z cache
+        # Step 1: Try to load from cache
         thumbnail_path = self.model.get_thumbnail_path()
         cached_pixmap = thumbnail_cache.get(thumbnail_path)
         if cached_pixmap:
             self._set_thumbnail_pixmap(cached_pixmap)
         elif thumbnail_path and os.path.exists(thumbnail_path):
-            # Krok 2: Jeśli nie ma w cache, załaduj asynchronicznie
+            # Step 2: If not in cache, load asynchronously
             self._create_placeholder_thumbnail()
             self._load_thumbnail_async(thumbnail_path)
         else:
-            # Krok 3: Jeśli plik nie istnieje, pokaż placeholder
+            # Step 3: If file doesn't exist, show placeholder
             self._create_placeholder_thumbnail()
 
     def _load_thumbnail_async(self, path: str):
@@ -368,15 +368,15 @@ class AssetTileView(QFrame):
         target_size = self.thumbnail_container.size()
         size = min(pixmap.width(), pixmap.height())
 
-        # Przycinanie do kwadratu
+        # Crop to square
         if pixmap.width() > pixmap.height():
-            # Szeroki - przytnij od lewej
+            # Wide - crop from left
             rect = pixmap.copy(0, 0, size, size)
         elif pixmap.height() > pixmap.width():
-            # Wysoki - przytnij od góry
+            # Tall - crop from top
             rect = pixmap.copy(0, 0, size, size)
         else:
-            # Już kwadrat
+            # Already square
             rect = pixmap
 
         scaled_pixmap = rect.scaled(
@@ -387,9 +387,9 @@ class AssetTileView(QFrame):
         self.thumbnail_container.setPixmap(scaled_pixmap)
 
     def _setup_folder_tile_ui(self):
-        # Wyświetlanie nazwy folderu
+        # Display folder name
         folder_name = self.model.get_name()
-        # Ogranicz długość nazwy do 16 znaków
+        # Limit name length to 16 characters
         if len(folder_name) > 16:
             display_name = folder_name[:13] + "..."
         else:
@@ -398,7 +398,7 @@ class AssetTileView(QFrame):
         self.name_label.setText(display_name)
         self.tile_number_label.setText(f"{self.tile_number} / {self.total_tiles}")
 
-        # Ukryj gwiazdki dla folderów
+        # Hide stars for folders
         for star_cb in self.star_checkboxes:
             star_cb.setVisible(False)
 
@@ -407,7 +407,7 @@ class AssetTileView(QFrame):
         self._load_empty_texture_spacer()
         self.checkbox.setVisible(False)
 
-        # Załaduj ikonę folderu
+        # Load folder icon
         self._load_folder_icon()
 
     def _create_placeholder_thumbnail(self):
@@ -432,8 +432,8 @@ class AssetTileView(QFrame):
                         Qt.TransformationMode.SmoothTransformation,
                     )
         except Exception as e:
-            logger.error(f"Błąd podczas ładowania ikony {icon_name}: {e}")
-        # Fallback: szary lub żółty prostokąt zależnie od ikony
+            logger.error(f"Error loading icon {icon_name}: {e}")
+        # Fallback: gray or yellow rectangle depending on icon
         fallback = QPixmap(size[0], size[1])
         if icon_name == "texture.png":
             fallback.fill(QColor("#FFD700"))
@@ -465,25 +465,25 @@ class AssetTileView(QFrame):
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_start_position = event.position().toPoint()
 
-            # Sprawdź, który widget został kliknięty
+            # Check which widget was clicked
             clicked_widget = self.childAt(event.position().toPoint())
 
-            # Jeśli wciśnięty jest Shift, nie pokazuj podglądu ani archiwum
+            # If Shift is pressed, don't show preview or archive
             if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 logger.debug(
-                    "Shift wciśnięty - blokada podglądu/archiwum, tylko drag and drop"
+                    "Shift pressed - preview/archive blocked, drag and drop only"
                 )
                 super().mousePressEvent(event)
                 return
 
-            # Obsługa kliknięć na miniaturkę
+            # Handle clicks on thumbnail
             if clicked_widget == self.thumbnail_container or (
                 clicked_widget and clicked_widget.parent() == self.thumbnail_container
             ):
                 self._on_thumbnail_clicked(event)
                 return
 
-            # Obsługa kliknięć na nazwę pliku
+            # Handle clicks on filename
             if clicked_widget == self.name_label:
                 self._on_filename_clicked(event)
                 return
@@ -509,41 +509,41 @@ class AssetTileView(QFrame):
         super().mouseMoveEvent(event)
 
     def _start_drag(self, event):
-        # Blokada D&D gdy trwa ładowanie galerii
+        # Block D&D when gallery is loading
         if hasattr(self, "_drag_and_drop_enabled") and not self._drag_and_drop_enabled:
-            logger.info("Drag and drop zablokowane podczas ładowania galerii.")
+            logger.info("Drag and drop blocked during gallery loading.")
             return
         
-        # ZABEZPIECZENIE: Sprawdź czy drag już nie jest w toku
+        # SECURITY: Check if drag is already in progress
         if hasattr(self, "_drag_in_progress") and self._drag_in_progress:
             logger.warning("Drag already in progress, ignoring new drag request")
             return
             
         logger.debug(f"Starting drag for asset: {self.asset_id}")
 
-        # Sprawdź czy selection_model istnieje
+        # Check if selection_model exists
         if not self.selection_model:
             logger.error("selection_model is None, cannot start drag")
             return
 
-        # Pobierz zaznaczone assety z SelectionModel
+        # Get selected assets from SelectionModel
         selected_asset_ids = self.selection_model.get_selected_asset_ids()
         logger.debug(f"Selected asset IDs: {selected_asset_ids}")
 
-        # Jeśli nie ma zaznaczonych assetów, przeciągnij tylko ten kafelek
+        # If no assets are selected, drag only this tile
         if not selected_asset_ids:
             selected_asset_ids = [self.asset_id]
             logger.debug(
                 f"No selected assets, dragging single asset: {selected_asset_ids}"
             )
 
-        # ZABEZPIECZENIE: Sprawdź czy asset_ids są prawidłowe
+        # SECURITY: Check if asset_ids are valid
         if not selected_asset_ids or any(not aid for aid in selected_asset_ids):
             logger.error(f"Invalid asset IDs for drag: {selected_asset_ids}")
             return
 
         try:
-            # Ustaw flagę drag in progress
+            # Set drag in progress flag
             self._drag_in_progress = True
             
             drag = QDrag(self)
@@ -554,22 +554,22 @@ class AssetTileView(QFrame):
 
             logger.debug(f"Created mime data: {mime_text}")
 
-            # Ustaw kursor przeciągania
+            # Set drag cursor
             drag.setDragCursor(QPixmap(), Qt.DropAction.MoveAction)
 
-            # Emituj sygnał rozpoczęcia przeciągania
+            # Emit drag start signal
             self.drag_started.emit(selected_asset_ids)
             logger.debug("Emitted drag_started signal")
 
-            # POPRAWKA: Wykonaj przeciąganie z timeout dla bezpieczeństwa
-            # Używamy Qt.DropAction.MoveAction | Qt.DropAction.IgnoreAction dla lepszej kompatybilności
+            # FIX: Execute drag with timeout for safety
+            # We use Qt.DropAction.MoveAction | Qt.DropAction.IgnoreAction for better compatibility
             result = drag.exec(Qt.DropAction.MoveAction | Qt.DropAction.IgnoreAction)
             logger.debug(f"Drag exec result: {result}")
             
         except Exception as e:
             logger.error(f"Error during drag operation: {e}")
         finally:
-            # Zawsze wyczyść flagę drag in progress
+            # Always clear drag in progress flag
             self._drag_in_progress = False
 
     def _on_thumbnail_clicked(self, _ev):
@@ -595,11 +595,11 @@ class AssetTileView(QFrame):
     def update_thumbnail_size(self, new_size: int):
         """Updates thumbnail size and recalculates layout."""
         self.thumbnail_size = new_size
-        # Przelicz szerokość kafelka
+        # Recalculate tile width
         tile_width = new_size + (2 * self.MARGINS_SIZE)
         tile_height = new_size + 70
         self.setFixedSize(tile_width, tile_height)
-        self.update_ui()  # Przeładuj UI, aby zastosować nowy rozmiar
+        self.update_ui()  # Reload UI to apply new size
 
     def _update_stars_visibility(self):
         """Updates the visibility of stars based on available space."""
@@ -619,23 +619,23 @@ class AssetTileView(QFrame):
 
     def set_checked(self, checked: bool):
         """Sets the checked state of the tile."""
-        # Ustaw flagę blokady przed zmianą stanu
+        # Set blocking flag before state change
         self._updating_checkbox = True
         try:
-            # Odłącz sygnał tymczasowo, aby uniknąć rekurencji
+            # Temporarily disconnect signal to avoid recursion
             self.checkbox.blockSignals(True)
             self.checkbox.setChecked(checked)
             self.checkbox.blockSignals(False)
-            # Ręcznie wywołaj metodę obsługującą zmianę stanu, aby zaktualizować model
+            # Manually call state change handler to update model
             self._on_checkbox_state_changed(self.checkbox.checkState().value)
         finally:
-            # Zawsze usuń flagę blokady
+            # Always remove blocking flag
             self._updating_checkbox = False
 
     def _on_checkbox_state_changed(self, state: int):
         """Handles checkbox state change."""
         is_checked = state == Qt.CheckState.Checked.value
-        # Zabezpieczenie przed rekurencją podczas programowego ustawiania checkboxa
+        # Protection against recursion during programmatic checkbox setting
         if hasattr(self, "_updating_checkbox") and self._updating_checkbox:
             return
         if is_checked:
@@ -643,7 +643,7 @@ class AssetTileView(QFrame):
         else:
             self.selection_model.remove_selection(self.asset_id)
         self.checkbox_state_changed.emit(is_checked)
-        # DODANO: Wymuszenie aktualizacji paska statusu
+        # ADDED: Force status bar update
         try:
             main_window = None
             widget = self
@@ -655,10 +655,10 @@ class AssetTileView(QFrame):
             if main_window:
                 main_window.update_selection_status()
                 logger.debug(
-                    f"Zaktualizowano pasek statusu po zmianie checkboxa dla {self.asset_id}"
+                    f"Updated status bar after checkbox change for {self.asset_id}"
                 )
         except Exception as e:
-            logger.debug(f"Nie można zaktualizować paska statusu: {e}")
+            logger.debug(f"Cannot update status bar: {e}")
 
     def get_star_rating(self) -> int:
         """Gets the star rating."""
@@ -673,11 +673,11 @@ class AssetTileView(QFrame):
         """Handles star click."""
         current_rating = self.get_star_rating()
         if clicked_rating == current_rating:
-            # Jeśli kliknięto w ostatnią zaznaczoną gwiazdkę, odznacz wszystkie
+            # If clicked on the last selected star, uncheck all
             self.clear_stars()
             self.model.set_stars(0)
         else:
-            # Ustaw nową ocenę
+            # Set new rating
             self.set_star_rating(clicked_rating)
             self.model.set_stars(clicked_rating)
 
@@ -691,21 +691,21 @@ class AssetTileView(QFrame):
 
     def _check_stars_fit(self) -> bool:
         """Checks if stars fit on the tile."""
-        # Oblicz dostępną szerokość dla gwiazdek
-        # Szerokość kafelka - marginesy - numer - checkbox - odstępy
+        # Calculate available width for stars
+        # Tile width - margins - number - checkbox - spacing
         available_width = self.width() - (2 * self.MARGINS_SIZE) - 30 - 16 - 12
 
-        # Szacowana szerokość 5 gwiazdek (każda ~12px) + odstępy
-        stars_width = 5 * 12 + 4 * 6  # 5 gwiazdek po 12px + 4 odstępy po 6px
+        # Estimated width of 5 stars (each ~12px) + spacing
+        stars_width = 5 * 12 + 4 * 6  # 5 stars at 12px + 4 spacing at 6px
 
         return stars_width <= available_width
 
     def resizeEvent(self, event):
         """Handles tile resize event."""
         super().resizeEvent(event)
-        # Aktualizuj widoczność gwiazdek po zmianie rozmiaru
+        # Update stars visibility after size change
         self._update_stars_visibility()
-        # Aktualizuj rozmiar miniatury, aby wypełnić dostępną przestrzeń
+        # Update thumbnail size to fill available space
         self._update_thumbnail_size()
 
     # ===============================================
@@ -788,14 +788,14 @@ class AssetTileView(QFrame):
     def _update_thumbnail_size(self):
         """Updates thumbnail size based on available space."""
         if hasattr(self, "thumbnail_container"):
-            # Oblicz dostępną przestrzeń dla miniatury
+            # Calculate available space for thumbnail
             available_width = self.width() - (2 * self.MARGINS_SIZE)
             available_height = (
                 self.height() - 70
-            )  # Odejmij miejsce na tekst i kontrolki
+            )  # Subtract space for text and controls
 
-            # Użyj mniejszego wymiaru, aby zachować proporcje kwadratu
+            # Use smaller dimension to maintain square proportions
             new_size = min(available_width, available_height, self.thumbnail_size)
-            new_size = max(new_size, 64)  # Minimalny rozmiar 64px
+            new_size = max(new_size, 64)  # Minimum size 64px
 
             self.thumbnail_container.setFixedSize(new_size, new_size)

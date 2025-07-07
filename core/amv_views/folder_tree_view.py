@@ -1,6 +1,6 @@
 """
-Widok drzewa folderów z obsługą drag & drop.
-Zawiera niestandardowy QTreeView z funkcjonalnością przeciągania assetów.
+Folder tree view with drag & drop support.
+Contains a custom QTreeView with asset dragging functionality.
 """
 
 import logging
@@ -17,9 +17,8 @@ logger = logging.getLogger(__name__)
 
 class CustomFolderTreeView(QTreeView):
     """
-    Niestandardowy widok drzewa folderów z obsługą drag & drop i menu
-    kontekstowego. Obsługuje przeciąganie assetów między folderami oraz
-    przebudowę assetów.
+    Custom folder tree view with drag & drop and context menu support.
+    Handles asset dragging between folders and asset rebuilding.
     """
 
     def __init__(self, parent=None):
@@ -28,18 +27,18 @@ class CustomFolderTreeView(QTreeView):
         self.drag_drop_model = None
         self.file_operations_model = None
         self.current_folder_path_getter = (
-            None  # Funkcja do pobierania aktualnego folderu
+            None  # Function to get current folder
         )
-        self.asset_grid_model = None  # Referencja do modelu siatki assetów
-        self.rebuild_callback = None  # Callback do przebudowy assetów
-        self.open_in_explorer_callback = None  # Callback do otwierania w eksploratorze
-        self.refresh_folder_callback = None  # Callback do odświeżania folderu
-        self._active_folder_index = None  # Indeks aktywnego folderu
+        self.asset_grid_model = None  # Reference to asset grid model
+        self.rebuild_callback = None  # Callback for asset rebuilding
+        self.open_in_explorer_callback = None  # Callback for opening in explorer
+        self.refresh_folder_callback = None  # Callback for folder refresh
+        self._active_folder_index = None  # Active folder index
 
-        # Włącz obsługę drop
+        # Enable drop support
         self.setAcceptDrops(True)
 
-        # Podpięcie sygnałów expanded/collapsed
+        # Connect expanded/collapsed signals
         self.expanded.connect(self._on_item_expanded)
         self.collapsed.connect(self._on_item_collapsed)
 
@@ -50,27 +49,27 @@ class CustomFolderTreeView(QTreeView):
         current_folder_path_getter,
         asset_grid_model=None,
     ):
-        """Ustawia modele potrzebne do obsługi drag & drop."""
+        """Sets models needed for drag & drop handling."""
         self.drag_drop_model = drag_drop_model
         self.file_operations_model = file_operations_model
         self.current_folder_path_getter = current_folder_path_getter
         self.asset_grid_model = asset_grid_model
 
     def set_rebuild_callback(self, callback):
-        """Ustawia callback do przebudowy assetów."""
+        """Sets callback for asset rebuilding."""
         self.rebuild_callback = callback
 
     def set_open_in_explorer_callback(self, callback):
-        """Ustawia callback do otwierania folderu w eksploratorze."""
+        """Sets callback for opening folder in explorer."""
         self.open_in_explorer_callback = callback
 
     def set_refresh_folder_callback(self, callback):
-        """Ustawia callback do odświeżania folderu."""
+        """Sets callback for folder refresh."""
         self.refresh_folder_callback = callback
 
     def setModel(self, model):
         super().setModel(model)
-        # Podpinaj sygnał currentChanged z opóźnieniem, by selectionModel już istniał
+        # Connect currentChanged signal with delay, so selectionModel already exists
         QTimer.singleShot(0, self._connect_selection_model)
 
     def _connect_selection_model(self):
@@ -89,20 +88,20 @@ class CustomFolderTreeView(QTreeView):
 
             menu = QMenu(self)
             
-            # Opcja włączania/wyłączania liczników assetów (zawsze dostępna)
+            # Option to enable/disable asset counters (always available)
             show_counts = self._get_show_asset_counts()
             toggle_counts_action = QAction(
-                "Ukryj liczniki assetów" if show_counts else "Pokaż liczniki assetów", 
+                "Hide asset counters" if show_counts else "Show asset counters", 
                 self
             )
             toggle_counts_action.triggered.connect(self._toggle_asset_counts)
             menu.addAction(toggle_counts_action)
             
-            # Opcja trybu rekurencyjnego (dostępna gdy liczniki są włączone)
+            # Recursive mode option (available when counters are enabled)
             if show_counts:
                 recursive_counts = self._get_recursive_asset_counts()
                 toggle_recursive_action = QAction(
-                    "Zliczaj tylko w folderze" if recursive_counts else "Zliczaj rekurencyjnie (+)",
+                    "Count only in folder" if recursive_counts else "Count recursively (+)",
                     self
                 )
                 toggle_recursive_action.triggered.connect(self._toggle_recursive_counts)
@@ -125,8 +124,8 @@ class CustomFolderTreeView(QTreeView):
                         f"contextMenuEvent - item row: {item.row()}, column: {item.column()}"
                     )
 
-                    # Opcja odświeżenia folderu (na górze)
-                    refresh_folder_action = QAction("Odśwież folder", self)
+                    # Folder refresh option (at top)
+                    refresh_folder_action = QAction("Refresh folder", self)
                     refresh_folder_action.triggered.connect(
                         lambda checked, path=folder_path: self._refresh_folder(path)
                     )
@@ -135,8 +134,8 @@ class CustomFolderTreeView(QTreeView):
                     # Separator
                     menu.addSeparator()
 
-                    # Opcja otwarcia w eksploratorze
-                    open_in_explorer_action = QAction("Otwórz w Eksploratorze", self)
+                    # Open in explorer option
+                    open_in_explorer_action = QAction("Open in Explorer", self)
                     open_in_explorer_action.triggered.connect(
                         lambda checked, path=folder_path: self._open_folder_in_explorer(
                             path
@@ -147,8 +146,8 @@ class CustomFolderTreeView(QTreeView):
                     # Separator
                     menu.addSeparator()
 
-                    # Opcja przebudowy assetów
-                    rebuild_action = QAction("Przebuduj assety", self)
+                    # Rebuild assets option
+                    rebuild_action = QAction("Rebuild assets", self)
                     rebuild_action.triggered.connect(
                         lambda checked, path=folder_path: self._rebuild_assets_in_folder(
                             path
@@ -167,108 +166,108 @@ class CustomFolderTreeView(QTreeView):
             else:
                 logger.warning("contextMenuEvent - index nie jest valid")
 
-            # Pokaż menu
+            # Show menu
             menu.exec(event.globalPos())
 
         except Exception as e:
             logger.error(f"Błąd obsługi menu kontekstowego: {e}")
 
     def _toggle_asset_counts(self):
-        """Przełącza pokazywanie liczników assetów w folderach"""
+        """Toggles showing asset counters in folders"""
         try:
-            # Pobierz aktualny stan
+            # Get current state
             current_state = self._get_show_asset_counts()
             new_state = not current_state
             
-            # Poinformuj kontroler o zmianie
+            # Inform controller about change
             if hasattr(self, 'folder_tree_controller'):
                 self.folder_tree_controller.set_show_asset_counts(new_state)
             
             logger.debug(f"Toggled asset counts: {current_state} -> {new_state}")
             
         except Exception as e:
-            logger.error(f"Błąd przełączania liczników assetów: {e}")
+            logger.error(f"Error toggling asset counters: {e}")
 
     def _toggle_recursive_counts(self):
-        """Przełącza tryb rekurencyjnego zliczania assetów"""
+        """Toggles recursive asset counting mode"""
         try:
-            # Pobierz aktualny stan
+            # Get current state
             current_state = self._get_recursive_asset_counts()
             new_state = not current_state
             
-            # Poinformuj kontroler o zmianie
+            # Inform controller about change
             if hasattr(self, 'folder_tree_controller'):
                 self.folder_tree_controller.set_recursive_asset_counts(new_state)
             
             logger.debug(f"Toggled recursive asset counts: {current_state} -> {new_state}")
             
         except Exception as e:
-            logger.error(f"Błąd przełączania trybu rekurencyjnego: {e}")
+            logger.error(f"Error toggling recursive mode: {e}")
 
     def _get_show_asset_counts(self) -> bool:
-        """Pobiera aktualny stan pokazywania liczników assetów"""
+        """Gets current state of showing asset counters"""
         try:
             if hasattr(self, 'folder_tree_controller'):
                 return self.folder_tree_controller.get_show_asset_counts()
-            return True  # Domyślnie włączone
+            return True  # Enabled by default
         except Exception as e:
-            logger.error(f"Błąd pobierania stanu liczników assetów: {e}")
+            logger.error(f"Error getting asset counters state: {e}")
             return True
 
     def _get_recursive_asset_counts(self) -> bool:
-        """Pobiera aktualny stan rekurencyjnego zliczania assetów"""
+        """Gets current state of recursive asset counting"""
         try:
             if hasattr(self, 'folder_tree_controller'):
                 return self.folder_tree_controller.get_recursive_asset_counts()
-            return True  # Domyślnie włączone
+            return True  # Enabled by default
         except Exception as e:
-            logger.error(f"Błąd pobierania stanu trybu rekurencyjnego: {e}")
+            logger.error(f"Error getting recursive mode state: {e}")
             return True
 
     def set_folder_tree_controller(self, controller):
-        """Ustawia referencję do kontrolera drzewa folderów"""
+        """Sets reference to folder tree controller"""
         self.folder_tree_controller = controller
 
     def _open_folder_in_explorer(self, folder_path: str):
-        """Otwiera folder w eksploratorze systemu."""
-        logger.debug(f"_open_folder_in_explorer - otrzymana ścieżka: {folder_path}")
+        """Opens folder in system explorer."""
+        logger.debug(f"_open_folder_in_explorer - received path: {folder_path}")
         try:
             if self.open_in_explorer_callback:
                 logger.debug(
-                    f"_open_folder_in_explorer - wywołuję callback z ścieżką: {folder_path}"
+                    f"_open_folder_in_explorer - calling callback with path: {folder_path}"
                 )
                 self.open_in_explorer_callback(folder_path)
             else:
                 logger.debug(
-                    f"_open_folder_in_explorer - brak callbacku, używam bezpośredniego otwarcia: {folder_path}"
+                    f"_open_folder_in_explorer - no callback, using direct opening: {folder_path}"
                 )
-                # Fallback - bezpośrednie otwarcie
+                # Fallback - direct opening
                 open_path_in_explorer(folder_path, self)
         except Exception as e:
-            logger.error(f"Błąd otwierania folderu w eksploratorze: {e}")
+            logger.error(f"Error opening folder in explorer: {e}")
 
     def _rebuild_assets_in_folder(self, folder_path: str):
-        """Przebudowuje assety w wybranym folderze."""
+        """Rebuilds assets in selected folder."""
         try:
             if self.rebuild_callback:
                 self.rebuild_callback(folder_path)
             else:
-                logger.warning("Brak callbacku do przebudowy assetów")
+                logger.warning("No callback for asset rebuilding")
         except Exception as e:
-            logger.error(f"Błąd wywołania callbacku przebudowy: {e}")
+            logger.error(f"Error calling rebuild callback: {e}")
 
     def _refresh_folder(self, folder_path: str):
-        """Odświeża folder."""
+        """Refreshes folder."""
         try:
             if self.refresh_folder_callback:
                 self.refresh_folder_callback(folder_path)
             else:
-                logger.warning("Brak callbacku do odświeżania folderu")
+                logger.warning("No callback for folder refresh")
         except Exception as e:
-            logger.error(f"Błąd wywołania callbacku odświeżania folderu: {e}")
+            logger.error(f"Error calling refresh folder callback: {e}")
 
     def dragEnterEvent(self, event):
-        """Obsługuje zdarzenie wejścia przeciąganego elementu."""
+        """Handles drag enter event."""
         logger.debug(f"dragEnterEvent triggered - mimeData: {event.mimeData().text()}")
         if event.mimeData().hasText() and event.mimeData().text().startswith(
             "application/x-cfab-asset"
@@ -282,12 +281,12 @@ class CustomFolderTreeView(QTreeView):
             event.ignore()
 
     def dragLeaveEvent(self, event):
-        """Obsługuje zdarzenie opuszczenia obszaru przez przeciągany element."""
+        """Handles drag leave event."""
         logger.debug("dragLeaveEvent triggered")
         self._clear_folder_highlight()
 
     def dragMoveEvent(self, event):
-        """Obsługuje zdarzenie ruchu przeciąganego elementu."""
+        """Handles drag move event."""
         logger.debug(
             f"dragMoveEvent triggered at position: {event.position().toPoint()}"
         )
@@ -329,11 +328,11 @@ class CustomFolderTreeView(QTreeView):
             logger.debug("Drag move rejected - invalid mime data")
 
     def dropEvent(self, event):
-        """Obsługuje zdarzenie upuszczenia elementu."""
+        """Handles drop event."""
         try:
             logger.debug(f"DropEvent triggered - mimeData: {event.mimeData().text()}")
 
-            # ZABEZPIECZENIE: Sprawdź czy nie ma już operacji w toku
+            # SECURITY: Check if operation is already in progress
             if (hasattr(self, 'file_operations_model') and 
                 self.file_operations_model and 
                 hasattr(self.file_operations_model, '_worker') and
@@ -344,7 +343,7 @@ class CustomFolderTreeView(QTreeView):
                 self._clear_folder_highlight()
                 return
 
-            # REFAKTORYZUJ: wynieś walidację do osobnych metod
+            # REFACTOR: move validation to separate methods
             if not self._validate_drop_event(event):
                 return
 
@@ -354,14 +353,14 @@ class CustomFolderTreeView(QTreeView):
 
             target_folder_path, asset_ids, current_folder_path = target_info
 
-            # ZABEZPIECZENIE: Dodatkowa walidacja asset_ids
+            # SECURITY: Additional asset_ids validation
             if not asset_ids or not all(asset_id.strip() for asset_id in asset_ids):
                 logger.error(f"Invalid or empty asset IDs: {asset_ids}")
                 event.ignore()
                 self._clear_folder_highlight()
                 return
 
-            # Pobierz pełne dane assetów z asset_grid_model
+            # Get full asset data from asset_grid_model
             assets_to_move = self._get_assets_to_move(asset_ids)
 
             if self._can_perform_drop(
@@ -383,7 +382,7 @@ class CustomFolderTreeView(QTreeView):
             self._clear_folder_highlight()
 
     def _validate_drop_event(self, event):
-        """Sprawdza czy zdarzenie drop jest prawidłowe."""
+        """Checks if drop event is valid."""
         if not event.mimeData().hasText() or not event.mimeData().text().startswith(
             "application/x-cfab-asset"
         ):
@@ -393,7 +392,7 @@ class CustomFolderTreeView(QTreeView):
         return True
 
     def _get_drop_target_info(self, event):
-        """Pobiera informacje o celu drop."""
+        """Gets drop target information."""
         index = self.indexAt(event.position().toPoint())
         if not index.isValid():
             logger.error("Invalid index")
@@ -434,7 +433,7 @@ class CustomFolderTreeView(QTreeView):
         return target_folder_path, asset_ids, current_folder_path
 
     def _get_assets_to_move(self, asset_ids):
-        """Pobiera pełne dane assetów do przeniesienia."""
+        """Gets full asset data to move."""
         assets_to_move = []
         if self.asset_grid_model:
             all_assets = self.asset_grid_model.get_assets()
@@ -450,7 +449,7 @@ class CustomFolderTreeView(QTreeView):
     def _can_perform_drop(
         self, assets_to_move, asset_ids, current_folder_path, target_folder_path
     ):
-        """Sprawdza czy można wykonać operację drop."""
+        """Checks if drop operation can be performed."""
         if not asset_ids or not all(asset_ids):
             logger.error(
                 f"[DROP ERROR] asset_ids is empty or contains empty values: {asset_ids}"
@@ -476,11 +475,11 @@ class CustomFolderTreeView(QTreeView):
     def _perform_drop_operation(
         self, assets_to_move, current_folder_path, target_folder_path, asset_ids
     ):
-        """Wykonuje operację drop."""
+        """Performs drop operation."""
         logger.debug(f"Source folder path: {current_folder_path}")
         if current_folder_path:
             try:
-                # ZABEZPIECZENIE: Sprawdź ponownie czy modele są dostępne
+                # SECURITY: Check again if models are available
                 if not self.file_operations_model:
                     logger.error("file_operations_model is None, cannot perform drop")
                     return
@@ -489,7 +488,7 @@ class CustomFolderTreeView(QTreeView):
                     logger.error("drag_drop_model is None, cannot complete drop")
                     return
                 
-                # ZABEZPIECZENIE: Sprawdź czy foldery istnieją
+                # SECURITY: Check if folders exist
                 if not os.path.exists(current_folder_path):
                     logger.error(f"Source folder does not exist: {current_folder_path}")
                     return
@@ -497,7 +496,7 @@ class CustomFolderTreeView(QTreeView):
                 if not os.path.exists(target_folder_path):
                     logger.warning(f"Target folder does not exist, will be created: {target_folder_path}")
                 
-                # Wykonaj operację przenoszenia w osobnym wątku
+                # Execute move operation in separate thread
                 logger.info(f"Starting move operation: {len(assets_to_move)} assets from {current_folder_path} to {target_folder_path}")
                 self.file_operations_model.move_assets(
                     assets_to_move,
@@ -505,7 +504,7 @@ class CustomFolderTreeView(QTreeView):
                     target_folder_path,
                 )
                 
-                # Oznacz drop jako zakończony
+                # Mark drop as completed
                 self.drag_drop_model.complete_drop(target_folder_path, asset_ids)
                 logger.debug("Drop operation initiated successfully")
                 
@@ -515,9 +514,9 @@ class CustomFolderTreeView(QTreeView):
             logger.error("Source folder path is empty!")
 
     def _highlight_folder_at_position(self, pos):
-        """Podświetla folder pod podaną pozycją bez zmiany zaznaczenia roboczego."""
+        """Highlights folder at given position without changing working selection."""
         try:
-            # Najpierw wyczyść poprzednie podświetlenie
+            # First clear previous highlight
             self._clear_folder_highlight()
             index = self.indexAt(pos)
             if index.isValid():
@@ -533,14 +532,14 @@ class CustomFolderTreeView(QTreeView):
             logger.error(f"Error highlighting folder at position {pos}: {e}")
 
     def _clear_folder_highlight(self):
-        """Czyści podświetlenie folderu docelowego."""
+        """Clears target folder highlight."""
         try:
             if self._highlighted_index and self._highlighted_index.isValid():
                 item = self.model().itemFromIndex(self._highlighted_index)
                 if item:
                     item.setForeground(
                         QBrush(QColor("#a9b7c6"))
-                    )  # Przywróć domyślny kolor
+                    )  # Restore default color
                 self._highlighted_index = None
                 self.viewport().update()
                 logger.debug("Cleared folder highlight")
@@ -558,7 +557,7 @@ class CustomFolderTreeView(QTreeView):
             item.setIcon(QIcon("core/resources/img/folder_icon.png"))
 
     def _on_current_folder_changed(self, current, previous):
-        # Przywróć ikonę poprzedniemu folderowi
+        # Restore icon to previous folder
         if previous.isValid():
             prev_item = self.model().itemFromIndex(previous)
             if prev_item:
@@ -566,7 +565,7 @@ class CustomFolderTreeView(QTreeView):
                     prev_item.setIcon(QIcon("core/resources/img/open_folder_icon.png"))
                 else:
                     prev_item.setIcon(QIcon("core/resources/img/folder_icon.png"))
-        # Ustaw ikonę aktywnego folderu
+        # Set icon for active folder
         if current.isValid():
             curr_item = self.model().itemFromIndex(current)
             if curr_item:

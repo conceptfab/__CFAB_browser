@@ -129,10 +129,10 @@ class AmvView(QWidget):
         layout.addWidget(header_frame)
 
     def _create_folder_tree_view(self, layout):
-        # Import tutaj aby uniknąć cyklicznych importów
+        # Import here to avoid circular imports
         from .folder_tree_view import CustomFolderTreeView
 
-        # Użyj wstrzykniętego widżetu lub utwórz nowy
+        # Use injected widget or create new one
         self.folder_tree_view = self._folder_tree_view or CustomFolderTreeView()
         self.folder_tree_view.setObjectName("cfabFolderTree")
         self.folder_tree_view.setProperty("class", "cfab-folder-tree")
@@ -366,9 +366,9 @@ class AmvView(QWidget):
     def update_gallery_placeholder(self, text: str):
         self.placeholder_label.setText(text)
         if text:
-            self.stacked_layout.setCurrentIndex(1)  # Pokaż placeholder
+            self.stacked_layout.setCurrentIndex(1)  # Show placeholder
         else:
-            self.stacked_layout.setCurrentIndex(0)  # Pokaż siatkę
+            self.stacked_layout.setCurrentIndex(0)  # Show grid
 
     def _create_control_panel(self):
         self.control_panel = QFrame()
@@ -390,27 +390,27 @@ class AmvView(QWidget):
         control_layout.setContentsMargins(8, 4, 8, 4)  # Internal margins
         control_layout.setSpacing(8)
         control_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-        # Placeholder for icon before QLineEdit - wyrównane z polem tekstowym
+        # Placeholder for icon before QLineEdit - aligned with text field
         self.icon_placeholder = QWidget()
-        self.icon_placeholder.setFixedSize(24, 22)  # 24px szerokość, 22px wysokość (16px + 4px padding + 2px border)
+        self.icon_placeholder.setFixedSize(24, 22)  # 24px width, 22px height (16px + 4px padding + 2px border)
         self.icon_placeholder.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.icon_placeholder.setStyleSheet("background: transparent; border: none;")
         icon_layout = QVBoxLayout(self.icon_placeholder)
-        icon_layout.setContentsMargins(0, 0, 0, 0)  # Brak marginesów dla precyzyjnego wyrównania
+        icon_layout.setContentsMargins(0, 0, 0, 0)  # No margins for precise alignment
         icon_layout.setSpacing(0)
-        icon_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Wyrównanie layoutu
+        icon_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Layout alignment
         icon_label = QLabel()
-        icon_label.setObjectName("ControlPanelIcon")  # ID dla CSS
-        icon_label.setPixmap(QPixmap("core/resources/img/search.png"))  # Bez skalowania - CSS kontroluje rozmiar
+        icon_label.setObjectName("ControlPanelIcon")  # ID for CSS
+        icon_label.setPixmap(QPixmap("core/resources/img/search.png"))  # No scaling - CSS controls size
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_label.setScaledContents(True)  # Pozwala CSS kontrolować skalowanie
+        icon_label.setScaledContents(True)  # Allows CSS to control scaling
         icon_layout.addWidget(icon_label)
         control_layout.addWidget(self.icon_placeholder)
 
         self.text_input = QLineEdit()
         self.text_input.setObjectName("ControlPanelTextInput")
         self.text_input.setMinimumWidth(120)
-        # Usunięto setFixedHeight(14) - CSS kontroluje wysokość (16px)
+        # Removed setFixedHeight(14) - CSS controls height (16px)
         self.text_input.setPlaceholderText("Enter text...")
         control_layout.addWidget(self.text_input, 3)
         # Add stars between QLineEdit and buttons
@@ -521,25 +521,25 @@ class AmvView(QWidget):
         self.expand_tree_requested.emit()
 
     def remove_asset_tiles(self, asset_ids_to_remove: list):
-        """OPTYMALIZACJA: Usuwanie kafelków assetów z galerii bez przebudowy layoutu."""
-        logger.debug(f"OPTYMALIZACJA: Usuwanie kafelków: {asset_ids_to_remove}")
+        """OPTIMIZATION: Removing asset tiles from gallery without rebuilding layout."""
+        logger.debug(f"OPTIMIZATION: Removing tiles: {asset_ids_to_remove}")
         
         try:
-            # Walidacja danych wejściowych
+            # Input data validation
             if not asset_ids_to_remove:
-                logger.debug("OPTYMALIZACJA: Brak ID assetów do usunięcia")
+                logger.debug("OPTIMIZATION: No asset IDs to remove")
                 return
             
             if not hasattr(self, 'gallery_container_widget') or not hasattr(self, 'gallery_layout'):
-                logger.warning("OPTYMALIZACJA: Brak wymaganych komponentów widoku")
+                logger.warning("OPTIMIZATION: Missing required view components")
                 return
             
-            # Wyłącz aktualizacje dla lepszej wydajności
+            # Disable updates for better performance
             self.gallery_container_widget.setUpdatesEnabled(False)
             
             widgets_to_remove = []
             
-            # Znajdź widżety do usunięcia
+            # Find widgets to remove
             for i in range(self.gallery_layout.count()):
                 item = self.gallery_layout.itemAt(i)
                 if item and item.widget():
@@ -547,21 +547,21 @@ class AmvView(QWidget):
                     if hasattr(widget, "asset_id") and widget.asset_id in asset_ids_to_remove:
                         widgets_to_remove.append(widget)
 
-            # Usuń widżety z layoutu
+            # Remove widgets from layout
             for widget in widgets_to_remove:
                 self.gallery_layout.removeWidget(widget)
-                widget.hide()  # Ukryj zamiast deleteLater dla lepszej wydajności
-                logger.debug(f"OPTYMALIZACJA: Usunięto kafelek: {widget.asset_id}")
+                widget.hide()  # Hide instead of deleteLater for better performance
+                logger.debug(f"OPTIMIZATION: Removed tile: {widget.asset_id}")
 
-            logger.debug(f"OPTYMALIZACJA: Usunięto {len(widgets_to_remove)} kafelków bez przebudowy galerii")
+            logger.debug(f"OPTIMIZATION: Removed {len(widgets_to_remove)} tiles without rebuilding gallery")
 
         except Exception as e:
-            logger.error(f"Błąd podczas optymalizowanego usuwania kafelków: {e}")
+            logger.error(f"Error during optimized tile removal: {e}")
         finally:
-            # Ponownie włącz aktualizacje
+            # Re-enable updates
             if hasattr(self, 'gallery_container_widget'):
                 self.gallery_container_widget.setUpdatesEnabled(True)
-                # Jednorazowa aktualizacja widoku
+                # Single view update
                 if hasattr(self, 'gallery_layout'):
                     self.gallery_layout.update()
                 self.gallery_container_widget.update()

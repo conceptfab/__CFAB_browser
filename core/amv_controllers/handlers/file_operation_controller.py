@@ -150,8 +150,8 @@ class FileOperationController(QObject):
             if success_messages:
                 logger.debug(f"Success messages: {success_messages}")
 
-                # OPTYMALIZACJA: Szybkie usuwanie tylko przeniesionych kafelków
-                self._remove_moved_assets_optimized(success_messages)
+                            # OPTIMIZATION: Fast removal of only moved tiles
+            self._remove_moved_assets_optimized(success_messages)
 
             # Clear selection after the operation
             self.model.selection_model.clear_selection()
@@ -159,10 +159,10 @@ class FileOperationController(QObject):
             # Update button states after the operation is complete
             self.controller.control_panel_controller.update_button_states()
 
-            # OPTYMALIZACJA: Odłożone odświeżanie struktury folderów
+            # OPTIMIZATION: Delayed folder structure refresh
             if success_messages:
-                # Użyj QTimer żeby odłożyć odświeżanie struktury folderów
-                # To pozwoli najpierw zakończyć usuwanie kafelków z galerii
+                # Use QTimer to delay folder structure refresh
+                # This will allow tile removal from gallery to complete first
                 QTimer.singleShot(100, lambda: self._refresh_folder_structure_delayed())
 
             logger.info(
@@ -172,7 +172,7 @@ class FileOperationController(QObject):
             )
 
     def _remove_moved_assets_optimized(self, success_messages: list):
-        """OPTYMALIZACJA: Szybkie usuwanie tylko przeniesionych assetów bez przebudowy galerii"""
+        """OPTIMIZATION: Fast removal of only moved assets without gallery rebuild"""
         try:
             if not self._validate_optimization_inputs(success_messages):
                 return
@@ -180,10 +180,10 @@ class FileOperationController(QObject):
             self._execute_asset_removal_with_sync(success_messages)
             self._update_gallery_placeholder_state()
 
-            logger.debug(f"OPTYMALIZACJA: Usunięto {len(success_messages)} assetów bez przebudowy galerii")
+            logger.debug(f"OPTIMIZATION: Removed {len(success_messages)} assets without gallery rebuild")
 
         except Exception as e:
-            logger.error(f"Błąd podczas optymalizowanego usuwania assetów: {e}")
+            logger.error(f"Error during optimized asset removal: {e}")
             self._fallback_refresh_gallery()
     
     def _execute_asset_removal_with_sync(self, success_messages: list):
@@ -194,7 +194,7 @@ class FileOperationController(QObject):
             with QMutexLocker(self.controller.asset_grid_controller._tiles_mutex):
                 self._perform_asset_removal_operations(success_messages)
         else:
-            # Fallback bez mutex jeśli nie istnieje
+            # Fallback without mutex if it doesn't exist
             self._perform_asset_removal_operations(success_messages)
     
     def _perform_asset_removal_operations(self, success_messages: list):
@@ -204,20 +204,20 @@ class FileOperationController(QObject):
         self._update_controller_asset_list(success_messages)
     
     def _validate_optimization_inputs(self, success_messages: list) -> bool:
-        """Waliduje dane wejściowe dla optymalizacji"""
+        """Validates inputs for optimization"""
         if not success_messages:
-            logger.debug("OPTYMALIZACJA: Brak wiadomości sukcesu - pomijam optymalizowane usuwanie")
+            logger.debug("OPTIMIZATION: No success messages - skipping optimized removal")
             return False
         
         current_assets = self.model.asset_grid_model.get_assets()
         if not current_assets:
-            logger.debug("OPTYMALIZACJA: Brak aktualnych assetów - pomijam optymalizowane usuwanie")
+            logger.debug("OPTIMIZATION: No current assets - skipping optimized removal")
             return False
             
         return True
     
     def _update_asset_model_fast(self, success_messages: list):
-        """Szybka aktualizacja modelu assetów bez emitowania sygnałów"""
+        """Fast asset model update without emitting signals"""
         current_assets = self.model.asset_grid_model.get_assets()
         logger.debug(f"Current assets count: {len(current_assets)}")
 
@@ -228,7 +228,7 @@ class FileOperationController(QObject):
         ]
         logger.debug(f"Updated assets count: {len(updated_assets)}")
         
-        # Bezpośrednia aktualizacja bez emitowania sygnałów
+        # Direct update without emitting signals
         self.model.asset_grid_model._assets = updated_assets
     
     def _update_controller_asset_list(self, success_messages: list):

@@ -22,62 +22,62 @@ class FolderSystemModel(QObject):
         self._tree_model.setHorizontalHeaderLabels(["Folders"])
         self._root_folder = ""
         self._is_loading = False
-        self._show_asset_counts = True  # Nowa opcja do pokazywania liczby assetów
-        self._recursive_asset_counts = True  # Nowa opcja do rekurencyjnego sumowania assetów
-        self._asset_count_cache = {}  # Cache dla liczb assetów
-        self._cache_timestamps = {}   # Timestampy dla cache
+        self._show_asset_counts = True  # New option to show asset counts
+        self._recursive_asset_counts = True  # New option for recursive asset counting
+        self._asset_count_cache = {}  # Cache for asset counts
+        self._cache_timestamps = {}   # Timestamps for cache
         logger.debug("FolderSystemModel initialized")
 
     def get_tree_model(self):
         return self._tree_model
 
     def set_show_asset_counts(self, show_counts: bool):
-        """Ustawia czy pokazywać liczbę assetów w folderach"""
+        """Sets whether to show asset counts in folders"""
         if self._show_asset_counts != show_counts:
             self._show_asset_counts = show_counts
-            # Wyczyść cache przy zmianie trybu
+            # Clear cache when mode changes
             self.clear_asset_count_cache()
-            # Odśwież drzewo folderów jeśli root folder jest ustawiony
+            # Refresh folder tree if root folder is set
             if self._root_folder:
                 self.set_root_folder(self._root_folder)
 
     def get_show_asset_counts(self) -> bool:
-        """Zwraca czy pokazywane są liczby assetów"""
+        """Returns whether asset counts are shown"""
         return self._show_asset_counts
 
     def set_recursive_asset_counts(self, recursive: bool):
-        """Ustawia czy sumować assety z podfolderów rekurencyjnie"""
+        """Sets whether to sum assets from subfolders recursively"""
         if self._recursive_asset_counts != recursive:
             self._recursive_asset_counts = recursive
-            # Wyczyść cache przy zmianie trybu rekurencyjnego
+            # Clear cache when recursive mode changes
             self.clear_asset_count_cache()
-            # Odśwież drzewo folderów jeśli root folder jest ustawiony
+            # Refresh folder tree if root folder is set
             if self._root_folder:
                 self.set_root_folder(self._root_folder)
 
     def get_recursive_asset_counts(self) -> bool:
-        """Zwraca czy sumowane są assety rekurencyjnie"""
+        """Returns whether assets are summed recursively"""
         return self._recursive_asset_counts
 
     def _count_assets_in_folder(self, folder_path: str) -> int:
-        """Quickly counts assets in a folder (.asset files) - z cache"""
+        """Quickly counts assets in a folder (.asset files) - with cache"""
         if not os.path.exists(folder_path):
             return 0
         
         return self._get_cached_asset_count(folder_path)
 
     def _get_cached_asset_count(self, folder_path: str) -> int:
-        """Zwraca liczbę assetów z cache lub oblicza na nowo jeśli potrzeba"""
+        """Returns asset count from cache or calculates new if needed"""
         try:
             folder_mtime = os.path.getmtime(folder_path)
             
-            # Sprawdź czy mamy cache i czy jest aktualny
+            # Check if we have cache and if it's current
             if (folder_path in self._asset_count_cache and 
                 folder_path in self._cache_timestamps and
                 self._cache_timestamps[folder_path] >= folder_mtime):
                 return self._asset_count_cache[folder_path]
             
-            # Oblicz na nowo i zapisz w cache
+            # Calculate new and save to cache
             if self._recursive_asset_counts:
                 count = self._count_assets_recursive(folder_path)
             else:
@@ -92,11 +92,11 @@ class FolderSystemModel(QObject):
             return 0
 
     def _count_assets_direct(self, folder_path: str) -> int:
-        """Zlicza assety bezpośrednio w folderze (bez podfolderów) - zoptymalizowane"""
+        """Counts assets directly in folder (without subfolders) - optimized"""
         return self._scan_folder_for_assets(folder_path, recursive=False)
 
     def _count_assets_recursive(self, folder_path: str, max_depth: int = 50, current_depth: int = 0) -> int:
-        """Zlicza assety rekurencyjnie w folderze i wszystkich podfolderach - zoptymalizowane"""
+        """Counts assets recursively in folder and all subfolders - optimized"""
         return self._scan_folder_for_assets(folder_path, recursive=True, max_depth=max_depth, current_depth=current_depth)
     
     def _scan_folder_for_assets(self, folder_path: str, recursive: bool = False, max_depth: int = 50, current_depth: int = 0) -> int:
@@ -131,12 +131,12 @@ class FolderSystemModel(QObject):
         return count
 
     def clear_asset_count_cache(self):
-        """Czyści cache liczb assetów"""
+        """Clears asset count cache"""
         self._asset_count_cache.clear()
         self._cache_timestamps.clear()
 
     def _clear_cache_for_path(self, folder_path: str):
-        """Czyści cache dla konkretnej ścieżki i jej rodziców"""
+        """Clears cache for specific path and its parents"""
         paths_to_clear = []
         for cached_path in self._asset_count_cache.keys():
             if cached_path.startswith(folder_path) or folder_path.startswith(cached_path):
@@ -147,7 +147,7 @@ class FolderSystemModel(QObject):
             self._cache_timestamps.pop(path, None)
 
     def _format_folder_display_name(self, folder_name: str, folder_path: str) -> str:
-        """Formatuje nazwę folderu z liczbą assetów (jeśli włączone)"""
+        """Formats folder name with asset count (if enabled)"""
         if not self._show_asset_counts:
             return folder_name
         
@@ -160,7 +160,7 @@ class FolderSystemModel(QObject):
     def set_root_folder(self, folder_path: str):
         if self._root_folder != folder_path:
             self._root_folder = folder_path
-            # Wyczyść cache przy zmianie root folder
+            # Clear cache when root folder changes
             self.clear_asset_count_cache()
             self._tree_model.clear()
             self._tree_model.setHorizontalHeaderLabels(["Folders"])
@@ -263,7 +263,7 @@ class FolderSystemModel(QObject):
     def refresh_folder(self, folder_path: str):
         """Refreshes a specific folder in the tree"""
         try:
-            # Wyczyść cache dla odświeżanego folderu
+            # Clear cache for refreshed folder
             self._clear_cache_for_path(folder_path)
             
             found = self._refresh_folder_recursive(
@@ -272,7 +272,7 @@ class FolderSystemModel(QObject):
             if found:
                 self.folder_structure_updated.emit(self._tree_model)
             else:
-                # Spróbuj odświeżyć cały model jeśli nie znaleziono konkretnego folderu
+                # Try to refresh entire model if specific folder not found
                 if self._root_folder:
                     self.set_root_folder(self._root_folder)
             logger.debug("Folder refreshed: %s", folder_path)
@@ -293,7 +293,7 @@ class FolderSystemModel(QObject):
                 if os.path.exists(child_path):
                     self._load_subfolders(child_item, child_path)
                 
-                # Zaktualizuj nazwę folderu z nową liczbą assetów
+                # Update folder name with new asset count
                 folder_name = os.path.basename(child_path)
                 display_name = self._format_folder_display_name(folder_name, child_path)
                 child_item.setText(display_name)
@@ -304,7 +304,7 @@ class FolderSystemModel(QObject):
                 if self._refresh_folder_recursive(child_item, target_path):
                     found = True
                     
-            # Zaktualizuj liczby assetów w każdym folderze podczas odświeżania
+            # Update asset counts in each folder during refresh
             if child_path:
                 folder_name = os.path.basename(child_path)
                 display_name = self._format_folder_display_name(folder_name, child_path)
