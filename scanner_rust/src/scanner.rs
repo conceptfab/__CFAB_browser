@@ -3,9 +3,20 @@ use pyo3::types::PyDict;
 use pyo3::exceptions::PyRuntimeError;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use rayon::prelude::*;
 use crate::types::*;
 use crate::file_utils::*;
 use crate::asset_builder::AssetBuilder;
+
+// Makro dla błędów runtime
+macro_rules! py_runtime_error {
+    ($msg:expr) => {
+        PyErr::new::<PyRuntimeError, _>($msg)
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        PyErr::new::<PyRuntimeError, _>(format!($fmt, $($arg)*))
+    };
+}
 
 #[pyclass]
 pub struct RustAssetRepository {
@@ -49,7 +60,7 @@ impl RustAssetRepository {
 
         // Skanowanie i grupowanie plików
         let (archive_by_name, image_by_name) = self.scan_and_group_files(folder_path)
-            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("Scan error: {}", e)))?;
+            .map_err(|e| py_runtime_error!("Scan error: {}", e))?;
 
         // Znajdź wspólne nazwy
         let common_names: HashSet<String> = archive_by_name
@@ -156,7 +167,7 @@ impl RustAssetRepository {
 
         // Utwórz plik z niesparowanymi plikami
         self.create_unpaired_files_json(folder_path, &archive_by_name, &image_by_name, &common_names)
-            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("Error creating unpaired files: {}", e)))?;
+            .map_err(|e| py_runtime_error!("Error creating unpaired files: {}", e))?;
 
         // Komunikat końcowy
         if let Some(ref callback) = progress_callback {
@@ -229,7 +240,7 @@ impl RustAssetRepository {
     fn scan_folder_for_files(&self, py: Python, folder_path: String) -> PyResult<(PyObject, PyObject)> {
         let folder_path = Path::new(&folder_path);
         let (archive_by_name, image_by_name) = self.scan_and_group_files(folder_path)
-            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("Scan error: {}", e)))?;
+            .map_err(|e| py_runtime_error!("Scan error: {}", e))?;
 
         // Konwersja do Python dict
         let py_archives = PyDict::new_bound(py);

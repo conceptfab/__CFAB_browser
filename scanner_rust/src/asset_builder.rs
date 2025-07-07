@@ -24,6 +24,9 @@ impl AssetBuilder {
         image_path: &Path,
         folder_path: &Path,
     ) -> Result<Asset> {
+        // NOWA WALIDACJA
+        self.validate_asset_inputs(name, archive_path, image_path, folder_path)?;
+        
         let size_mb = file_utils::get_file_size_mb(archive_path)?;
         let textures_in_archive = file_utils::check_texture_folders_presence(folder_path);
 

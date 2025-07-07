@@ -73,4 +73,24 @@ pub enum ScannerError {
     IoError(#[from] std::io::Error),
     #[error("Błąd JSON: {0}")]
     JsonError(#[from] serde_json::Error),
+}
+
+/// Konfiguracja scanera
+#[derive(Debug, Clone)]
+pub struct ScannerConfig {
+    pub thumbnail_size: u32,
+    pub parallel_processing: bool,
+    pub cache_dir_name: String,
+    pub file_extensions: FileExtensions,
+}
+
+impl Default for ScannerConfig {
+    fn default() -> Self {
+        Self {
+            thumbnail_size: 256,
+            parallel_processing: true,
+            cache_dir_name: ".cache".to_string(),
+            file_extensions: FileExtensions::default(),
+        }
+    }
 } 

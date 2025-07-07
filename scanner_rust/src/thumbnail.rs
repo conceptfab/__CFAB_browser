@@ -2,6 +2,7 @@ use image::{DynamicImage, imageops::FilterType, GenericImageView};
 use std::path::Path;
 use std::fs;
 use std::time::SystemTime;
+use std::sync::OnceLock;
 use anyhow::{Result, anyhow};
 
 /// Generator miniaturek - dokładnie jak w Pythonie
@@ -63,8 +64,16 @@ impl ThumbnailGenerator {
 
     /// KRYTYCZNA FUNKCJA: Przeskalowanie do kwadratu z przycinaniem
     /// IDENTYCZNA LOGIKA JAK W PYTHONIE - NIE ZMIENIAĆ!
-    fn resize_to_square(&self, img: DynamicImage, size: u32) -> DynamicImage {
+    fn resize_to_square(&self, img: DynamicImage, size: u32) -> Result<DynamicImage> {
+        if size == 0 {
+            return Err(anyhow!("Rozmiar miniaturki nie może być zerem"));
+        }
+        
         let (width, height) = img.dimensions();
+        
+        if width == 0 || height == 0 {
+            return Err(anyhow!("Obraz ma nieprawidłowe wymiary: {}x{}", width, height));
+        }
         
         // Oblicz współczynnik skalowania
         let scale = size as f32 / (width.min(height) as f32);
@@ -77,7 +86,7 @@ impl ThumbnailGenerator {
         // Przyciąć do kwadratu zgodnie z wymaganiami:
         // - Wysokie obrazy: przycięcie od GÓRY (górny lewy róg)
         // - Szerokie obrazy: przycięcie od LEWEJ (górny lewy róg)
-        if new_width > size {
+        let result = if new_width > size {
             // Szerokie obrazy - przycinaj od lewej strony (górny lewy róg)
             resized.crop_imm(0, 0, size, size)
         } else if new_height > size {
@@ -85,7 +94,9 @@ impl ThumbnailGenerator {
             resized.crop_imm(0, 0, size, size)
         } else {
             resized
-        }
+        };
+        
+        Ok(result)
     }
 
     /// Zapisz miniaturkę jako WebP z kontrolą jakości (ZGODNIE Z PYTHONEM)
@@ -173,7 +184,7 @@ impl ThumbnailGenerator {
         };
 
         // Przeskaluj do kwadratu (KRYTYCZNA LOGIKA!)
-        let thumbnail = self.resize_to_square(processed_img, self.thumbnail_size);
+        let thumbnail = self.resize_to_square(processed_img, self.thumbnail_size)?;
 
         // Zapisz jako WebP z kontrolowaną jakością (ZGODNIE Z PYTHONEM)
         self.save_webp_with_quality(&thumbnail, &thumbnail_path, has_alpha)?;
@@ -187,18 +198,12 @@ impl ThumbnailGenerator {
     }
 }
 
-/// Globalna instancja generatora
-static mut GENERATOR: Option<ThumbnailGenerator> = None;
-static INIT: std::sync::Once = std::sync::Once::new();
+/// Globalna instancja generatora (bezpieczna wersja)
+static GENERATOR: OnceLock<ThumbnailGenerator> = OnceLock::new();
 
 /// Pobiera globalną instancję generatora
 pub fn get_generator() -> &'static ThumbnailGenerator {
-    unsafe {
-        INIT.call_once(|| {
-            GENERATOR = Some(ThumbnailGenerator::default());
-        });
-        GENERATOR.as_ref().unwrap()
-    }
+    GENERATOR.get_or_init(|| ThumbnailGenerator::default())
 }
 
 /// Główna funkcja generowania miniaturek (public API)
