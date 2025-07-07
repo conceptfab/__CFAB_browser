@@ -78,13 +78,13 @@ class CustomFolderTreeView(QTreeView):
             sel_model.currentChanged.connect(self._on_current_folder_changed)
 
     def contextMenuEvent(self, event):
-        """Obsługuje menu kontekstowe dla folderu."""
+        """Handles the context menu for a folder."""
         try:
             index = self.indexAt(event.pos())
             logger.debug(
                 f"contextMenuEvent - index: {index}, isValid: {index.isValid()}"
             )
-            logger.debug(f"contextMenuEvent - pozycja myszy: {event.pos()}")
+            logger.debug(f"contextMenuEvent - mouse position: {event.pos()}")
 
             menu = QMenu(self)
             
@@ -157,20 +157,20 @@ class CustomFolderTreeView(QTreeView):
 
                 else:
                     logger.warning(
-                        "contextMenuEvent - item lub UserRole data jest None"
+                        "contextMenuEvent - item or UserRole data is None"
                     )
                     if item:
                         logger.warning(
                             f"contextMenuEvent - UserRole data: {item.data(Qt.ItemDataRole.UserRole)}"
                         )
             else:
-                logger.warning("contextMenuEvent - index nie jest valid")
+                logger.warning("contextMenuEvent - index is not valid")
 
             # Show menu
             menu.exec(event.globalPos())
 
         except Exception as e:
-            logger.error(f"Błąd obsługi menu kontekstowego: {e}")
+            logger.error(f"Error handling context menu: {e}")
 
     def _toggle_asset_counts(self):
         """Toggles showing asset counters in folders"""

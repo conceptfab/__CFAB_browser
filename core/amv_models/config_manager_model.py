@@ -26,7 +26,7 @@ class ConfigManagerMV(QObject):
     def load_config(self, force_reload=False):
         try:
             if force_reload or not self._is_cache_valid():
-                logger.debug("Ładowanie konfiguracji z pliku")
+                logger.debug("Loading configuration from file")
                 config = load_from_file(self._config_path)
                 if config:
                     self._config_cache = config
@@ -36,17 +36,17 @@ class ConfigManagerMV(QObject):
                         else 0
                     )
                     self.config_loaded.emit(config)
-                    logger.debug("Konfiguracja załadowana pomyślnie")
+                    logger.debug("Configuration loaded successfully")
                 else:
                     self._config_cache = self._get_default_config()
                     self._config_timestamp = 0
                     self.config_loaded.emit(self._config_cache)
-                    logger.warning("Użyto domyślnej konfiguracji")
+                    logger.warning("Default configuration used")
 
             return self._config_cache or self._get_default_config()
 
         except Exception as e:
-            error_msg = f"Błąd ładowania konfiguracji: {e}"
+            error_msg = f"Error loading configuration: {e}"
             logger.error(error_msg)
             self.config_error.emit(error_msg)
             return self._get_default_config()

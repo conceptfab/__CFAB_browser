@@ -46,8 +46,8 @@ class PreviewTile(QWidget):
         self.filename_label.setWordWrap(True)
         self.filename_label.setFixedWidth(
             self.thumbnail_size
-        )  # Ogranicz szerokość do rozmiaru miniatury
-        self.filename_label.setMaximumHeight(40)  # Maksymalna wysokość dla nazwy pliku
+        )  # Limit the width to the size of the thumbnail
+        self.filename_label.setMaximumHeight(40)  # Maximum height for the file name
         self.filename_label.setCursor(Qt.CursorShape.PointingHandCursor)
         self.filename_label.mousePressEvent = self._on_filename_clicked
         main_layout.addWidget(self.filename_label)
@@ -62,10 +62,10 @@ class PreviewTile(QWidget):
         main_layout.addLayout(checkbox_layout)
 
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.setFixedWidth(self.thumbnail_size + 10)  # 5px padding on each side
+        self.setFixedWidth(self.thumbnail_size + 10)  # 5px margin on each side
         self.setFixedHeight(
             self.thumbnail_size + 70
-        )  # Zwiększona wysokość dla nazwy pliku + checkbox
+        )  # Increased height for the file name + checkbox
 
     def load_thumbnail(self):
         if not os.path.exists(self.file_path):
@@ -73,10 +73,10 @@ class PreviewTile(QWidget):
             self._create_placeholder_thumbnail()
             return
 
-        # Ładuj bezpośrednio z dysku - BEZ CACHOWANIA!
+        # Load directly from disk - NO CACHING!
         pixmap = QPixmap(self.file_path)
         if not pixmap.isNull():
-            # Bezpośrednie skalowanie i ustawienie
+            # Direct scaling and setting
             scaled_pixmap = pixmap.scaled(
                 self.thumbnail_size,
                 self.thumbnail_size,
@@ -124,6 +124,6 @@ class PreviewTile(QWidget):
         self.setFixedHeight(self.thumbnail_size + 70)
         self.thumbnail_label.setFixedSize(self.thumbnail_size, self.thumbnail_size)
         self.filename_label.setFixedWidth(self.thumbnail_size)
-        # Przeładuj bezpośrednio z dysku - BEZ CACHOWANIA!
+        # Reload directly from disk - NO CACHING!
         self.load_thumbnail()
         self.updateGeometry()

@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 class FileShortenerWorker(BaseWorker):
     """Worker for shortening file names with duplicate handling"""
 
-    # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
+    # Changed signal name to 'finished' according to BaseWorker
     finished = pyqtSignal(str)  # message
-    pairs_found = pyqtSignal(list)  # lista par do wyświetlenia
-    user_confirmation_needed = pyqtSignal(list)  # czeka na potwierdzenie użytkownika
+    pairs_found = pyqtSignal(list)  # list of pairs to display
+    user_confirmation_needed = pyqtSignal(list)  # waits for user confirmation
 
     def __init__(self, folder_path: str, max_name_length: int):
         super().__init__(folder_path)
@@ -69,7 +69,7 @@ class FileShortenerWorker(BaseWorker):
             # First, pairs
             if self.files_info and self.files_info["pairs"]:
                 self.progress_updated.emit(
-                    0, len(self.files_info["pairs"]), "Shortening pair names..."
+                    0, len(self.files_info["pairs"]), "Skracanie nazw par..."
                 )
                 for i, (archive_file, preview_file) in enumerate(
                     self.files_info["pairs"]
@@ -110,7 +110,7 @@ class FileShortenerWorker(BaseWorker):
                 self.progress_updated.emit(
                     0,
                     len(self.files_info["unpaired"]),
-                    "Shortening unpaired file names...",
+                    "Shortening names of unpaired files...",
                 )
                 for i, file_path in enumerate(self.files_info["unpaired"]):
                     try:
@@ -132,7 +132,7 @@ class FileShortenerWorker(BaseWorker):
                         self.progress_updated.emit(
                             i + 1,
                             len(self.files_info["unpaired"]),
-                            f"Processing: {filename[:20]}...",
+                            f"Przetwarzanie: {filename[:20]}...",
                         )
 
                     except Exception as e:

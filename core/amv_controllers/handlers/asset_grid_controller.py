@@ -76,7 +76,7 @@ class AssetGridController(QObject):
         """
         Throttled version of asset grid rebuild to prevent excessive calls.
         """
-        # OPTYMALIZACJA: Throttling - opóźnij rebuild o 50ms
+        # OPTIMIZATION: Throttling - delay rebuild by 50ms
         self._pending_assets = assets
         self._rebuild_timer.start(50)  # 50ms delay
     
@@ -195,7 +195,7 @@ class AssetGridController(QObject):
 
     def _finalize_grid_update(self, empty=False):
         if empty:
-            self.view.update_gallery_placeholder("No assets found in this folder.")
+            self.view.update_gallery_placeholder("No assets in this folder.")
             update_main_window_status(self.view)
             return
         self.view.stacked_layout.setCurrentIndex(0)
@@ -281,27 +281,27 @@ class AssetGridController(QObject):
         self.controller.control_panel_controller.update_button_states()
 
     def clear_asset_tiles(self):
-        """OPTYMALIZACJA: Zwraca wszystkie aktywne kafelki do puli bez czyszczenia galerii."""
+        """OPTIMIZATION: Returns all active tiles to the pool without clearing the gallery."""
         try:
-            logger.debug(f"OPTYMALIZACJA: Zwracanie {len(self.asset_tiles)} kafelków do puli")
+            logger.debug(f"OPTIMIZATION: Returning {len(self.asset_tiles)} tiles to the pool")
             
-            # Walidacja dostępności tile_pool
+            # Validate tile_pool availability
             if not hasattr(self, 'tile_pool'):
-                logger.warning("OPTYMALIZACJA: Brak tile_pool - pomijam zwracanie kafelków")
+                logger.warning("OPTIMIZATION: No tile_pool - skipping returning tiles")
                 self.asset_tiles.clear()
                 return
             
             for tile_view in self.asset_tiles:
-                # Sprawdź czy kafelek nie jest już w puli
+                # Check if the tile is not already in the pool
                 if hasattr(tile_view, 'isVisible') and tile_view.isVisible():
                     self.tile_pool.release(tile_view)
                 
             self.asset_tiles.clear()
-            logger.debug("OPTYMALIZACJA: Wszystkie kafelki zwrócone do puli")
+            logger.debug("OPTIMIZATION: All tiles returned to the pool")
             
         except Exception as e:
-            logger.error(f"Błąd podczas zwracania kafelków do puli: {e}")
-            # Fallback - wyczyść listę nawet jeśli wystąpił błąd
+            logger.error(f"Error while returning tiles to the pool: {e}")
+            # Fallback - clear the list even if an error occurred
             self.asset_tiles.clear()
 
     def get_asset_tiles(self):

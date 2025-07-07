@@ -36,7 +36,7 @@ class WorkspaceFoldersModel(QObject):
         try:
             self._folders = []
 
-            # Przeiteruj przez work_folder1 do work_folder9
+            # Iterate through work_folder1 to work_folder9
             for i in range(1, 10):
                 folder_key = f"work_folder{i}"
                 folder_config = config.get(folder_key, {})
@@ -49,19 +49,19 @@ class WorkspaceFoldersModel(QObject):
                 folder_icon = folder_config.get("icon", "")
                 folder_color = folder_config.get("color", "#007ACC")
 
-                # Sprawdź, czy folder istnieje (tylko jeśli ma ścieżkę)
+                # Check if the folder exists (only if it has a path)
                 folder_exists = os.path.exists(folder_path) if folder_path else False
                 if folder_path and not folder_exists:
-                    logger.warning(f"Folder roboczy nie istnieje: {folder_path}")
+                    logger.warning(f"Working folder does not exist: {folder_path}")
 
-                # Ustaw domyślną ikonę jeśli nie ma określonej
+                # Set a default icon if none is specified
                 if not folder_icon:
                     if folder_name.lower().find("texture") != -1:
                         folder_icon = "texture.png"
                     else:
                         folder_icon = "workfolder_icon.png"
 
-                # Dodaj wszystkie foldery, nawet puste
+                # Add all folders, even empty ones
                 self._folders.append(
                     {
                         "name": folder_name,
@@ -71,32 +71,32 @@ class WorkspaceFoldersModel(QObject):
                         "exists": folder_exists,
                         "enabled": bool(
                             folder_path and folder_exists
-                        ),  # Aktywny tylko jeśli ma ścieżkę i istnieje
+                        ),  # Active only if it has a path and exists
                     }
                 )
 
-            # SORTOWANIE ALFABETYCZNE - najpierw aktywne, potem nieaktywne
-            # Sortuj aktywne foldery alfabetycznie
+            # ALPHABETICAL SORTING - active first, then inactive
+            # Sort active folders alphabetically
             active_folders = [f for f in self._folders if f["enabled"] and f["name"]]
             active_folders.sort(key=lambda x: x["name"].lower())
             
-            # Sortuj nieaktywne foldery alfabetycznie
+            # Sort inactive folders alphabetically
             inactive_folders = [f for f in self._folders if not f["enabled"] and f["name"]]
             inactive_folders.sort(key=lambda x: x["name"].lower())
             
-            # Puste foldery na końcu
+            # Empty folders at the end
             empty_folders = [f for f in self._folders if not f["name"]]
             
-            # Złóż wszystko w kolejności: aktywne, nieaktywne, puste
+            # Combine everything in order: active, inactive, empty
             self._folders = active_folders + inactive_folders + empty_folders
 
             if emit_signal:
                 self.folders_updated.emit(self._folders)
                 logger.info(f"🔧 DEBUG: folders_updated signal emitted with {len(self._folders)} folders")
-            logger.debug(f"Załadowano {len(self._folders)} folderów roboczych (sortowanie alfabetyczne)")
+            logger.debug(f"Loaded {len(self._folders)} working folders (alphabetical sorting)")
 
         except Exception as e:
-            logger.error(f"Błąd podczas ładowania folderów roboczych: {e}")
+            logger.error(f"Error while loading working folders: {e}")
             self._folders = []
             if emit_signal:
                 self.folders_updated.emit(self._folders)

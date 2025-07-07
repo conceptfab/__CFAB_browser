@@ -12,7 +12,7 @@ from PyQt6.QtCore import pyqtSignal
 from .base_worker import BaseWorker
 from core.__rust import hash_utils  # pyright: ignore
 
-# Log informacyjny o załadowaniu modułu Rust
+# Informational log about loading Rust module
 try:
     hash_utils_location = hash_utils.__file__
     
@@ -21,48 +21,48 @@ try:
     build_timestamp = build_info.get('build_timestamp', 'unknown')
     module_number = build_info.get('module_number', '2')
     
-    print(f"🦀 RUST HASH_UTILS: Używam LOKALNEJ wersji z: {hash_utils_location} [build: {build_timestamp}, module: {module_number}]")
+    print(f"🦀 RUST HASH_UTILS: Using LOCAL version from: {hash_utils_location} [build: {build_timestamp}, module: {module_number}]")
 except AttributeError:
-    print(f"🦀 RUST HASH_UTILS: Moduł załadowany (brak informacji o lokalizacji)")
+    print(f"🦀 RUST HASH_UTILS: Module loaded (no location information)")
 
 logger = logging.getLogger(__name__)
 
 
 class DuplicateFinderWorker(BaseWorker):
-    """Worker do znajdowania duplikatów plików na podstawie SHA-256"""
+    """Worker for finding duplicate files based on SHA-256"""
 
     finished = pyqtSignal(str)  # message
-    duplicates_found = pyqtSignal(list)  # lista duplikatów do wyświetlenia
+    duplicates_found = pyqtSignal(list)  # list of duplicates to display
 
     def __init__(self, folder_path: str):
         super().__init__(folder_path)
         self.duplicates_to_move = []
 
     def _run_operation(self):
-        """Główna metoda znajdowania duplikatów"""
+        """Main method for finding duplicates"""
         try:
-            logger.info(f"Rozpoczęcie szukania duplikatów w folderze: {self.folder_path}")
+            logger.info(f"Starting duplicate search in folder: {self.folder_path}")
 
-            # Znajdź pliki archiwum
+            # Find archive files
             archive_files = self._find_archive_files()
             if not archive_files:
                 self.finished.emit("No archive files to check")
                 return
 
-            # Oblicz SHA-256 dla każdego pliku
+            # Calculate SHA-256 for each file
             file_hashes = self._calculate_file_hashes(archive_files)
             
-            # Znajdź duplikaty
+            # Find duplicates
             duplicates = self._find_duplicates(file_hashes)
             
             if not duplicates:
                 self.finished.emit("No duplicates found")
                 return
 
-            # Przygotuj listę do przeniesienia (nowsze pliki)
+            # Prepare list for moving (newer files)
             self.duplicates_to_move = self._prepare_files_to_move(duplicates)
             
-            # Przenieś pliki do folderu __duplicates__
+            # Move files to __duplicates__ folder
             moved_count = self._move_duplicates_to_folder()
             
             message = f"Found {len(duplicates)} duplicate groups. Moved {moved_count} files to __duplicates__ folder"

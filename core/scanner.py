@@ -4,15 +4,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# ZAWSZE preferuj lokalną wersję Rust scannera z core/__rust
+# ALWAYS prefer the local version of the Rust scanner from core/__rust
 rust_dir = os.path.join(os.path.dirname(__file__), "__rust")
 
-# Usuń site-packages z path tymczasowo aby wymusić lokalną wersję
+# Temporarily remove site-packages from path to force the local version
 original_path = sys.path.copy()
-# Usuń wszystkie ścieżki zawierające site-packages dla scanner_rust
+# Remove all paths containing site-packages for scanner_rust
 sys.path = [p for p in sys.path if 'site-packages' not in p or 'scanner_rust' not in p]
 
-# Dodaj lokalny folder na początek
+# Add the local folder at the beginning
 if rust_dir not in sys.path:
     sys.path.insert(0, rust_dir)
 
@@ -25,10 +25,10 @@ try:
     build_timestamp = build_info.get('build_timestamp', 'unknown')
     module_number = build_info.get('module_number', '1')
     
-    logger.info(f"🦀 ✅ SUKCES: Załadowano LOKALNY silnik Rust scanner z: {scanner_location}")
-    print(f"🦀 RUST SCANNER: Używam LOKALNEJ wersji z: {scanner_location} [build: {build_timestamp}, module: {module_number}]")
+    logger.info(f"🦀 ✅ SUCCESS: Loaded LOCAL Rust scanner engine from: {scanner_location}")
+    print(f"🦀 RUST SCANNER: Using LOCAL version from: {scanner_location} [build: {build_timestamp}, module: {module_number}]")
 except ImportError as e:
-    # Przywróć oryginalną ścieżkę w przypadku błędu
+    # Restore the original path in case of error
     sys.path = original_path
     try:
         import scanner_rust
@@ -39,15 +39,15 @@ except ImportError as e:
         build_timestamp = build_info.get('build_timestamp', 'unknown')
         module_number = build_info.get('module_number', '1')
         
-        logger.warning(f"🦀 ⚠️ FALLBACK: Używam GLOBALNEGO silnika Rust scanner z: {scanner_location}")
-        print(f"🦀 RUST SCANNER: FALLBACK - używam globalnej wersji z: {scanner_location} [build: {build_timestamp}, module: {module_number}]")
+        logger.warning(f"🦀 ⚠️ FALLBACK: Using GLOBAL Rust scanner engine from: {scanner_location}")
+        print(f"🦀 RUST SCANNER: FALLBACK - using global version from: {scanner_location} [build: {build_timestamp}, module: {module_number}]")
     except ImportError:
-        logger.error(f"🦀 ❌ BŁĄD: Nie można załadować żadnej wersji scanner_rust: {e}")
-        raise ImportError("Nie można załadować Rustowego backendu (scanner_rust): {}".format(e))
+        logger.error(f"🦀 ❌ ERROR: Cannot load any version of scanner_rust: {e}")
+        raise ImportError("Cannot load Rust backend (scanner_rust): {}".format(e))
 
 class AssetRepository:
     """
-    Wrapper na Rustowy backend skanera assetów.
+    Wrapper for Rust backend of asset scanner.
     """
     def __init__(self):
         self._rust_repo = scanner_rust.RustAssetRepository()

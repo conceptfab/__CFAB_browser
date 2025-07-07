@@ -4,7 +4,7 @@ use std::fs;
 use anyhow::Result;
 use rayon::prelude::*;
 
-/// Sprawdza czy plik ma prawidłowe rozszerzenie (case-insensitive)
+/// Checks if file has valid extension (case-insensitive)
 pub fn has_valid_extension(file_path: &Path, extensions: &HashSet<String>) -> bool {
     if let Some(ext) = file_path.extension() {
         if let Some(ext_str) = ext.to_str() {
@@ -15,7 +15,7 @@ pub fn has_valid_extension(file_path: &Path, extensions: &HashSet<String>) -> bo
     false
 }
 
-/// Pobiera pliki z określonymi rozszerzeniami z parallel processing dla dużych folderów
+/// Gets files with specified extensions with parallel processing for large folders
 pub fn get_files_by_extensions(
     folder_path: &Path,
     extensions: &HashSet<String>
@@ -25,7 +25,7 @@ pub fn get_files_by_extensions(
     
     let entries = entries?;
     
-    // Używaj parallel processing dla dużych folderów
+    // Use parallel processing for large folders
     let files: Vec<PathBuf> = if entries.len() > 1000 {
         entries.into_par_iter()
             .filter_map(|entry| {
@@ -53,15 +53,15 @@ pub fn get_files_by_extensions(
     Ok(files)
 }
 
-/// Pobiera rozmiar pliku w MB
+/// Gets file size in MB
 pub fn get_file_size_mb(file_path: &Path) -> Result<f64> {
     let metadata = fs::metadata(file_path)?;
     let size_bytes = metadata.len() as f64;
     let size_mb = size_bytes / (1024.0 * 1024.0);
-    Ok((size_mb * 100.0).round() / 100.0) // Zaokrąglenie do 2 miejsc po przecinku
+    Ok((size_mb * 100.0).round() / 100.0) // Round to 2 decimal places
 }
 
-/// Grupuje pliki według nazw (case-insensitive)
+/// Groups files by names (case-insensitive)
 pub fn group_files_by_name(files: Vec<PathBuf>) -> HashMap<String, PathBuf> {
     let mut grouped = HashMap::new();
 
@@ -77,21 +77,21 @@ pub fn group_files_by_name(files: Vec<PathBuf>) -> HashMap<String, PathBuf> {
     grouped
 }
 
-/// Sprawdza obecność folderów tekstur
+/// Checks presence of texture folders
 pub fn check_texture_folders_presence(folder_path: &Path) -> bool {
     let texture_folders = ["tex", "textures", "maps"];
 
     for folder_name in &texture_folders {
         let texture_path = folder_path.join(folder_name);
         if texture_path.is_dir() {
-            return false; // Znaleziono folder tekstur - tekstury zewnętrzne
+            return false; // Found texture folder - external textures
         }
     }
 
-    true // Brak folderów tekstur - tekstury w archiwum
+    true // No texture folders - textures in archive
 }
 
-/// Skanuje w poszukiwaniu folderów specjalnych
+/// Scans for special folders
 pub fn scan_for_special_folders(folder_path: &Path) -> Result<Vec<crate::types::SpecialFolder>> {
     let mut special_folders = Vec::new();
     let special_names = ["tex", "textures", "maps"];

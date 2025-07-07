@@ -297,7 +297,7 @@ class PairingTab(QWidget):
 
     def _remove_paired_items_from_ui(self, archive_name: str, preview_full_path: str):
         """Removes paired items from UI without reloading the entire list"""
-        # Usuń archiwum z listy archiwów
+        # Remove archive from archives list
         for i in range(self.archive_list_widget.count()):
             item = self.archive_list_widget.item(i)
             item_widget = self.archive_list_widget.itemWidget(item)
@@ -306,7 +306,7 @@ class PairingTab(QWidget):
                 print(f"Removed archive from UI: {archive_name}")
                 break
 
-        # Usuń podgląd z galerii podglądów
+        # Remove preview from preview gallery
         preview_name = os.path.basename(preview_full_path)
         self.preview_gallery_view.remove_preview_by_path(preview_full_path)
         print(f"Removed preview from UI: {preview_name}")
@@ -387,7 +387,7 @@ class PairingTab(QWidget):
                 QMessageBox.warning(
                     self,
                     "Error",
-                    "An error occurred while deleting previews. Check logs.",
+                    "An error occurred while deleting previews. Check the logs.",
                 )
             self.load_data()
 
@@ -411,19 +411,19 @@ class PairingTab(QWidget):
                 QMessageBox.warning(
                     self,
                     "Error",
-                    "An error occurred while deleting archives. Check logs.",
+                    "An error occurred while deleting archives. Check the logs.",
                 )
             self.load_data()
 
     def _on_rebuild_assets_clicked(self):
-        # Użyj folderu roboczego z modelu zamiast folderu z pliku unpair_files.json
+        # Use the working folder from the model instead of the folder from the unpair_files.json file
         work_folder = (
             self.model.work_folder if hasattr(self.model, "work_folder") else ""
         )
 
         if not work_folder or not os.path.exists(work_folder):
             QMessageBox.warning(
-                self, "Error", "Working folder is not set or does not exist."
+                self, "Error", "The working folder is not set or does not exist."
             )
             return
 
@@ -448,7 +448,7 @@ class PairingTab(QWidget):
             )
 
     def _on_rebuild_finished(self, message):
-        # KATEGORYCZNE CZYSZCZENIE CACHE PAMIĘCI RAM PO PRZEBUDOWIE ASSETÓW!!!
+        # ABSOLUTE CLEARING OF RAM CACHE AFTER REBUILDING ASSETS!!!
         from core.utilities import clear_thumbnail_cache_after_rebuild
         clear_thumbnail_cache_after_rebuild(is_error=False)
         
@@ -460,7 +460,7 @@ class PairingTab(QWidget):
         from core.utilities import clear_thumbnail_cache_after_rebuild
         clear_thumbnail_cache_after_rebuild(is_error=True)
         
-        QMessageBox.critical(self, "Rebuild Error", error_message)
+        QMessageBox.critical(self, "Rebuild error", error_message)
 
     # ===============================================
     # HELPER FUNCTIONS FOR _update_button_states

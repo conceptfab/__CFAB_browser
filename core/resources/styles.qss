@@ -2,7 +2,7 @@
    CFAB Browser
    ============================================================================= */
 
-/* ===================== GŁÓWNE TŁA I TEKST ===================== */
+/* ===================== MAIN BACKGROUNDS AND TEXT ===================== */
 *:hover {
     color: #717bbc !important;
 }
@@ -17,7 +17,7 @@ QMainWindow, QDialog, QWidget {
     font-size: 10px;
 }
 
-/* ===================== AMV TAB - GŁÓWNA ZAKŁADKA ===================== */
+/* ===================== AMV TAB - MAIN TAB ===================== */
 QWidget[objectName="amvTab"] {
     background-color: #1e1e2e;
     border: 1px solid #717bbc;

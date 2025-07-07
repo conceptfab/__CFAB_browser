@@ -12,22 +12,22 @@ mod build_info;
 use scanner::RustAssetRepository;
 use build_info::{get_build_info, get_build_number, get_build_datetime, get_git_commit, get_module_number, get_module_info, get_log_prefix, format_log_message};
 
-/// Moduł Rust Scanner dla PyO3
+/// Rust Scanner module for PyO3
 #[pymodule]
 fn scanner_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Inicjalizuj logger
+    // Initialize logger
     let _ = env_logger::try_init();
     
-    // Pobierz informacje o kompilacji
+    // Get build information
     let build_number = env!("VERGEN_BUILD_TIMESTAMP");
     let module_number = 1;
     
     info!("🦀 Rust Scanner module initialized [build: {}, module: {}]", build_number, module_number);
     
-    // Dodaj klasę główną
+    // Add main class
     m.add_class::<RustAssetRepository>()?;
     
-    // Dodaj funkcje informacji o kompilacji
+    // Add build information functions
     m.add_function(wrap_pyfunction!(get_build_info, m)?)?;
     m.add_function(wrap_pyfunction!(get_build_number, m)?)?;
     m.add_function(wrap_pyfunction!(get_build_datetime, m)?)?;

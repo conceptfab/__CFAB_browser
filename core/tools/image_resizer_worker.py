@@ -11,7 +11,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from .base_worker import BaseWorker
 from core.__rust import image_tools  # pyright: ignore
 
-# Log informacyjny o załadowaniu modułu Rust
+# Informational log about loading Rust module
 try:
     image_tools_location = image_tools.__file__
     
@@ -20,9 +20,9 @@ try:
     build_timestamp = build_info.get('build_timestamp', 'unknown')
     module_number = build_info.get('module_number', '3')
     
-    print(f"🦀 RUST IMAGE_TOOLS: Używam LOKALNEJ wersji z: {image_tools_location} [build: {build_timestamp}, module: {module_number}]")
+    print(f"🦀 RUST IMAGE_TOOLS: Using LOCAL version from: {image_tools_location} [build: {build_timestamp}, module: {module_number}]")
 except AttributeError:
-    print(f"🦀 RUST IMAGE_TOOLS: Moduł załadowany (brak informacji o lokalizacji)")
+    print(f"🦀 RUST IMAGE_TOOLS: Module loaded (no location information)")
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class ImageResizerWorker(BaseWorker):
     """Worker for resizing image files"""
 
-    # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
+    # Changed signal name to 'finished' according to BaseWorker
     finished = pyqtSignal(str)  # message
 
     def __init__(self, folder_path: str):

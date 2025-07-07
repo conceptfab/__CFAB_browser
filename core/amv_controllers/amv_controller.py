@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class AmvController(QObject):
     """Controller for the AMV tab - Model-View connector"""
 
-    # Sygnał emitowany przy zmianie folderu roboczego
+    # Signal emitted when the working directory changes
     working_directory_changed = pyqtSignal(str)
 
     def __init__(self, model, view, main_window=None):
@@ -43,7 +43,7 @@ class AmvController(QObject):
         from .handlers.file_operation_controller import FileOperationController
         from .handlers.folder_tree_controller import FolderTreeController
 
-        # Najpierw utwórz wszystkie kontrolery
+        # First, create all controllers
         self.folder_tree_controller = FolderTreeController(self.model, self.view, self)
         self.asset_grid_controller = AssetGridController(self.model, self.view, self)
         self.control_panel_controller = ControlPanelController(
@@ -56,7 +56,7 @@ class AmvController(QObject):
             self.model, self.view, self
         )
 
-        # Następnie wywołaj setup() na każdym z nich
+        # Then call setup() on each of them
         self.folder_tree_controller.setup()
         self.asset_grid_controller.setup()
         self.control_panel_controller.setup()
@@ -100,8 +100,8 @@ class AmvController(QObject):
 
     def _on_scan_progress(self, current: int, total: int, message: str):
         """Handles scan progress."""
-        # Wartość 'current' jest już zmapowana w AssetGridModel (10-90% + końcowe kroki)
-        # Nie przeliczamy ponownie, tylko używamy bezpośrednio
+        # The 'current' value is already mapped in AssetGridModel (10-90% + final steps)
+        # We don't recalculate, we use it directly
         progress = current
         self.model.control_panel_model.set_progress(progress)
         logger.debug(f"🦀 Scan progress: {progress}% - {message}")
@@ -126,14 +126,14 @@ class AmvController(QObject):
             self.model.control_panel_model.set_progress(100)
             self.view.update_gallery_placeholder("")
 
-            # Zamiast resetować filtry, zastosuj aktualny filtr do nowych danych
+            # Instead of resetting filters, apply the current filter to the new data
             self.model.asset_grid_model.set_assets(assets)
 
     def _on_scan_error(self, error_msg: str):
         logger.error(f"Controller: Scan error: {error_msg}")
         self.model.control_panel_model.set_progress(0)
         self.view.update_gallery_placeholder(f"Scan error: {error_msg}")
-        # Aktualizuj stan przycisków po błędzie skanowania
+        # Update button states after a scan error
         self.control_panel_controller.update_button_states()
 
     def _handle_file_action(self, path: str, action_type: str):

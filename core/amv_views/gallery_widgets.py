@@ -43,7 +43,7 @@ class DropHighlightDelegate(QStyledItemDelegate):
             painter.setPen(QPen(QColor("#FFD700"), 2))
             painter.drawRect(rect.adjusted(1, 1, -2, -2))
             painter.restore()
-            # Rysuj tekst normalnie - niebieskie tło i tak będzie widoczne
+            # Draw text normally - blue background will be visible anyway
             super().paint(painter, option, index)
         else:
             super().paint(painter, option, index) 

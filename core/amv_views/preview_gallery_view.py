@@ -18,7 +18,7 @@ class PreviewGalleryView(QWidget):
         super().__init__()
         self.current_thumbnail_size = 128  # Default size
         self.selected_preview = None
-        self._current_preview_paths = []  # Aktualne ścieżki podglądów
+        self._current_preview_paths = []  # Current preview paths
 
         self.init_ui()
 

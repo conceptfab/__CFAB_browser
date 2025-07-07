@@ -1,248 +1,223 @@
-# Lista fraz do tłumaczenia
+File: core\amv_views\gallery_widgets.py
 
-Pliki posortowane pod względem ilości fraz do tłumaczenia (malejąco).
+L46: # Rysuj tekst normalnie - niebieskie tło i tak będzie widoczne
 
----
+core/amv_views/preview_gallery_view.py:21: self.\_current_preview_paths = [] # Aktualne ścieżki podglądów
 
-## 7. `core/tools/prefix_suffix_remover_worker.py` (17)
+core/main_window.py:262: "INFO": "ℹ️",
 
-### UI Messages (3)
-- `Brak plików do przetworzenia`
-- `Przetwarzanie: {filename_with_ext}`
-- `Usuwanie {self.mode} zakończone: {renamed_count} plików zmieniono`
+core/main_window.py:269: icon = level_mapping.get(log_level.upper(), "ℹ️")
 
-### Logi (4)
-- `Rozpoczęcie usuwania {self.mode} w folderze: {self.folder_path}`
-- `Zmieniono: '{filename_with_ext}' -> '{new_full_filename}'`
-- `Błąd podczas przetwarzania {os.path.basename(file_path)}: {e}`
-- `Błąd podczas usuwania {self.mode}: {e}`
+core/main_window.py:361: "completed": "✅",
 
-### Komentarze (10)
-- `"""Worker do usuwania prefixu/suffixu z nazw plików"""`
-- `# Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker`
-- `# "prefix" lub "suffix"`
-- `"""Główna metoda usuwania prefixu/suffixu"""`
-- `# Znajdź wszystkie pliki w folderze`
-- `# Przetwórz pliki`
-- `# Sprawdź czy plik pasuje do kryteriów`
-- `# Usuń spacje z końca po usunięciu prefix`
-- `# Usuń spacje z końca po usunięciu suffix`
-- `# Zmień nazwę`
-- `# Przygotuj komunikat końcowy`
+core/main_window.py:362: "started": "🔄",
+
+core/main_window.py:364: "processing": "⏳",
+
+core/main_window.py:367: icon = status_icons.get(status, "ℹ️")
+
+core/pairing_tab.py:300: # Usuń archiwum z listy archiwów
+
+core/pairing_tab.py:309: # Usuń podgląd z galerii podglądów
+
+core/performance_monitor.py:233:# Globalna instancja monitora wydajności
+
+core/rules.py:342: # Sprawdź czy ścieżka nie zawiera sekwencji path traversal
 
 ---
 
-## 8. `core/tools/duplicate_finder_worker.py` (16)
+File: core\rules.py
 
-### UI Messages (3)
-- `No archive files to check`
-- `No duplicates found`
-- `Found {len(duplicates)} duplicate groups. Moved {moved_count} files to __duplicates__ folder`
+L346: # Sprawdź czy ścieżka nie jest zbyt długa
 
-### Logi (1)
-- `Rozpoczęcie szukania duplikatów w folderze: {self.folder_path}`
+L350: # Sprawdź czy ścieżka nie zawiera niedozwolonych znaków
 
-### Komentarze (12)
-- `# Log informacyjny o załadowaniu modułu Rust`
-- `# Pobierz informacje o kompilacji`
-- `"""Worker do znajdowania duplikatów plików na podstawie SHA-256"""`
-- `# lista duplikatów do wyświetlenia`
-- `"""Główna metoda znajdowania duplikatów"""`
-- `# Znajdź pliki archiwum`
-- `# Oblicz SHA-256 dla każdego pliku`
-- `# Znajdź duplikaty`
-- `# Przygotuj listę do przeniesienia (nowsze pliki)`
-- `# Przenieś pliki do folderu __duplicates__`
+L426: # Sprawdź rozszerzenia używając sets dla O(1) lookup
 
 ---
 
-## 9. `core/pairing_tab.py` (16)
+File: core\scanner.py
 
-### UI Messages (11)
-- `Create asset`
-- `Delete unpaired previews`
-- `Delete unpaired archives`
-- `Rebuild assets`
-- `Open in default program`
-- `Confirmation`
-- `Are you sure you want to delete ALL unpaired previews from the list and disk?
-This operation cannot be undone.`
-- `Success`
-- `Successfully deleted unpaired previews.`
-- `Error`
-- `An error occurred while deleting previews. Check logs.`
-- `Are you sure you want to delete ALL unpaired archives from the list and disk?
-This operation cannot be undone.`
-- `Successfully deleted unpaired archives.`
-- `An error occurred while deleting archives. Check logs.`
-- `Are you sure you want to rebuild all assets in the folder:
-{work_folder}?`
-- `Process started`
-- `Asset rebuild started in folder:
-{work_folder}`
-- `Rebuild Error`
+L28: logger.info(f"🦀 ✅ SUCCESS: Loaded LOCAL Rust scanner engine from: {scanner_location}")
 
-### Logi (1)
-- `Zabezpieczenie przed wieloma oknami`
-
-### Komentarze (4)
-- `# Użyj folderu roboczego z modelu zamiast folderu z pliku unpair_files.json`
-- `# KATEGORYCZNE CZYSZCZENIE CACHE PAMIĘCI RAM PO PRZEBUDOWIE ASSETÓW!!!`
-- `# CATEGORICAL CLEARING OF RAM CACHE EVEN AFTER REBUILD ERROR!!!`
+L50: Wrapper na Rustowy backend skanera assetów.
 
 ---
 
-## 10. `core/amv_models/asset_grid_model.py` (15)
+File: core\tools\duplicate_finder_worker.py
 
-### Logi (8)
-- `WCZYTYWANIE OD NOWA assetów w folderze: %s`
-- `Inicjalizacja skanowania...`
-- `Skanowanie: {message}`
-- `Rozpoczynanie skanowania plików...`
-- `Skanowanie zakończone, znaleziono %d assetów`
-- `Ładowanie assetów z plików...`
-- `WCZYTANO OD NOWA %d assetów z plików .asset`
-- `Finalizowanie...`
-- `WCZYTYWANIE OD NOWA zakończone, łącznie {len(all_assets)} assetów`
-- `Zakończono!`
+L15: # Log informacyjny o załadowaniu modułu Rust
 
-### Komentarze (7)
-- `# Początek - inicjalizacja (0-10%)`
-- `# WCZYTAJ OD NOWA - najpierw skanuj i utwórz assety`
-- `# Skanuj folder i utwórz nowe assety (10-80%)`
-- `# Map scan progress to the 10-80% range`
-- `# Ładowanie assetów (80-95%)`
-- `# WCZYTAJ OD NOWA - teraz załaduj wszystkie assety z plików .asset`
-- `# Finalizacja (95-100%)`
+L24: print(f"🦀 RUST HASH_UTILS: Używam LOKALNEJ wersji z: {hash_utils_location} [build: {build_timestamp}, module: {module_number}]")
 
----
+L26: print(f"🦀 RUST HASH_UTILS: Moduł załadowany (brak informacji o lokalizacji)")
 
-## 11. `core/amv_models/workspace_folders_model.py` (14)
+L32: """Worker do znajdowania duplikatów plików na podstawie SHA-256"""
 
-### Logi (4)
-- `Folder roboczy nie istnieje: {folder_path}`
-- `Załadowano {len(self._folders)} folderów roboczych (sortowanie alfabetyczne)`
-- `Błąd podczas ładowania folderów roboczych: {e}`
+L35: duplicates_found = pyqtSignal(list) # lista duplikatów do wyświetlenia
 
-### Komentarze (10)
-- `# Przeiteruj przez work_folder1 do work_folder9`
-- `# Sprawdź, czy folder istnieje (tylko jeśli ma ścieżkę)`
-- `# Ustaw domyślną ikonę jeśli nie ma określonej`
-- `# Dodaj wszystkie foldery, nawet puste`
-- `# Aktywny tylko jeśli ma ścieżkę i istnieje`
-- `# SORTOWANIE ALFABETYCZNE - najpierw aktywne, potem nieaktywne`
-- `# Sortuj aktywne foldery alfabetycznie`
-- `# Sortuj nieaktywne foldery alfabetycznie`
-- `# Puste foldery na końcu`
-- `# Złóż wszystko w kolejności: aktywne, nieaktywne, puste`
+L42: """Główna metoda znajdowania duplikatów"""
+
+L44: logger.info(f"Rozpoczęcie szukania duplikatów w folderze: {self.folder_path}")
+
+L46: # Znajdź pliki archiwum
+
+L49: self.finished.emit("Brak plików archiwum do sprawdzenia")
+
+L52: # Oblicz SHA-256 dla każdego pliku
+
+L55: # Znajdź duplikaty
+
+L59: self.finished.emit("Nie znaleziono duplikatów")
+
+L62: # Przygotuj listę do przeniesienia (nowsze pliki)
+
+L65: # Przenieś pliki do folderu **duplicates**
+
+L68: message = f"Znaleziono {len(duplicates)} grup duplikatów. Przeniesiono {moved_count} plików do folderu **duplicates**"
 
 ---
 
-## 12. `core/tools/file_shortener_worker.py` (13)
+File: core\tools\file_renamer_worker.py
 
-### UI Messages (5)
-- `No files to process`
-- `Shortening pair names...`
-- `Shortened pair: {archive_name[:20]}...`
-- `Shortening unpaired file names...`
-- `Processing: {filename[:20]}...`
-- `Name shortening completed: {shortened_count} files shortened`
+L21: # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
 
-### Logi (3)
-- `Zmieniono nazwę: {os.path.basename(file_path)} -> {new_name + file_ext}`
-- `Błąd podczas zmiany nazwy {file_path}: {e}`
+L23: pairs_found = pyqtSignal(list) # lista par do wyświetlenia
 
-### Komentarze (5)
-- `# Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker`
-- `# lista par do wyświetlenia`
-- `# czeka na potwierdzenie użytkownika`
-- `"""Zmienia nazwę pliku zachowując rozszerzenie"""`
-- `# Pobierz rozszerzenie`
-- `# Utwórz nową nazwę z rozszerzeniem`
-- `# Zmień nazwę`
+L24: user_confirmation_needed = pyqtSignal(list) # czeka na potwierdzenie użytkownika
+
+L45: self.finished.emit("Brak plików do przetworzenia")
+
+L117: "Randomizowanie nazw nieparowanych plików...",
+
+L145: message = f"Randomizacja nazw zakończona: {renamed_count} plików zrandomizowano"
+
+L147: message += f", {error_count} błędów"
 
 ---
 
-## 13. `core/amv_models/drag_drop_model.py` (12)
+File: core\tools\file_shortener_worker.py
 
-### Logi (1)
-- `Porównanie ścieżek: norm_target='{norm_target}', norm_current='{norm_current}'`
+L19: # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
 
-### Komentarze (11)
-- `# Lista ID assetów przeciąganych`
-- `# Czy upuszczenie jest możliwe`
-- `# Ścieżka docelowa, lista ID przeniesionych assetów`
-- `# NOWE: zabezpieczenie przed rekurencją`
-- `# ZABEZPIECZENIE: Sprawdź czy operacja już nie jest w toku`
-- `# Normalizuj ścieżki do porównania`
-- `# Przykład: Nie zezwalaj na upuszczanie do folderów tekstur`
-- `# ZABEZPIECZENIE: Sprawdź czy asset_ids są prawidłowe`
-- `# ZABEZPIECZENIE: Sprawdź czy target_path jest prawidłowy`
-- `# Wyczyść po zakończeniu operacji`
-- `# W przypadku błędu, wyczyść stan`
+L21: pairs_found = pyqtSignal(list) # lista par do wyświetlenia
 
----
+L22: user_confirmation_needed = pyqtSignal(list) # czeka na potwierdzenie użytkownika
 
-## 14. `core/scanner.py` (11)
+L43: self.finished.emit("Brak plików do przetworzenia")
 
-### Logi (4)
-- `🦀 ✅ SUKCES: Załadowano LOKALNY silnik Rust scanner z: {scanner_location}`
-- `🦀 RUST SCANNER: Używam LOKALNEJ wersji z: {scanner_location} [build: {build_timestamp}, module: {module_number}]`
-- `🦀 ⚠️ FALLBACK: Używam GLOBALNEGO silnika Rust scanner z: {scanner_location}`
-- `🦀 RUST SCANNER: FALLBACK - używam globalnej wersji z: {scanner_location} [build: {build_timestamp}, module: {module_number}]`
-- `🦀 ❌ BŁĄD: Nie można załadować żadnej wersji scanner_rust: {e}`
+L101: f"Skrócona para: {archive_name[:20]}...",
 
-### Komentarze (7)
-- `# ZAWSZE preferuj lokalną wersję Rust scannera z core/__rust`
-- `# Usuń site-packages z path tymczasowo aby wymusić lokalną wersję`
-- `# Usuń wszystkie ścieżki zawierające site-packages dla scanner_rust`
-- `# Dodaj lokalny folder na początek`
-- `# Pobierz informacje o kompilacji`
-- `# Przywróć oryginalną ścieżkę w przypadku błędu`
-- `# Nie można załadować Rustowego backendu (scanner_rust): {}`
-- `"""Wrapper na Rustowy backend skanera assetów."""`
+L113: "Skracanie nazw nieparowanych plików...",
+
+L143: message = f"Skracanie nazw zakończone: {shortened_count} plików skrócono"
+
+L145: message += f", {error_count} błędów"
+
+L252: """Zmienia nazwę pliku zachowując rozszerzenie"""
+
+L258: # Utwórz nową nazwę z rozszerzeniem
+
+L265: # Zmień nazwę
+
+L268: f"Zmieniono nazwę: {os.path.basename(file_path)} -> {new_name + file_ext}"
+
+L273: logger.error(f"Błąd podczas zmiany nazwy {file_path}: {e}")
 
 ---
 
-## 15. `core/amv_models/file_operations_model.py` (9)
+File: core\tools\image_resizer_worker.py
 
-### Logi (1)
-- `Błąd przenoszenia assetu {original_name}: {e}`
+L14: # Log informacyjny o załadowaniu modułu Rust
 
-### Komentarze (8)
-- `# 1. Plik .asset`
-- `# 2. Plik archiwum`
-- `# 3. Plik podglądu`
-- `# 4. Plik miniatury w folderze .cache`
-- `# Przechowuj folder docelowy`
-- `# Zapisz folder docelowy`
-- `# Zwraca folder docelowy ostatniej operacji move`
-- `# Wyczyść folder docelowy przy delete`
+L23: print(f"🦀 RUST IMAGE_TOOLS: Używam LOKALNEJ wersji z: {image_tools_location} [build: {build_timestamp}, module: {module_number}]")
+
+L25: print(f"🦀 RUST IMAGE_TOOLS: Moduł załadowany (brak informacji o lokalizacji)")
+
+L33: # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
+
+L49: self.finished.emit("Brak plików do zmiany rozmiaru")
 
 ---
 
-## Pozostałe pliki
+File: core\tools\prefix_suffix_remover_worker.py
 
-- **`core/tools/file_renamer_worker.py` (8)**: 5 UI, 3 komentarze
-- **`core/workers/asset_rebuilder_worker.py` (8)**: 5 UI, 1 log, 2 komentarze
-- **`core/amv_controllers/handlers/folder_tree_controller.py` (8)**: 2 logi, 6 komentarzy
-- **`core/tools/image_resizer_worker.py` (7)**: 4 UI, 3 komentarze
-- **`core/tools/webp_converter_worker.py` (7)**: 4 UI, 3 komentarze
-- **`core/json_utils.py` (6)**: 5 logów, 1 komentarz
-- **`core/amv_views/preview_tile.py` (6)**: 6 komentarzy
-- **`core/amv_controllers/amv_controller.py` (5)**: 5 komentarzy
-- **`core/amv_controllers/handlers/asset_grid_controller.py` (5)**: 5 komentarzy
-- **`core/amv_models/pairing_model.py` (5)**: 5 komentarzy
-- **`core/amv_tab.py` (5)**: 5 komentarzy
-- **`core/performance_monitor.py` (5)**: 5 komentarzy
-- **`core/utilities.py` (5)**: 2 logi, 3 komentarze
-- **`core/amv_models/config_manager_model.py` (4)**: 4 logi
-- **`core/rules.py` (4)**: 4 komentarze
-- **`core/main_window.py` (4)**: 4 UI
-- **`core/preview_window.py` (3)**: 1 UI, 1 log, 1 komentarz
-- **`core/amv_controllers/handlers/asset_rebuild_controller.py` (2)**: 2 komentarze
-- **`core/amv_models/selection_model.py` (2)**: 2 komentarze
-- **`core/selection_counter.py` (2)**: 2 UI
-- **`core/workers/worker_manager.py` (2)**: 2 UI
-- **`core/amv_controllers/handlers/signal_connector.py` (1)**: 1 komentarz
-- **`core/amv_views/preview_gallery_view.py` (1)**: 1 komentarz
+L16: """Worker do usuwania prefixu/suffixu z nazw plików"""
+
+L18: # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
+
+L27: """Główna metoda usuwania prefixu/suffixu"""
+
+L30: f"Rozpoczęcie usuwania {self.mode} w folderze: {self.folder_path}"
+
+L33: # Znajdź wszystkie pliki w folderze
+
+L41: self.finished.emit("Brak plików do przetworzenia")
+
+L44: # Przetwórz pliki
+
+L54: # Sprawdź czy plik pasuje do kryteriów
+
+L60: ).rstrip() # Usuń spacje z końca po usunięciu prefix
+
+L66: ).rstrip() # Usuń spacje z końca po usunięciu suffix
+
+L78: # Zmień nazwę
+
+L94: f"Błąd podczas przetwarzania {os.path.basename(file_path)}: {e}"
+
+L97: # Przygotuj komunikat końcowy
+
+L99: f"Usuwanie {self.mode} zakończone: {renamed_count} plików zmieniono"
+
+L102: message += f", {error_count} błędów"
+
+L107: error_msg = f"Błąd podczas usuwania {self.mode}: {e}"
+
+---
+
+File: core\tools\webp_converter_worker.py
+
+L14: # Log informacyjny o załadowaniu modułu Rust
+
+L23: print(f"🦀 RUST IMAGE_TOOLS (WebP): Używam LOKALNEJ wersji z: {image_tools_location} [build: {build_timestamp}, module: {module_number}]")
+
+L25: print(f"🦀 RUST IMAGE_TOOLS (WebP): Moduł załadowany (brak informacji o lokalizacji)")
+
+L31: """Worker do konwersji plików graficznych do formatu WebP"""
+
+L33: # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
+
+L40: """Główna metoda konwersji do WebP"""
+
+L47: self.finished.emit("Brak plików do konwersji na WebP")
+
+L114: message = f"Konwersja zakończona: {converted_count} przekonwertowano"
+
+L116: message += f", {skipped_count} pominięto (już istnieją)"
+
+L118: message += f", {error_count} błędów"
+
+L122: len(files_to_convert), len(files_to_convert), "Konwersja zakończona"
+
+---
+
+File: core\tools_tab.py
+
+L759: # Połącz sygnały
+
+L882: item_text = f"📦 {archive_name}\n 🖼️ {preview_name}"
+
+L935: item_text = f"📦 {archive_name}\n 🖼️ {preview_name}"
+
+---
+
+File: core\workers\asset_rebuilder_worker.py
+
+L53: self.progress_updated.emit(0, 100, "Usuwanie starych plików .asset...")
+
+L68: 40, 100, "Skanowanie i tworzenie nowych assetów..."
+
+L74: self.progress_updated.emit(100, 100, "Przebudowa zakończona!")
+
+L76: f"Pomyślnie przebudowano assety w folderze: {self.folder_path}"

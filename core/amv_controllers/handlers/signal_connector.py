@@ -89,7 +89,7 @@ class SignalConnector:
             )
 
         # --- Text filter signal connection ---
-        # Połącz sygnał filtra tekstowego
+        # Connect the text filter signal
         if hasattr(self.view, 'text_input') and self.view.text_input:
             self.view.text_input.textChanged.connect(
                 lambda: control_panel_controller.filter_assets()

@@ -77,13 +77,13 @@ def load_from_file(file_path):
     try:
         import os
 
-        # Sprawdź rozmiar pliku przed załadowaniem (limit 100MB)
+        # Check the file size before loading (100MB limit)
         file_size = os.path.getsize(file_path)
         max_size = 100 * 1024 * 1024  # 100MB
 
         if file_size > max_size:
             logger.error(
-                f"Plik {file_path} jest za duży ({file_size} bytes), limit: {max_size} bytes"
+                f"File {file_path} is too large ({file_size} bytes), limit: {max_size} bytes"
             )
             return None
 
@@ -94,16 +94,16 @@ def load_from_file(file_path):
             with open(file_path, "r", encoding="utf-8") as f:
                 return json.load(f)
     except PermissionError as e:
-        logger.error(f"Brak uprawnień do odczytu pliku {file_path}: {e}")
+        logger.error(f"No permissions to read file {file_path}: {e}")
         return None
     except FileNotFoundError as e:
-        logger.error(f"Plik nie istnieje {file_path}: {e}")
+        logger.error(f"File does not exist {file_path}: {e}")
         return None
     except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"Nieprawidłowy format JSON w pliku {file_path}: {e}")
+        logger.error(f"Invalid JSON format in file {file_path}: {e}")
         return None
     except UnicodeDecodeError as e:
-        logger.error(f"Błąd kodowania pliku {file_path}: {e}")
+        logger.error(f"File encoding error {file_path}: {e}")
         return None
     except Exception as e:
         logger.error(f"Unexpected error while loading file {file_path}: {e}")

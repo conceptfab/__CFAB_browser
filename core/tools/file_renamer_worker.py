@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 class FileRenamerWorker(BaseWorker):
     """Worker for randomizing file names"""
 
-    # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
+    # Changed signal name to 'finished' according to BaseWorker
     finished = pyqtSignal(str)  # message
-    pairs_found = pyqtSignal(list)  # lista par do wyświetlenia
-    user_confirmation_needed = pyqtSignal(list)  # czeka na potwierdzenie użytkownika
+    pairs_found = pyqtSignal(list)  # list of pairs to display
+    user_confirmation_needed = pyqtSignal(list)  # waits for user confirmation
 
     def __init__(self, folder_path: str, max_name_length: int):
         super().__init__(folder_path)
@@ -71,7 +71,7 @@ class FileRenamerWorker(BaseWorker):
             # First, pairs
             if self.files_info and self.files_info["pairs"]:
                 self.progress_updated.emit(
-                    0, len(self.files_info["pairs"]), "Randomizing pair names..."
+                    0, len(self.files_info["pairs"]), "Randomizowanie nazw par..."
                 )
                 for i, (archive_file, preview_file) in enumerate(
                     self.files_info["pairs"]
@@ -102,7 +102,7 @@ class FileRenamerWorker(BaseWorker):
                         self.progress_updated.emit(
                             i + 1,
                             len(self.files_info["pairs"]),
-                            f"Randomized pair: {new_name if len(archive_name) > self.max_name_length else archive_name}",
+                            f"Zrandomizowana para: {new_name if len(archive_name) > self.max_name_length else archive_name}",
                         )
 
                     except Exception as e:
@@ -114,7 +114,7 @@ class FileRenamerWorker(BaseWorker):
                 self.progress_updated.emit(
                     0,
                     len(self.files_info["unpaired"]),
-                    "Randomizing unpaired file names...",
+                    "Randomizing names of unpaired files...",
                 )
                 for i, file_path in enumerate(self.files_info["unpaired"]):
                     try:
@@ -134,7 +134,7 @@ class FileRenamerWorker(BaseWorker):
                         self.progress_updated.emit(
                             i + 1,
                             len(self.files_info["unpaired"]),
-                            f"Processing: {filename}",
+                            f"Przetwarzanie: {filename}",
                         )
 
                     except Exception as e:

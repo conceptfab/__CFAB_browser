@@ -81,7 +81,7 @@ class AssetRebuildController(QObject):
         logger.debug(f"Rebuild finished: {message}")
         self.model.control_panel_model.set_progress(100)
 
-        # KATEGORYCZNE CZYSZCZENIE CACHE PAMIĘCI RAM PO PRZEBUDOWIE ASSETÓW!!!
+        # ABSOLUTE CLEARING OF RAM CACHE AFTER REBUILDING ASSETS!!!
         from core.utilities import clear_thumbnail_cache_after_rebuild
         clear_thumbnail_cache_after_rebuild(is_error=False)
 
@@ -102,7 +102,7 @@ class AssetRebuildController(QObject):
         """Handles errors during asset rebuild"""
         logger.error(f"Asset rebuild error: {error_message}")
 
-        # KATEGORYCZNE CZYSZCZENIE CACHE PAMIĘCI RAM NAWET PO BŁĘDZIE PRZEBUDOWY!!!
+        # ABSOLUTE CLEARING OF RAM CACHE EVEN AFTER A REBUILD ERROR!!!
         from core.utilities import clear_thumbnail_cache_after_rebuild
         clear_thumbnail_cache_after_rebuild(is_error=True)
 

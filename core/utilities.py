@@ -1,5 +1,5 @@
 """
-Moduł utilities - wspólne funkcje narzędziowe
+Utilities module - common utility functions
 """
 
 import logging
@@ -10,22 +10,22 @@ logger = logging.getLogger(__name__)
 
 def clear_thumbnail_cache_after_rebuild(is_error: bool = False):
     """
-    Czyści cache pamięci RAM po przebudowie assetów.
+    Clears RAM cache after asset rebuild.
     Simplified version - removed duplicate logic and excessive logging.
     
     Args:
-        is_error (bool): True jeśli czyszczenie po błędzie, False po sukcesie
+        is_error (bool): True if clearing after error, False after success
     """
     try:
         from core.thumbnail_cache import thumbnail_cache
         
         thumbnail_cache.clear()
         
-        status = "po błędzie" if is_error else "po przebudowie"
-        logger.info(f"Cache pamięci RAM wyczyszczony {status}")
+        status = "after error" if is_error else "after rebuild"
+        logger.info(f"RAM cache cleared {status}")
             
     except Exception as e:
-        logger.error(f"Błąd podczas czyszczenia thumbnail cache: {e}")
+        logger.error(f"Error clearing thumbnail cache: {e}")
 
 
 
@@ -33,7 +33,7 @@ def clear_thumbnail_cache_after_rebuild(is_error: bool = False):
 
 def update_main_window_status(widget):
     """
-    Aktualizuje pasek statusu w głównym oknie.
+    Updates the status bar in the main window.
     Simplified version with optimized parent traversal.
     """
     try:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CFAB Browser - Główny plik uruchamiający aplikację
+CFAB Browser - Main application startup file
 """
 
 import logging
@@ -13,7 +13,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication, QSplashScreen
 
-# Import głównego okna
+# Import main window
 from core.json_utils import load_from_file
 from core.main_window import MainWindow
 from core.thumbnail_cache import ThumbnailCache
@@ -40,7 +40,7 @@ def setup_logger():
 
 
 def load_styles(app, logger):
-    """Ładuje style z pliku QSS"""
+    """Loads styles from QSS file"""
     try:
         config = load_from_file("config.json")
 
@@ -67,7 +67,7 @@ def load_styles(app, logger):
 
 
 def main():
-    """Główna funkcja uruchamiająca aplikację"""
+    """Main function that starts the application"""
     logger = setup_logger()
     logger.info("Starting CFAB Browser application")
 

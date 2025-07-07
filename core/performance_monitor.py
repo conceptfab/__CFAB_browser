@@ -54,7 +54,7 @@ class PerformanceMetrics:
         if additional_data:
             self.additional_data.update(additional_data)
 
-        # Pobierz końcowe zużycie pamięci
+        # Get final memory usage
         if PSUTIL_AVAILABLE:
             try:
                 process = psutil.Process()
@@ -108,7 +108,7 @@ class PerformanceMonitor:
         """Logs metrics to file and/or console"""
         metrics_dict = metrics.to_dict()
 
-        # Logowanie do pliku
+        # Logging to a file
         if self.log_file:
             try:
                 with open(self.log_file, "a", encoding="utf-8") as f:
@@ -116,7 +116,7 @@ class PerformanceMonitor:
             except Exception as e:
                 logger.error(f"Could not write to performance log file: {e}")
 
-        # Logowanie do konsoli
+        # Logging to the console
         if self.enable_console_logging:
             duration_str = f"{metrics.duration:.3f}s" if metrics.duration else "N/A"
             memory_str = (
@@ -134,10 +134,10 @@ class PerformanceMonitor:
                     f"(memory: {memory_str}) - {metrics.error_message}"
                 )
 
-        # Dodaj do historii
+        # Add to history
         self.metrics_history.append(metrics)
 
-        # Ogranicz historię do ostatnich 1000 wpisów
+        # Limit history to the last 1000 entries
         if len(self.metrics_history) > 1000:
             self.metrics_history = self.metrics_history[-1000:]
 
@@ -203,7 +203,7 @@ class PerformanceMonitor:
 
         def decorator(func: Callable) -> Callable:
             def wrapper(*args, **kwargs):
-                # Użyj nazwy funkcji jeśli nie podano operation_name
+                # Use the function name if operation_name is not provided
                 op_name = operation_name or func.__name__
 
                 start_time = time.perf_counter()
@@ -230,7 +230,7 @@ class PerformanceMonitor:
         return decorator
 
 
-# Globalna instancja monitora wydajności
+# Global performance monitor instance
 _performance_monitor: Optional[PerformanceMonitor] = None
 
 

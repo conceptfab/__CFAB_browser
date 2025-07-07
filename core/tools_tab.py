@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 
 from core.workers.asset_rebuilder_worker import AssetRebuilderWorker
 from core.workers.worker_manager import WorkerManager
-# thumbnail_cache imported w utilities.clear_thumbnail_cache_after_rebuild()
+        # thumbnail_cache imported in utilities.clear_thumbnail_cache_after_rebuild()
 from core.tools import (
     BaseWorker,
     WebPConverterWorker,
@@ -378,9 +378,6 @@ class ToolsTab(QWidget):
                 "No files",
                 "Skipped all", 
                 "Nothing to",
-                "Brak plików",
-                "Wszystkie pliki pominięto",
-                "Nie znaleziono plików",
                 "No duplicates found",
                 "No archive files",
                 "No images found",
@@ -397,9 +394,6 @@ class ToolsTab(QWidget):
                 "moved",
                 "removed",
                 "shortened",
-                "zmieniono",
-                "przeniesiono",
-                "skonwertowano",
                 "Moved",
                 "created",
                 "deleted",
@@ -750,7 +744,7 @@ class ToolsTab(QWidget):
             selected_mode = "prefix" if prefix_radio.isChecked() else "suffix"
             self._start_remove(text_to_remove, selected_mode)
 
-    def _start_remove(self, text_to_remove: str, mode: str): # Starts removing prefix/suffix from file names
+    def _start_remove(self, text_to_remove: str, mode: str):  # Starts removing prefix/suffix from file names
         """Starts removing prefix/suffix from file names"""
         try:
             # Disable button during removal
@@ -762,7 +756,7 @@ class ToolsTab(QWidget):
                 self.current_working_directory, text_to_remove, mode
             )
 
-            # Połącz sygnały
+            # Connect signals
             self.remove_worker.progress_updated.connect(
                 lambda c, t, m: self._handle_worker_progress(
                     self.remove_button, c, t, m
@@ -885,7 +879,7 @@ class ToolsTab(QWidget):
         for archive_path, preview_path in pairs:
             archive_name = os.path.basename(archive_path)
             preview_name = os.path.basename(preview_path)
-            item_text = f"📦 {archive_name}\n   🖼️ {preview_name}"
+            item_text = f"📦 {archive_name}\n 🖼️ {preview_name}"
             list_widget.addItem(item_text)
 
         layout.addWidget(list_widget)
@@ -916,7 +910,7 @@ class ToolsTab(QWidget):
             # User confirmed - continue operation
             self.file_renamer.confirm_operation()
 
-    def _show_pairs_dialog_shortener(self, pairs): # Displays a window with a list of pairs to be shortened
+    def _show_pairs_dialog_shortener(self, pairs):  # Displays a window with a list of pairs to be shortened
         """Displays a window with a list of pairs to be shortened"""
         if not pairs:
             return
@@ -938,7 +932,7 @@ class ToolsTab(QWidget):
         for archive_path, preview_path in pairs:
             archive_name = os.path.basename(archive_path)
             preview_name = os.path.basename(preview_path)
-            item_text = f"📦 {archive_name}\n   🖼️ {preview_name}"
+            item_text = f"📦 {archive_name}\n 🖼️ {preview_name}"
             list_widget.addItem(item_text)
 
         layout.addWidget(list_widget)

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-/// Struktura reprezentująca asset
+/// Structure representing an asset
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Asset {
     #[serde(rename = "type")]
@@ -17,7 +17,7 @@ pub struct Asset {
     pub meta: serde_json::Value,
 }
 
-/// Struktura reprezentująca folder specjalny
+/// Structure representing a special folder
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpecialFolder {
     pub folder_type: String,
@@ -25,7 +25,7 @@ pub struct SpecialFolder {
     pub folder_path: String,
 }
 
-/// Wynik skanowania
+/// Scan result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScanResult {
     pub assets: Vec<Asset>,
@@ -33,7 +33,7 @@ pub struct ScanResult {
     pub unpaired_files: UnpairedFiles,
 }
 
-/// Niesparowane pliki
+/// Unpaired files
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnpairedFiles {
     #[serde(rename = "unpaired_archives")]
@@ -46,7 +46,7 @@ pub struct UnpairedFiles {
     pub total_images: usize,
 }
 
-/// Konfiguracja rozszerzeń plików
+/// File extensions configuration
 #[derive(Debug, Clone)]
 pub struct FileExtensions {
     pub archives: std::collections::HashSet<String>,
@@ -68,19 +68,19 @@ impl Default for FileExtensions {
     }
 }
 
-/// Błędy scanera
+/// Scanner errors
 #[derive(thiserror::Error, Debug)]
 pub enum ScannerError {
-    #[error("Błąd I/O: {0}")]
+    #[error("I/O Error: {0}")]
     IoError(#[from] std::io::Error),
-    #[error("Błąd JSON: {0}")]
+    #[error("JSON Error: {0}")]
     JsonError(#[from] serde_json::Error),
 }
 
-/// Konfiguracja scanera
+/// Scanner configuration
 #[derive(Debug, Clone)]
 pub struct ScannerConfig {
-    // Pola zarezerwowane na przyszłość
+    // Fields reserved for future use
     _thumbnail_size: u32,
     _parallel_processing: bool,
     _cache_dir_name: String,

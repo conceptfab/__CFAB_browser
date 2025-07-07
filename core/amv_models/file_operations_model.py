@@ -150,7 +150,7 @@ class FileOperationsWorker(QThread):
         except Exception as e:
             return {
                 "success": False,
-                "message": f"Błąd przenoszenia assetu {original_name}: {e}",
+                "message": f"Error moving asset {original_name}: {e}",
                 "final_name": original_name,
             }
 
@@ -332,23 +332,23 @@ class FileOperationsWorker(QThread):
         asset_name = asset_data.get("name", "")
         files = []
 
-        # 1. Plik .asset
+        # 1. .asset file
         asset_file = os.path.join(folder_path, f"{asset_name}.asset")
         files.append(asset_file)
 
-        # 2. Plik archiwum
+        # 2. Archive file
         archive_filename = asset_data.get("archive")
         if archive_filename:
             archive_file = os.path.join(folder_path, archive_filename)
             files.append(archive_file)
 
-        # 3. Plik podglądu
+        # 3. Preview file
         preview_filename = asset_data.get("preview")
         if preview_filename:
             preview_file = os.path.join(folder_path, preview_filename)
             files.append(preview_file)
 
-        # 4. Plik miniatury w folderze .cache
+        # 4. Thumbnail file in .cache folder
         cache_dir = os.path.join(folder_path, ".cache")
         thumb_file = os.path.join(cache_dir, f"{asset_name}.thumb")
         files.append(thumb_file)
@@ -372,7 +372,7 @@ class FileOperationsModel(QObject):
         super().__init__()
         self._worker = None
         self._worker_mutex = QMutex()
-        self._last_target_folder = None  # Przechowuj folder docelowy
+        self._last_target_folder = None  # Store the target folder
 
     def move_assets(
         self, assets_data: list, source_folder_path: str, target_folder_path: str
@@ -385,7 +385,7 @@ class FileOperationsModel(QObject):
                 )
                 self._stop_worker_safely()
 
-            self._last_target_folder = target_folder_path  # Zapisz folder docelowy
+            self._last_target_folder = target_folder_path  # Save the target folder
             self._worker = FileOperationsWorker(
                 "move", assets_data, source_folder_path, target_folder_path
             )
@@ -393,7 +393,7 @@ class FileOperationsModel(QObject):
             self._worker.start()
 
     def get_last_target_folder(self) -> str:
-        """Zwraca folder docelowy ostatniej operacji move"""
+        """Returns the target folder of the last move operation"""
         return self._last_target_folder
 
     def delete_assets(self, assets_data: list, current_folder_path: str):
@@ -405,7 +405,7 @@ class FileOperationsModel(QObject):
                 )
                 self._stop_worker_safely()
 
-            self._last_target_folder = None  # Wyczyść folder docelowy przy delete
+            self._last_target_folder = None  # Clear the target folder on delete
             self._worker = FileOperationsWorker(
                 "delete", assets_data, current_folder_path, None
             )

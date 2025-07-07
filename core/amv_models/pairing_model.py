@@ -20,13 +20,13 @@ class PairingModel:
     def set_work_folder(self, folder_path: str):
         self.work_folder = folder_path
         self.unpair_files_path = os.path.join(folder_path, "unpair_files.json")
-        logger.info(f"PairingModel work folder set to: {folder_path}")
+        logger.info(f"PairingModel working folder set to: {folder_path}")
         self.load_unpair_files()
 
     def load_unpair_files(self):
         if not self.unpair_files_path:
             logger.warning(
-                "PairingModel: Attempted to load unpair files with no path set."
+                "PairingModel: Attempting to load unpair files without a path set."
             )
             self._create_default_unpair_files()
             return
@@ -35,7 +35,7 @@ class PairingModel:
 
         if not os.path.exists(self.unpair_files_path):
             logger.warning(
-                f"File not found: {self.unpair_files_path}. Creating default."
+                f"File not found: {self.unpair_files_path}. Creating a default one."
             )
             self._create_default_unpair_files()
             return
@@ -52,7 +52,7 @@ class PairingModel:
                 )
         except json.JSONDecodeError:
             logger.error(
-                f"Error decoding JSON from {self.unpair_files_path}. Creating default."
+                f"JSON decoding error from {self.unpair_files_path}. Creating a default one."
             )
             self._create_default_unpair_files()
             # Reset lists in case of error
@@ -60,7 +60,7 @@ class PairingModel:
             self.unpaired_images = []
         except Exception as e:
             logger.error(
-                f"Error loading {self.unpair_files_path}: {e}. Creating default."
+                f"Error loading {self.unpair_files_path}: {e}. Creating a default one."
             )
             self._create_default_unpair_files()
             # Reset lists in case of error
@@ -91,7 +91,7 @@ class PairingModel:
             return  # Do not save if path is not set
         data = {
             "unpaired_archives": self.unpaired_archives,
-            "unpaired_images": self.unpaired_images,  # POPRAWKA: zapisz jako unpaired_images
+            "unpaired_images": self.unpaired_images,  # FIX: save as unpaired_images
             "total_unpaired_archives": len(self.unpaired_archives),
             "total_unpaired_images": len(self.unpaired_images),
         }
@@ -99,7 +99,7 @@ class PairingModel:
             with open(self.unpair_files_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
         except Exception as e:
-            logger.error(f"Error saving {self.unpair_files_path}: {e}")
+            logger.error(f"Error writing {self.unpair_files_path}: {e}")
 
     def get_unpaired_archives(self):
         return self.unpaired_archives
@@ -142,7 +142,7 @@ class PairingModel:
 
         self.save_unpair_files()
         logger.info(
-            f"Archive deletion complete. Deleted: {deleted_count}, Failed: {failed_count}."
+            f"Deleting archives finished. Deleted: {deleted_count}, Failures: {failed_count}."
         )
         return failed_count == 0
 
@@ -164,18 +164,18 @@ class PairingModel:
 
         self.save_unpair_files()
         logger.info(
-            f"Image deletion complete. Deleted: {deleted_count}, Failed: {failed_count}."
+            f"Deleting previews finished. Deleted: {deleted_count}, Failures: {failed_count}."
         )
         return failed_count == 0
     
     def _validate_work_folder(self) -> bool:
         """Validate that work folder is set and exists"""
         if not self.work_folder:
-            logger.error("Cannot delete files, work folder path is not set.")
+            logger.error("Cannot delete files, the working folder path is not set.")
             return False
         
         if not os.path.exists(self.work_folder):
-            logger.error(f"Work folder does not exist: {self.work_folder}")
+            logger.error(f"Working folder does not exist: {self.work_folder}")
             return False
         
         return True
@@ -196,7 +196,7 @@ class PairingModel:
                 self.unpaired_archives.remove(archive_name)
                 return True  # Not an error, just file doesn't exist
         except PermissionError as e:
-            logger.error(f"Permission denied deleting archive {archive_name}: {e}")
+            logger.error(f"No permissions to delete archive {archive_name}: {e}")
             return False
         except OSError as e:
             logger.error(f"OS error deleting archive {archive_name}: {e}")
@@ -241,14 +241,14 @@ class PairingModel:
         )
 
         try:
-            # 1. Zmień nazwę pliku podglądu
+            # 1. Rename the preview file
             if preview_full_path != new_preview_full_path:
                 shutil.move(preview_full_path, new_preview_full_path)
                 logger.info(
                     f"Renamed preview from {preview_full_path} to {new_preview_full_path}"
                 )
 
-            # 2. Utwórz asset
+            # 2. Create asset
             work_folder_path = os.path.dirname(archive_full_path)
             asset_repository = AssetRepository()
             asset_data = asset_repository._create_single_asset(
@@ -259,7 +259,7 @@ class PairingModel:
             )
             if asset_data:
                 logger.info(f"Created asset for {archive_name_without_ext}")
-                # 3. Utwórz thumbnail
+                # 3. Create thumbnail
                 thumbnail_success = asset_repository.create_thumbnail_for_asset(
                     os.path.join(work_folder_path, f"{archive_name_without_ext}.asset"),
                     new_preview_full_path,
@@ -271,7 +271,7 @@ class PairingModel:
                         f"Failed to create thumbnail for {archive_name_without_ext}"
                     )
 
-                # 4. Zaktualizuj unpair_files.json
+                # 4. Update unpair_files.json
                 self.remove_paired_files(
                     os.path.basename(archive_full_path),
                     os.path.basename(preview_full_path),

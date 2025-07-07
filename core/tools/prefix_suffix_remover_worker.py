@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class PrefixSuffixRemoverWorker(BaseWorker):
-    """Worker do usuwania prefixu/suffixu z nazw plików"""
+    """Worker for removing prefix/suffix from file names"""
 
-    # Zmieniono nazwę sygnału na 'finished' zgodnie z BaseWorker
+    # Changed signal name to 'finished' according to BaseWorker
     finished = pyqtSignal(str)  # message
 
     def __init__(self, folder_path: str, text_to_remove: str, mode: str):
@@ -24,13 +24,13 @@ class PrefixSuffixRemoverWorker(BaseWorker):
         self.mode = mode  # "prefix" lub "suffix"
 
     def _run_operation(self):
-        """Główna metoda usuwania prefixu/suffixu"""
+        """Main method for removing prefix/suffix"""
         try:
             logger.info(
-                f"Rozpoczęcie usuwania {self.mode} w folderze: {self.folder_path}"
+                f"Starting removal of {self.mode} in folder: {self.folder_path}"
             )
 
-            # Znajdź wszystkie pliki w folderze
+            # Find all files in the folder
             files_to_process = []
             for item in os.listdir(self.folder_path):
                 item_path = os.path.join(self.folder_path, item)
@@ -38,10 +38,10 @@ class PrefixSuffixRemoverWorker(BaseWorker):
                     files_to_process.append(item_path)
 
             if not files_to_process:
-                self.finished.emit("Brak plików do przetworzenia")
+                self.finished.emit("No files to process")
                 return
 
-            # Przetwórz pliki
+            # Process files
             renamed_count = 0
             error_count = 0
 
@@ -51,19 +51,19 @@ class PrefixSuffixRemoverWorker(BaseWorker):
                     filename_base, file_extension = os.path.splitext(filename_with_ext)
                     new_filename_base = None
 
-                    # Sprawdź czy plik pasuje do kryteriów
+                    # Check if file matches criteria
                     if self.mode == "prefix" and filename_base.startswith(
                         self.text_to_remove
                     ):
                         new_filename_base = filename_base.removeprefix(
                             self.text_to_remove
-                        ).rstrip()  # Usuń spacje z końca po usunięciu prefix
+                        ).rstrip()  # Remove spaces from end after removing prefix
                     elif self.mode == "suffix" and filename_base.endswith(
                         self.text_to_remove
                     ):
                         new_filename_base = filename_base.removesuffix(
                             self.text_to_remove
-                        ).rstrip()  # Usuń spacje z końca po usunięciu suffix
+                        ).rstrip()  # Remove spaces from end after removing suffix
 
                     if new_filename_base is not None and new_filename_base:
                         new_full_filename = new_filename_base + file_extension
@@ -75,11 +75,11 @@ class PrefixSuffixRemoverWorker(BaseWorker):
                         if not self._validate_file_paths(file_path, new_file_path):
                             continue
 
-                        # Zmień nazwę
+                        # Rename
                         os.rename(file_path, new_file_path)
                         renamed_count += 1
                         logger.info(
-                            f"Zmieniono: '{filename_with_ext}' -> '{new_full_filename}'"
+                            f"Renamed: '{filename_with_ext}' -> '{new_full_filename}'"
                         )
 
                     self.progress_updated.emit(
@@ -91,19 +91,19 @@ class PrefixSuffixRemoverWorker(BaseWorker):
                 except Exception as e:
                     error_count += 1
                     logger.error(
-                        f"Błąd podczas przetwarzania {os.path.basename(file_path)}: {e}"
+                        f"Error processing {os.path.basename(file_path)}: {e}"
                     )
 
-            # Przygotuj komunikat końcowy
+            # Prepare final message
             message = (
-                f"Usuwanie {self.mode} zakończone: {renamed_count} plików zmieniono"
+                f"Removal of {self.mode} completed: {renamed_count} files changed"
             )
             if error_count > 0:
-                message += f", {error_count} błędów"
+                message += f", {error_count} errors"
 
             self.finished.emit(message)
 
         except Exception as e:
-            error_msg = f"Błąd podczas usuwania {self.mode}: {e}"
+            error_msg = f"Error during removal of {self.mode}: {e}"
             logger.error(error_msg)
             self.error_occurred.emit(error_msg) 

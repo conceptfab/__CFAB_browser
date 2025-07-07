@@ -306,19 +306,19 @@ class FolderClickRules:
     - .cache folder - cache with generated thumbnails
     """
 
-    # Stałe konfiguracyjne
+    # Configuration constants
     CACHE_FOLDER_NAME = ".cache"
     THUMB_EXTENSION = ".thumb"
 
-    # Zbiory rozszerzeń plików dla efektywnego lookup
+    # File extension sets for efficient lookup
     ASSET_EXTENSIONS: Set[str] = {".asset"}
     ARCHIVE_EXTENSIONS: Set[str] = {".rar", ".zip", ".sbsar", ".7z"}
     PREVIEW_EXTENSIONS: Set[str] = {".jpg", ".jpeg", ".png",".webp", ".gif"}
 
-    # Cache TTL (Time To Live) w sekundach
+    # Cache TTL (Time To Live) in seconds
     CACHE_TTL = 300  # 5 minutes
 
-    # Cache dla wyników analizy folderów
+    # Cache for folder analysis results
     _folder_analysis_cache: Dict[str, Dict] = {}
     _cache_timestamps: Dict[str, float] = {}
 
@@ -339,15 +339,15 @@ class FolderClickRules:
         if not isinstance(folder_path, str):
             return "Folder path must be a string"
 
-        # Sprawdź czy ścieżka nie zawiera sekwencji path traversal
+        # Check if path doesn't contain path traversal sequences
         if ".." in folder_path or "\\.." in folder_path or "/.." in folder_path:
             return "Folder path contains forbidden path traversal sequences"
 
-        # Sprawdź czy ścieżka nie jest zbyt długa
+        # Check if path is not too long
         if len(folder_path) > 4096:
             return "Folder path is too long"
 
-        # Sprawdź czy ścieżka nie zawiera niedozwolonych znaków
+        # Check if path doesn't contain forbidden characters
         # Note: colon (:) is allowed in Windows (C:\)
         invalid_chars = re.search(r'[<>"|?*]', folder_path)
         if invalid_chars:
@@ -423,7 +423,7 @@ class FolderClickRules:
 
         item_lower = item.lower()
 
-        # Sprawdź rozszerzenia używając sets dla O(1) lookup
+        # Check extensions using sets for O(1) lookup
         for ext in FolderClickRules.ASSET_EXTENSIONS:
             if item_lower.endswith(ext):
                 return "asset"

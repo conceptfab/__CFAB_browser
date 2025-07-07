@@ -7,13 +7,13 @@ logger = logging.getLogger(__name__)
 class SelectionModel(QObject):
     """Model for managing asset selection"""
 
-    selection_changed = pyqtSignal(list)  # Emituje listę ID zaznaczonych assetów
+    selection_changed = pyqtSignal(list)  # Emits a list of selected asset IDs
 
     def __init__(self):
         super().__init__()
         self._selected_asset_ids = (
             set()
-        )  # Używamy set dla szybkiego sprawdzania unikalności
+        )  # We use a set for fast uniqueness checking
         logger.info("SelectionModel initialized")
 
     def add_selection(self, asset_id: str):

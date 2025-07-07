@@ -191,8 +191,8 @@ class AssetTileView(QFrame):
     
     def _calculate_tile_dimensions(self):
         """Calculate tile dimensions based on content"""
-        tile_padding = 6  # z CSS
-        tile_border = 1  # z CSS
+        tile_padding = 6  # from CSS
+        tile_border = 1  # from CSS
         
         # Calculate width based on columns
         # icon(60) + name(136) + size(60)

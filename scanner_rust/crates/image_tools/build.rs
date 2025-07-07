@@ -1,7 +1,7 @@
 use vergen::{vergen, Config};
 
 fn main() {
-    // Generuj informacje o kompilacji
+    // Generate build information
     let mut config = Config::default();
     *config.build_mut().timestamp_mut() = true;
     *config.cargo_mut().target_triple_mut() = true;

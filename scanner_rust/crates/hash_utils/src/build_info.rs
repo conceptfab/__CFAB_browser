@@ -1,51 +1,51 @@
 use pyo3::prelude::*;
 use std::collections::HashMap;
 
-/// Zwraca informacje o kompilacji modułu Rust Hash Utils
+/// Returns build information for Rust Hash Utils module
 #[pyfunction]
 pub fn get_build_info() -> HashMap<String, String> {
     let mut info = HashMap::new();
     
-    // Numer modułu (2)
+    // Module number (2)
     info.insert("module_number".to_string(), "2".to_string());
     
-    // Informacje o kompilacji
+    // Build information
     info.insert("build_timestamp".to_string(), env!("VERGEN_BUILD_TIMESTAMP").to_string());
     
-    // Informacje o Cargo
+    // Cargo information
     info.insert("cargo_target_triple".to_string(), env!("VERGEN_CARGO_TARGET_TRIPLE").to_string());
     
-    // Dodatkowe informacje
+    // Additional information
     info.insert("rust_version".to_string(), env!("VERGEN_RUSTC_SEMVER").to_string());
     
     info
 }
 
-/// Zwraca numer kompilacji (timestamp jako string)
+/// Returns build number (timestamp as string)
 #[pyfunction]
 pub fn get_build_number() -> String {
     env!("VERGEN_BUILD_TIMESTAMP").to_string()
 }
 
-/// Zwraca datę i godzinę kompilacji w czytelnym formacie
+/// Returns build date and time in readable format
 #[pyfunction]
 pub fn get_build_datetime() -> String {
     env!("VERGEN_BUILD_TIMESTAMP").to_string()
 }
 
-/// Zwraca hash commita Git
+/// Returns Git commit hash
 #[pyfunction]
 pub fn get_git_commit() -> String {
     "unknown".to_string()
 }
 
-/// Zwraca numer modułu
+/// Returns module number
 #[pyfunction]
 pub fn get_module_number() -> u32 {
     2
 }
 
-/// Zwraca informacje o module w formacie tekstowym
+/// Returns module information in text format
 #[pyfunction]
 pub fn get_module_info() -> String {
     format!(
@@ -56,13 +56,13 @@ pub fn get_module_info() -> String {
     )
 }
 
-/// Zwraca prefiks logowania z numerem kompilacji
+/// Returns logging prefix with build number
 #[pyfunction]
 pub fn get_log_prefix() -> String {
     format!("[build: {}, module: {}]", env!("VERGEN_BUILD_TIMESTAMP"), 2)
 }
 
-/// Formatuje komunikat z prefiksem kompilacji
+/// Formats message with build prefix
 #[pyfunction]
 pub fn format_log_message(message: &str) -> String {
     format!("🦀 {} [build: {}, module: {}]", message, env!("VERGEN_BUILD_TIMESTAMP"), 2)

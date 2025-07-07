@@ -232,7 +232,7 @@ class FileOperationController(QObject):
         self.model.asset_grid_model._assets = updated_assets
     
     def _update_controller_asset_list(self, success_messages: list):
-        """Aktualizuje listę assetów w kontrolerze"""
+        """Updates the asset list in the controller"""
         asset_tiles = self.controller.asset_grid_controller.get_asset_tiles()
         if asset_tiles:
             logger.debug(f"Active tiles count before removal: {len(asset_tiles)}")
@@ -246,7 +246,7 @@ class FileOperationController(QObject):
             logger.debug(f"Active tiles count after removal: {len(updated_tiles)}")
     
     def _update_gallery_placeholder_state(self):
-        """Aktualizuje placeholder galerii w zależności od stanu assetów"""
+        """Updates the gallery placeholder depending on the asset state"""
         current_assets = self.model.asset_grid_model.get_assets()
         if not current_assets:
             self.view.update_gallery_placeholder("No assets found in this folder.")
@@ -254,28 +254,28 @@ class FileOperationController(QObject):
             self.view.update_gallery_placeholder("")
 
     def _remove_tiles_from_view_fast(self, asset_ids_to_remove: list):
-        """OPTYMALIZACJA: Szybkie usuwanie kafelków bez reorganizacji layoutu"""
+        """OPTIMIZATION: Fast removal of tiles without layout reorganization"""
         try:
             if not self._validate_tile_removal_inputs(asset_ids_to_remove):
                 return
             
             self._disable_view_updates()
             tiles_removed = self._remove_tiles_from_layout(asset_ids_to_remove)
-            logger.debug(f"OPTYMALIZACJA: Szybko usunięto {tiles_removed} kafelków z widoku")
+            logger.debug(f"OPTIMIZATION: Quickly removed {tiles_removed} tiles from the view")
 
         except Exception as e:
-            logger.error(f"Błąd podczas szybkiego usuwania kafelków: {e}")
+            logger.error(f"Error during fast tile removal: {e}")
         finally:
             self._enable_view_updates()
     
     def _validate_tile_removal_inputs(self, asset_ids_to_remove: list) -> bool:
         """Validate inputs for tile removal operation"""
         if not asset_ids_to_remove:
-            logger.debug("OPTYMALIZACJA: Brak ID assetów do usunięcia")
+            logger.debug("OPTIMIZATION: No asset IDs to remove")
             return False
         
         if not hasattr(self.view, 'gallery_container_widget'):
-            logger.warning("OPTYMALIZACJA: Brak gallery_container_widget w widoku")
+            logger.warning("OPTIMIZATION: No gallery_container_widget in the view")
             return False
         
         return True
@@ -288,7 +288,7 @@ class FileOperationController(QObject):
         """Re-enable view updates and refresh layout"""
         if hasattr(self.view, 'gallery_container_widget'):
             self.view.gallery_container_widget.setUpdatesEnabled(True)
-            # Jednorazowa aktualizacja layoutu
+            # One-time layout update
             if hasattr(self.view, 'gallery_layout'):
                 self.view.gallery_layout.update()
     
@@ -307,41 +307,41 @@ class FileOperationController(QObject):
     
     def _remove_single_tile(self, tile):
         """Remove single tile from layout and return to pool"""
-        # Usuń z layoutu
+        # Remove from layout
         if hasattr(self.view, 'gallery_layout'):
             self.view.gallery_layout.removeWidget(tile)
         
-        # Zwróć do puli (zamiast deleteLater dla lepszej wydajności)
+        # Return to the pool (instead of deleteLater for better performance)
         if hasattr(self.controller.asset_grid_controller, 'tile_pool'):
             self.controller.asset_grid_controller.tile_pool.release(tile)
 
     def _refresh_folder_structure_delayed(self):
-        """OPTYMALIZACJA: Odłożone odświeżanie struktury folderów"""
+        """OPTIMIZATION: Delayed refresh of the folder structure"""
         try:
             current_folder_path = self.model.asset_grid_model.get_current_folder()
             if current_folder_path:
-                # Odśwież tylko strukturę drzewa folderów (dla liczników assetów)
+                # Refresh only the folder tree structure (for asset counters)
                 self.model.folder_system_model.refresh_folder(current_folder_path)
-                logger.debug(f"OPTYMALIZACJA: Odświeżono strukturę folderów: {current_folder_path}")
+                logger.debug(f"OPTIMIZATION: Refreshed folder structure: {current_folder_path}")
             
-            # Odśwież także folder docelowy przy operacjach move
+            # Also refresh the target folder for move operations
             target_folder_path = self.model.file_operations_model.get_last_target_folder()
             if target_folder_path and target_folder_path != current_folder_path:
                 self.model.folder_system_model.refresh_folder(target_folder_path)
-                logger.debug(f"OPTYMALIZACJA: Odświeżono folder docelowy: {target_folder_path}")
+                logger.debug(f"OPTIMIZATION: Refreshed target folder: {target_folder_path}")
             
         except Exception as e:
-            logger.error(f"Błąd odświeżania struktury folderów: {e}")
+            logger.error(f"Error refreshing folder structure: {e}")
 
     def _fallback_refresh_gallery(self):
-        """Fallback: Pełne odświeżanie galerii w przypadku błędu optymalizacji"""
+        """Fallback: Full gallery refresh in case of optimization error"""
         try:
-            logger.warning("FALLBACK: Pełne odświeżanie galerii po błędzie optymalizacji")
+            logger.warning("FALLBACK: Full gallery refresh after optimization error")
             current_folder = self.model.asset_grid_model.get_current_folder()
             if current_folder:
                 self.model.asset_grid_model.scan_folder(current_folder)
         except Exception as e:
-            logger.error(f"Błąd podczas fallback refresh galerii: {e}")
+            logger.error(f"Error during fallback gallery refresh: {e}")
 
     def on_file_operation_error(self, error_msg: str):
         """Handles file operation errors"""

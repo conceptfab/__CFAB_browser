@@ -23,7 +23,7 @@ class FolderTreeController(QObject):
         self.view.folder_tree_view.expanded.connect(self.on_tree_item_expanded)
         self.view.folder_tree_view.collapsed.connect(self.on_tree_item_collapsed)
 
-        # Ustaw referencję do kontrolera w widoku
+        # Set a reference to the controller in the view
         if hasattr(self.view.folder_tree_view, "set_folder_tree_controller"):
             self.view.folder_tree_view.set_folder_tree_controller(self)
 
@@ -63,25 +63,25 @@ class FolderTreeController(QObject):
         logger.debug("Folder system model connected to view - STAGE 6")
 
     def set_show_asset_counts(self, show_counts: bool):
-        """Włącza/wyłącza pokazywanie liczby assetów w folderach"""
+        """Enables/disables showing the number of assets in folders"""
         if hasattr(self.model, 'folder_system_model'):
             self.model.folder_system_model.set_show_asset_counts(show_counts)
             logger.debug(f"Asset counts in folder tree set to: {show_counts}")
 
     def get_show_asset_counts(self) -> bool:
-        """Zwraca czy pokazywane są liczby assetów w folderach"""
+        """Returns whether the number of assets in folders is shown"""
         if hasattr(self.model, 'folder_system_model'):
             return self.model.folder_system_model.get_show_asset_counts()
         return False
 
     def set_recursive_asset_counts(self, recursive: bool):
-        """Włącza/wyłącza rekurencyjne sumowanie assetów z podfolderów"""
+        """Enables/disables recursive summing of assets from subfolders"""
         if hasattr(self.model, 'folder_system_model'):
             self.model.folder_system_model.set_recursive_asset_counts(recursive)
             logger.debug(f"Recursive asset counts in folder tree set to: {recursive}")
 
     def get_recursive_asset_counts(self) -> bool:
-        """Zwraca czy sumowane są assety rekurencyjnie"""
+        """Returns whether assets are summed recursively"""
         if hasattr(self.model, 'folder_system_model'):
             return self.model.folder_system_model.get_recursive_asset_counts()
         return False
@@ -106,11 +106,11 @@ class FolderTreeController(QObject):
         self._last_scanned_folder = folder_path
         
         try:
-            # POPRAWKA: Reset galerii przed skanowaniem nowego folderu
-            logger.debug(f"Resetowanie galerii przed skanowaniem: {folder_path}")
+            # FIX: Reset gallery before scanning a new folder
+            logger.debug(f"Resetting gallery before scanning: {folder_path}")
             self.controller.asset_grid_controller.clear_asset_tiles()
             self.view.update_gallery_placeholder("Loading...")
-            logger.debug("Galeria zresetowana - przygotowano do załadowania nowych assetów")
+            logger.debug("Gallery reset - prepared to load new assets")
             
             self.model.asset_grid_model.set_current_folder(folder_path)
             self.model.asset_grid_model.scan_folder(folder_path)

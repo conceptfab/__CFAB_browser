@@ -16,7 +16,7 @@ impl AssetBuilder {
         }
     }
 
-    /// Tworzy pojedynczy asset
+    /// Creates a single asset
     pub fn create_single_asset(
         &self,
         name: &str,
@@ -24,28 +24,28 @@ impl AssetBuilder {
         image_path: &Path,
         folder_path: &Path,
     ) -> Result<Asset> {
-        // NOWA WALIDACJA
+        // NEW VALIDATION
         self.validate_asset_inputs(name, archive_path, image_path, folder_path)?;
         
         let size_mb = file_utils::get_file_size_mb(archive_path)?;
         let textures_in_archive = file_utils::check_texture_folders_presence(folder_path);
 
-        // Pobierz tylko nazwy plików, nie pełne ścieżki
+        // Get only file names, not full paths
         let archive_name = archive_path
             .file_name()
             .and_then(|name| name.to_str())
-            .ok_or_else(|| anyhow::anyhow!("Nie można pobrać nazwy pliku archiwum"))?;
+            .ok_or_else(|| anyhow::anyhow!("Cannot get archive file name"))?;
 
         let preview_name = image_path
             .file_name()
             .and_then(|name| name.to_str())
-            .ok_or_else(|| anyhow::anyhow!("Nie można pobrać nazwy pliku obrazu"))?;
+            .ok_or_else(|| anyhow::anyhow!("Cannot get image file name"))?;
 
-        // Generuj miniaturkę dla pliku obrazu
+        // Generate thumbnail for image file
         let thumbnail_name = match thumbnail::generate_thumbnail(&image_path.to_string_lossy()) {
             Ok((thumb_name, _size)) => thumb_name,
             Err(_) => {
-                // Jeśli nie udało się wygenerować miniaturki, użyj domyślnej nazwy
+                // If thumbnail generation fails, use default name
                 format!("{}.thumb", name)
             }
         };
@@ -64,26 +64,26 @@ impl AssetBuilder {
         })
     }
 
-    /// Zapisuje asset do pliku .asset
+    /// Saves asset to .asset file
     pub fn save_asset_to_file(&self, asset: &Asset, file_path: &Path) -> Result<()> {
         let json_content = serde_json::to_string_pretty(asset)?;
         fs::write(file_path, json_content)
-            .map_err(|e| anyhow::anyhow!("Błąd zapisu pliku .asset: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Error saving .asset file: {}", e))?;
         Ok(())
     }
 
-    /// Ładuje asset z pliku .asset
+    /// Loads asset from .asset file
     pub fn load_asset_from_file(&self, file_path: &Path) -> Result<Asset> {
         let content = fs::read_to_string(file_path)
-            .map_err(|e| anyhow::anyhow!("Błąd odczytu pliku .asset: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Error reading .asset file: {}", e))?;
         
         let asset: Asset = serde_json::from_str(&content)
-            .map_err(|e| anyhow::anyhow!("Błąd parsowania JSON: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("JSON parsing error: {}", e))?;
         
         Ok(asset)
     }
 
-    /// Sprawdza poprawność danych wejściowych
+    /// Validates input data
     pub fn validate_asset_inputs(
         &self,
         name: &str,
@@ -92,26 +92,26 @@ impl AssetBuilder {
         folder_path: &Path,
     ) -> Result<()> {
         if name.is_empty() {
-            return Err(anyhow::anyhow!("Nazwa asset'a nie może być pusta"));
+            return Err(anyhow::anyhow!("Asset name cannot be empty"));
         }
 
         if !archive_path.exists() {
-            return Err(anyhow::anyhow!("Plik archiwum nie istnieje: {:?}", archive_path));
+            return Err(anyhow::anyhow!("Archive file does not exist: {:?}", archive_path));
         }
 
         if !image_path.exists() {
-            return Err(anyhow::anyhow!("Plik obrazu nie istnieje: {:?}", image_path));
+            return Err(anyhow::anyhow!("Image file does not exist: {:?}", image_path));
         }
 
         if !folder_path.exists() || !folder_path.is_dir() {
-            return Err(anyhow::anyhow!("Folder nie istnieje: {:?}", folder_path));
+            return Err(anyhow::anyhow!("Folder does not exist: {:?}", folder_path));
         }
 
-        // Sprawdź rozszerzenia plików
+        // Check file extensions
         if let Some(ext) = archive_path.extension() {
             if let Some(ext_str) = ext.to_str() {
                 if !self.file_extensions.archives.contains(&ext_str.to_lowercase()) {
-                    return Err(anyhow::anyhow!("Nieobsługiwane rozszerzenie archiwum: {}", ext_str));
+                    return Err(anyhow::anyhow!("Unsupported archive extension: {}", ext_str));
                 }
             }
         }
@@ -119,7 +119,7 @@ impl AssetBuilder {
         if let Some(ext) = image_path.extension() {
             if let Some(ext_str) = ext.to_str() {
                 if !self.file_extensions.images.contains(&ext_str.to_lowercase()) {
-                    return Err(anyhow::anyhow!("Nieobsługiwane rozszerzenie obrazu: {}", ext_str));
+                    return Err(anyhow::anyhow!("Unsupported image extension: {}", ext_str));
                 }
             }
         }

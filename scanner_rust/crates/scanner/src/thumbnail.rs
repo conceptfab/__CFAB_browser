@@ -5,7 +5,7 @@ use std::fs;
 use std::sync::OnceLock;
 use anyhow::{Result, anyhow};
 
-/// Generator miniaturek - dokładnie jak w Pythonie, ale zoptymalizowany
+/// Thumbnail generator - exactly like in Python, but optimized
 pub struct ThumbnailGenerator {
     pub thumbnail_size: u32,
     pub cache_dir_name: String,
@@ -21,7 +21,7 @@ impl Default for ThumbnailGenerator {
 }
 
 impl ThumbnailGenerator {
-    // Funkcja zarezerwowana na przyszłość
+    // Function reserved for future use
     #[allow(dead_code)]
     pub fn new(thumbnail_size: u32) -> Self {
         Self {
@@ -30,7 +30,7 @@ impl ThumbnailGenerator {
         }
     }
 
-    /// Sprawdza czy obraz ma przezroczystość
+    /// Checks if image has transparency
     fn has_transparency(&self, img: &DynamicImage) -> bool {
         match img {
             DynamicImage::ImageRgba8(_) => true,
@@ -42,63 +42,63 @@ impl ThumbnailGenerator {
         }
     }
 
-    /// Pobiera parametry kompresji WebP zgodnie z Pythonem
+    /// Gets WebP compression parameters according to Python
     fn get_webp_quality(&self, has_alpha: bool) -> f32 {
         if has_alpha { 80.0 } else { 75.0 }
     }
 
-    /// ZOPTYMALIZOWANE sprawdzanie czy miniaturka jest aktualna (nowsza niż oryginał)
+    /// OPTIMIZED checking if thumbnail is current (newer than original)
     fn is_thumbnail_current(&self, image_path: &Path, thumbnail_path: &Path) -> bool {
         if !thumbnail_path.exists() {
             return false;
         }
 
-        // Fast path - sprawdź tylko czy plik istnieje dla lepszej wydajności
-        // W większości przypadków cache jest aktualny
+        // Fast path - check only if file exists for better performance
+        // In most cases cache is current
         match (
             fs::metadata(image_path).and_then(|m| m.modified()),
             fs::metadata(thumbnail_path).and_then(|m| m.modified())
         ) {
             (Ok(image_time), Ok(thumb_time)) => thumb_time >= image_time,
-            _ => false, // W przypadku błędu, przegenuj miniaturkę
+            _ => false, // In case of error, regenerate thumbnail
         }
     }
 
-    /// KRYTYCZNA FUNKCJA: Przeskalowanie do kwadratu z przycinaniem
-    /// ZOPTYMALIZOWANA WERSJA - szybsze filtrowanie
+    /// CRITICAL FUNCTION: Resize to square with cropping
+    /// OPTIMIZED VERSION - faster filtering
     fn resize_to_square(&self, img: DynamicImage, size: u32) -> Result<DynamicImage> {
         if size == 0 {
-            return Err(anyhow!("Rozmiar miniaturki nie może być zerem"));
+            return Err(anyhow!("Thumbnail size cannot be zero"));
         }
         
         let (width, height) = img.dimensions();
         
         if width == 0 || height == 0 {
-            return Err(anyhow!("Obraz ma nieprawidłowe wymiary: {}x{}", width, height));
+            return Err(anyhow!("Image has invalid dimensions: {}x{}", width, height));
         }
         
-        // Sprawdź czy obraz już ma właściwy rozmiar
+        // Check if image already has proper size
         if width == size && height == size {
             return Ok(img);
         }
         
-        // Oblicz współczynnik skalowania tak, aby krótszy bok miał rozmiar 'size'
+        // Calculate scaling factor so that shorter side has 'size' dimension
         let scale = size as f32 / (width.min(height) as f32);
         let new_width = (width as f32 * scale).round() as u32;
         let new_height = (height as f32 * scale).round() as u32;
 
-        // Użyj szybszego filtra dla miniaturek - Triangle zamiast Lanczos3
+        // Use faster filter for thumbnails - Triangle instead of Lanczos3
         let filter = if size <= 128 { 
-            FilterType::Triangle  // Szybszy dla małych miniaturek
+            FilterType::Triangle  // Faster for small thumbnails
         } else { 
-            FilterType::Lanczos3  // Lepsze dla większych
+            FilterType::Lanczos3  // Better for larger ones
         };
         
         let resized = img.resize(new_width, new_height, filter);
 
-        // POPRAWIONE przycięcie do kwadratu:
-        // - Wysokie obrazy: przycinane od góry (crop_y = 0)
-        // - Szerokie obrazy: przycinane od lewej strony (crop_x = 0)
+        // FIXED cropping to square:
+        // - Tall images: cropped from top (crop_y = 0)
+        // - Wide images: cropped from left side (crop_x = 0)
         let crop_x = if new_width > size { 0 } else { 0 };
         let crop_y = if new_height > size { 0 } else { 0 };
         let crop_width = new_width.min(size);
@@ -106,7 +106,7 @@ impl ThumbnailGenerator {
         
         let result = resized.crop_imm(crop_x, crop_y, crop_width, crop_height);
         
-        // Jeśli wynik nie jest kwadratem o żądanym rozmiarze, dopasuj
+        // If result is not a square of desired size, adjust
         if result.width() != size || result.height() != size {
             Ok(result.resize_exact(size, size, filter))
         } else {
@@ -114,11 +114,11 @@ impl ThumbnailGenerator {
         }
     }
 
-    /// ZOPTYMALIZOWANE zapisywanie WebP - mniej konwersji kolorów
+    /// OPTIMIZED WebP saving - fewer color conversions
     fn save_webp_with_quality(&self, thumbnail: &DynamicImage, path: &Path, has_alpha: bool) -> Result<()> {
         let quality = self.get_webp_quality(has_alpha);
         
-        // Tworzenie katalogów cache tylko gdy potrzeba
+        // Create cache directories only when needed
         if let Some(parent) = path.parent() {
             if !parent.exists() {
                 fs::create_dir_all(parent)?;
@@ -126,37 +126,37 @@ impl ThumbnailGenerator {
         }
         
         if has_alpha {
-            // Z przezroczystością: quality=80 (jak w Pythonie)
+            // With transparency: quality=80 (like in Python)
             let rgba_img = thumbnail.to_rgba8();
             let encoder = webp::Encoder::from_rgba(rgba_img.as_raw(), rgba_img.width(), rgba_img.height());
             let webp_data = encoder.encode(quality);
             fs::write(path, &*webp_data)
-                .map_err(|e| anyhow!("Błąd zapisu WebP: {}", e))?;
+                .map_err(|e| anyhow!("WebP save error: {}", e))?;
         } else {
-            // Bez przezroczystości: quality=75 (jak w Pythonie)
+            // Without transparency: quality=75 (like in Python)
             let rgb_img = thumbnail.to_rgb8();
             let encoder = webp::Encoder::from_rgb(rgb_img.as_raw(), rgb_img.width(), rgb_img.height());
             let webp_data = encoder.encode(quality);
             fs::write(path, &*webp_data)
-                .map_err(|e| anyhow!("Błąd zapisu WebP: {}", e))?;
+                .map_err(|e| anyhow!("WebP save error: {}", e))?;
         }
         
         Ok(())
     }
 
-    /// ZOPTYMALIZOWANA główna funkcja generowania miniaturki
+    /// OPTIMIZED main thumbnail generation function
     pub fn generate_thumbnail(&self, image_path: &str) -> Result<(String, u32)> {
-        // Szybka walidacja
+        // Quick validation
         if image_path.is_empty() {
-            return Err(anyhow!("Nieprawidłowa ścieżka obrazu: {}", image_path));
+            return Err(anyhow!("Invalid image path: {}", image_path));
         }
 
         let path = Path::new(image_path);
         if !path.exists() {
-            return Err(anyhow!("Plik nie istnieje: {}", image_path));
+            return Err(anyhow!("File does not exist: {}", image_path));
         }
 
-        // Sprawdź rozszerzenie - tylko obsługiwane formaty
+        // Check extension - only supported formats
         let supported_formats = [".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tga"];
         let ext = path.extension()
             .and_then(|s| s.to_str())
@@ -164,21 +164,21 @@ impl ThumbnailGenerator {
             .unwrap_or_default();
         
         if !supported_formats.contains(&ext.as_str()) {
-            return Err(anyhow!("Nieobsługiwany format: {}", ext));
+            return Err(anyhow!("Unsupported format: {}", ext));
         }
 
-        // Ścieżka miniaturki - uproszczona logika cache
+        // Thumbnail path - simplified cache logic
         let file_stem = path.file_stem()
             .and_then(|s| s.to_str())
-            .ok_or_else(|| anyhow!("Nie można pobrać nazwy pliku"))?;
+            .ok_or_else(|| anyhow!("Cannot get file name"))?;
         
         let cache_dir = path.parent()
-            .ok_or_else(|| anyhow!("Nie można pobrać katalogu nadrzędnego"))?
+            .ok_or_else(|| anyhow!("Cannot get parent directory"))?
             .join(&self.cache_dir_name);
         
         let thumbnail_path = cache_dir.join(format!("{}.thumb", file_stem));
         
-        // OPTYMALIZACJA: Sprawdź cache PRZED tworzeniem katalogu
+        // OPTIMIZATION: Check cache BEFORE creating directory
         if self.is_thumbnail_current(path, &thumbnail_path) {
             return Ok((
                 thumbnail_path.file_name()
@@ -188,20 +188,20 @@ impl ThumbnailGenerator {
             ));
         }
 
-        // Utwórz katalog cache tylko gdy potrzeba wygenerować nową miniaturkę
+        // Create cache directory only when need to generate new thumbnail
         fs::create_dir_all(&cache_dir)?;
 
-        // Wczytaj obraz - użyj szybszej deserializacji
+        // Load image - use faster deserialization
         let img = image::open(path)
-            .map_err(|e| anyhow!("Błąd wczytywania obrazu {}: {}", image_path, e))?;
+            .map_err(|e| anyhow!("Error loading image {}: {}", image_path, e))?;
 
-        // Sprawdź przezroczystość
+        // Check transparency
         let has_alpha = self.has_transparency(&img);
 
-        // OPTYMALIZACJA: Mniej konwersji kolorów - pracuj bezpośrednio na img
+        // OPTIMIZATION: Fewer color conversions - work directly on img
         let thumbnail = self.resize_to_square(img, self.thumbnail_size)?;
 
-        // Zapisz jako WebP z kontrolowaną jakością
+        // Save as WebP with controlled quality
         self.save_webp_with_quality(&thumbnail, &thumbnail_path, has_alpha)?;
 
         Ok((
@@ -213,15 +213,15 @@ impl ThumbnailGenerator {
     }
 }
 
-/// Globalna instancja generatora (bezpieczna wersja)
+/// Global generator instance (safe version)
 static GENERATOR: OnceLock<ThumbnailGenerator> = OnceLock::new();
 
-/// Pobiera globalną instancję generatora
+/// Gets global generator instance
 pub fn get_generator() -> &'static ThumbnailGenerator {
     GENERATOR.get_or_init(|| ThumbnailGenerator::default())
 }
 
-/// Główna funkcja generowania miniaturek (public API)
+/// Main thumbnail generation function (public API)
 pub fn generate_thumbnail(image_path: &str) -> Result<(String, u32)> {
     let generator = get_generator();
     generator.generate_thumbnail(image_path)

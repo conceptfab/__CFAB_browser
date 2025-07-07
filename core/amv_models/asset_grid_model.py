@@ -72,7 +72,7 @@ class AssetGridModel(QObject):
 
         try:
             self.scan_started.emit(folder_path)
-            logger.info("WCZYTYWANIE OD NOWA assetów w folderze: %s", folder_path)
+            logger.info("RELOADING assets in folder: %s", folder_path)
 
             if not os.path.exists(folder_path):
                 error_msg = f"Folder does not exist: {folder_path}"
@@ -80,42 +80,42 @@ class AssetGridModel(QObject):
                 self.scan_error.emit(error_msg)
                 return
 
-            # Początek - inicjalizacja (0-10%)
-            self.scan_progress.emit(0, 100, "Inicjalizacja skanowania...")
+            # Start - initialization (0-10%)
+            self.scan_progress.emit(0, 100, "Initializing scan...")
 
-            # WCZYTAJ OD NOWA - najpierw skanuj i utwórz assety
+            # RELOAD - first scan and create assets
             asset_repository = AssetRepository()
             
-            # Skanuj folder i utwórz nowe assety (10-80%)
+            # Scan folder and create new assets (10-80%)
             def progress_callback(current, total, message):
                 if total > 0:
-                    # Map scan progress to the 10-80% range
+                    # Map scanning progress to the 10-80% range
                     progress_percent = 10 + int((current / total) * 70)
-                    self.scan_progress.emit(progress_percent, 100, f"Skanowanie: {message}")
+                    self.scan_progress.emit(progress_percent, 100, f"Scanning: {message}")
                 else:
-                    self.scan_progress.emit(40, 100, f"Skanowanie: {message}")
+                    self.scan_progress.emit(40, 100, f"Scanning: {message}")
 
-            self.scan_progress.emit(10, 100, "Rozpoczynanie skanowania plików...")
+            self.scan_progress.emit(10, 100, "Starting file scan...")
             
             scanned_assets = asset_repository.find_and_create_assets(
                 folder_path, progress_callback
             )
-            logger.debug("Skanowanie zakończone, znaleziono %d assetów", len(scanned_assets))
+            logger.debug("Scan finished, found %d assets", len(scanned_assets))
 
-            # Ładowanie assetów (80-95%)
-            self.scan_progress.emit(80, 100, "Ładowanie assetów z plików...")
+            # Loading assets (80-95%)
+            self.scan_progress.emit(80, 100, "Loading assets from files...")
             
-            # WCZYTAJ OD NOWA - teraz załaduj wszystkie assety z plików .asset
+            # RELOAD - now load all assets from .asset files
             all_assets = asset_repository.load_existing_assets(folder_path)
-            logger.debug("WCZYTANO OD NOWA %d assetów z plików .asset", len(all_assets))
+            logger.debug("RELOADED %d assets from .asset files", len(all_assets))
 
-            # Finalizacja (95-100%)
-            self.scan_progress.emit(95, 100, "Finalizowanie...")
+            # Finalizing (95-100%)
+            self.scan_progress.emit(95, 100, "Finalizing...")
             
             duration = time.time() - start_time
-            logger.debug(f"WCZYTYWANIE OD NOWA zakończone, łącznie {len(all_assets)} assetów")
+            logger.debug(f"RELOADING finished, total {len(all_assets)} assets")
             
-            self.scan_progress.emit(100, 100, "Zakończono!")
+            self.scan_progress.emit(100, 100, "Finished!")
             self.scan_completed.emit(all_assets, duration, "scan_folder")
 
         except Exception as e:

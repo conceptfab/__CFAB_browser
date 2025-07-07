@@ -32,10 +32,10 @@ fn calculate_sha256(py: Python, file_path: String) -> PyResult<String> {
 
 #[pymodule]
 fn hash_utils(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Dodaj funkcję główną
+    // Add main function
     m.add_function(wrap_pyfunction!(calculate_sha256, m)?)?;
     
-    // Dodaj funkcje informacji o kompilacji
+    // Add build information functions
     m.add_function(wrap_pyfunction!(get_build_info, m)?)?;
     m.add_function(wrap_pyfunction!(get_build_number, m)?)?;
     m.add_function(wrap_pyfunction!(get_build_datetime, m)?)?;

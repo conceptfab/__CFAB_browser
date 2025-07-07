@@ -8,20 +8,20 @@ logger = logging.getLogger(__name__)
 class DragDropModel(QObject):
     """Model for Drag and Drop operations"""
 
-    drag_started = pyqtSignal(list)  # Lista ID assetów przeciąganych
-    drop_possible = pyqtSignal(bool)  # Czy upuszczenie jest możliwe
+    drag_started = pyqtSignal(list)  # List of dragged asset IDs
+    drop_possible = pyqtSignal(bool)  # Is dropping possible
     drop_completed = pyqtSignal(
         str, list
-    )  # Ścieżka docelowa, lista ID przeniesionych assetów
+    )  # Target path, list of moved asset IDs
 
     def __init__(self):
         super().__init__()
         self._dragged_asset_ids = []
-        self._operation_in_progress = False  # NOWE: zabezpieczenie przed rekurencją
+        self._operation_in_progress = False  # NEW: protection against recursion
         logger.info("DragDropModel initialized")
 
     def start_drag(self, asset_ids: list):
-        # ZABEZPIECZENIE: Sprawdź czy operacja już nie jest w toku
+        # PROTECTION: Check if the operation is not already in progress
         if self._operation_in_progress:
             logger.warning("Drag operation already in progress, ignoring new start_drag")
             return
@@ -42,7 +42,7 @@ class DragDropModel(QObject):
             f"validate_drop called with target_path: '{target_path}', current_folder_path: '{current_folder_path}'"
         )
 
-        # Normalizuj ścieżki do porównania
+        # Normalize paths for comparison
         def norm(path):
             if not path:
                 return ""
@@ -51,7 +51,7 @@ class DragDropModel(QObject):
         norm_target = norm(target_path)
         norm_current = norm(current_folder_path)
         logger.debug(
-            f"Porównanie ścieżek: norm_target='{norm_target}', norm_current='{norm_current}'"
+            f"Path comparison: norm_target='{norm_target}', norm_current='{norm_current}'"
         )
         if norm_current and norm_target == norm_current:
             self.drop_possible.emit(False)
@@ -59,7 +59,7 @@ class DragDropModel(QObject):
                 f"Drop not possible: {target_path} is the same as current folder."
             )
             return False
-        # Przykład: Nie zezwalaj na upuszczanie do folderów tekstur
+        # Example: Do not allow dropping into texture folders
         if any(
             folder_name in norm_target for folder_name in ["tex", "textures", "maps"]
         ):
@@ -76,23 +76,23 @@ class DragDropModel(QObject):
             if asset_ids is None:
                 asset_ids = self._dragged_asset_ids
                 
-            # ZABEZPIECZENIE: Sprawdź czy asset_ids są prawidłowe
+            # PROTECTION: Check if asset_ids are valid
             if not asset_ids:
                 logger.warning("No asset IDs to complete drop operation")
                 return
                 
-            # ZABEZPIECZENIE: Sprawdź czy target_path jest prawidłowy
+            # PROTECTION: Check if target_path is valid
             if not target_path or not target_path.strip():
                 logger.error("Invalid target_path for complete_drop")
                 return
                 
             self.drop_completed.emit(target_path, asset_ids)
-            self._dragged_asset_ids = []  # Wyczyść po zakończeniu operacji
+            self._dragged_asset_ids = []  # Clear after the operation is finished
             logger.debug(f"Drop completed to {target_path} for assets: {asset_ids}")
             
         except Exception as e:
             logger.error(f"Error in complete_drop: {e}")
-            # W przypadku błędu, wyczyść stan
+            # In case of an error, clear the state
             self._dragged_asset_ids = []
 
     def get_dragged_asset_ids(self) -> list:

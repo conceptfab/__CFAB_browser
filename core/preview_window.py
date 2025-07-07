@@ -28,7 +28,7 @@ class ImageLoader(QObject):
             pixmap = QPixmap(absolute_image_path)
 
             if pixmap.isNull():
-                error_msg = f"Nie można załadować obrazu: " f"{self.image_path}"
+                error_msg = f"Cannot load image: " f"{self.image_path}"
                 self.image_loaded.emit(QPixmap(), error_msg)
                 return
 
@@ -50,7 +50,7 @@ class ImageLoader(QObject):
             )
             self.image_scaled.emit(scaled_pixmap)
         except Exception as e:
-            logger.error(f"Błąd skalowania obrazu: {e}")
+            logger.error(f"Error scaling image: {e}")
             self.image_scaled.emit(QPixmap())
 
     def _pre_scale_pixmap(self, pixmap: QPixmap) -> QPixmap:

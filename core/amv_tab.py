@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 # ==============================================================================
-# GŁÓWNA KLASA ZAKŁADKI AMV
+# MAIN CLASS OF THE AMV TAB
 # ==============================================================================
 
 
@@ -31,10 +31,10 @@ class AmvTab(QWidget):
     ):
         super().__init__()
 
-        # Ustaw objectName dla stylowania QSS
+        # Set objectName for QSS styling
         self.setObjectName("amvTab")
 
-        # Wstrzykiwanie zależności z fallback do domyślnych instancji
+        # Dependency injection with fallback to default instances
         self.model = model or AmvModel()
         self.view = view or AmvView()
         self.controller = controller or AmvController(self.model, self.view, main_window)

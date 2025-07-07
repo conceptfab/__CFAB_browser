@@ -34,9 +34,9 @@ fn convert_to_webp(py: Python, input_path: String, output_path: String) -> PyRes
         let mut img = image::open(&input_path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to open image {}: {}", input_path, e)))?;
 
-        // Poprawna konwersja obrazów z alpha channel
+        // Correct conversion of images with alpha channel
         if img.color().has_alpha() {
-            // Konwertuj RGBA do RGB z białym tłem
+            // Convert RGBA to RGB with white background
             let rgb_img = DynamicImage::ImageRgb8({
                 let rgba = img.to_rgba8();
                 let mut rgb_buffer = image::RgbImage::new(img.width(), img.height());
@@ -91,11 +91,11 @@ fn calculate_new_size(width: u32, height: u32) -> (u32, u32) {
 
 #[pymodule]
 fn image_tools(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Dodaj funkcje główne
+    // Add main functions
     m.add_function(wrap_pyfunction!(resize_image, m)?)?;
     m.add_function(wrap_pyfunction!(convert_to_webp, m)?)?;
     
-    // Dodaj funkcje informacji o kompilacji
+    // Add build information functions
     m.add_function(wrap_pyfunction!(get_build_info, m)?)?;
     m.add_function(wrap_pyfunction!(get_build_number, m)?)?;
     m.add_function(wrap_pyfunction!(get_build_datetime, m)?)?;

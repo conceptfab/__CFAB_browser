@@ -71,7 +71,7 @@ class AssetRebuilderWorker(QThread):
 
             # Finish only if not stopped
             if not self._is_interruption_requested():
-                self.progress_updated.emit(100, 100, "Rebuild finished!")
+                self.progress_updated.emit(100, 100, "Rebuild completed!")
                 self.finished.emit(
                     f"Successfully rebuilt assets in folder: {self.folder_path}"
                 )
