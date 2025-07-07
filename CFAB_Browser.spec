@@ -40,6 +40,6 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=True,
-    upx_exclude=['ucrtbase.dll'],
+    upx_exclude=['ucrtbase.dll', 'VCRUNTIME140.dll', 'VCRUNTIME140_1.dll', 'Qt6*.dll', 'MSVCP140.dll', 'python3.dll', 'libcrypto-3.dll', 'libssl-3.dll', 'libffi-8.dll', '*.pyd'],
     name='CFAB_Browser',
 )
