@@ -21,6 +21,8 @@ impl Default for ThumbnailGenerator {
 }
 
 impl ThumbnailGenerator {
+    // Funkcja zarezerwowana na przyszłość
+    #[allow(dead_code)]
     pub fn new(thumbnail_size: u32) -> Self {
         Self {
             thumbnail_size,

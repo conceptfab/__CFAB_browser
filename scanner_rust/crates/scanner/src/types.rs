@@ -71,10 +71,6 @@ impl Default for FileExtensions {
 /// Błędy scanera
 #[derive(thiserror::Error, Debug)]
 pub enum ScannerError {
-    #[error("Folder nie istnieje: {0}")]
-    FolderNotFound(String),
-    #[error("Brak uprawnień do folderu: {0}")]
-    PermissionDenied(String),
     #[error("Błąd I/O: {0}")]
     IoError(#[from] std::io::Error),
     #[error("Błąd JSON: {0}")]
@@ -84,19 +80,20 @@ pub enum ScannerError {
 /// Konfiguracja scanera
 #[derive(Debug, Clone)]
 pub struct ScannerConfig {
-    pub thumbnail_size: u32,
-    pub parallel_processing: bool,
-    pub cache_dir_name: String,
-    pub file_extensions: FileExtensions,
+    // Pola zarezerwowane na przyszłość
+    _thumbnail_size: u32,
+    _parallel_processing: bool,
+    _cache_dir_name: String,
+    _file_extensions: FileExtensions,
 }
 
 impl Default for ScannerConfig {
     fn default() -> Self {
         Self {
-            thumbnail_size: 256,
-            parallel_processing: true,
-            cache_dir_name: ".cache".to_string(),
-            file_extensions: FileExtensions::default(),
+            _thumbnail_size: 256,
+            _parallel_processing: true,
+            _cache_dir_name: ".cache".to_string(),
+            _file_extensions: FileExtensions::default(),
         }
     }
 } 

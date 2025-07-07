@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use image::{imageops::FilterType, DynamicImage, GenericImageView, RgbImage, Rgb};
+use image::{imageops::FilterType, DynamicImage, GenericImageView};
 
 mod build_info;
 use build_info::{get_build_info, get_build_number, get_build_datetime, get_git_commit, get_module_number, get_module_info, get_log_prefix, format_log_message};
