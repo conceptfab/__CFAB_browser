@@ -9,6 +9,44 @@ TARGET_DIR = "core/__rust"
 MODULES = ["scanner", "image_tools", "hash_utils"]
 # --------------------
 
+def clean_previous_builds(script_dir):
+    """Czyści pozostałości po poprzednich kompilacjach."""
+    print("🧹 --- Czyszczenie pozostałości po poprzednich kompilacjach ---")
+    
+    # 1. Usuń pliki .pyd z docelowego katalogu
+    target_root_dir = os.path.join(script_dir, '..', TARGET_DIR)
+    if os.path.exists(target_root_dir):
+        for file in os.listdir(target_root_dir):
+            if file.endswith('.pyd'):
+                file_path = os.path.join(target_root_dir, file)
+                try:
+                    os.remove(file_path)
+                    print(f"🧹 Usunięto: {file}")
+                except Exception as e:
+                    print(f"⚠️  Nie udało się usunąć {file}: {e}")
+    
+    # 2. Usuń foldery target w każdym module
+    for module in MODULES:
+        module_path = os.path.join(script_dir, CRATES_DIR, module)
+        target_dir = os.path.join(module_path, "target")
+        if os.path.exists(target_dir):
+            try:
+                shutil.rmtree(target_dir)
+                print(f"🧹 Usunięto folder target dla modułu: {module}")
+            except Exception as e:
+                print(f"⚠️  Nie udało się usunąć target dla {module}: {e}")
+    
+    # 3. Usuń główny folder target w scanner_rust
+    main_target_dir = os.path.join(script_dir, "target")
+    if os.path.exists(main_target_dir):
+        try:
+            shutil.rmtree(main_target_dir)
+            print(f"🧹 Usunięto główny folder target")
+        except Exception as e:
+            print(f"⚠️  Nie udało się usunąć główny folder target: {e}")
+    
+    print("🧹 --- Czyszczenie zakończone ---\n")
+
 def run_command(command, cwd, manifest_path):
     """Uruchamia polecenie i sprawdza, czy się powiodło."""
     full_command = f"{command} --manifest-path \"{manifest_path}\""
@@ -30,6 +68,9 @@ def main():
     """Główna funkcja budująca."""
     print("🦀 --- Rozpoczęcie budowania modułów Rust ---")
     script_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Czyszczenie pozostałości po poprzednich kompilacjach
+    clean_previous_builds(script_dir)
     
     # Tworzenie docelowego folderu, jeśli nie istnieje
     target_root_dir = os.path.join(script_dir, '..', TARGET_DIR)
