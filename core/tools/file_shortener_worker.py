@@ -258,9 +258,8 @@ class FileShortenerWorker(BaseWorker):
             # Utwórz nową nazwę z rozszerzeniem
             new_file_path = os.path.join(file_dir, new_name + file_ext)
 
-            # Sprawdź czy nowa nazwa nie istnieje
-            if os.path.exists(new_file_path):
-                logger.warning(f"Plik o nazwie {new_name + file_ext} już istnieje")
+            # Use consolidated validation from base_worker
+            if not self._validate_file_paths(file_path, new_file_path):
                 return False
 
             # Zmień nazwę

@@ -17,20 +17,22 @@ class WorkspaceFoldersModel(QObject):
         self._config_manager = config_manager
         self._folders = []
         self.load_folders()
+        # Don't emit signal here - will be called after signals are connected
+        # self.folders_updated.emit(self._folders) 
         logger.debug("WorkspaceFoldersModel initialized")
 
-    def load_folders(self):
+    def load_folders(self, emit_signal=False):
         """Loads workspace folders from configuration"""
         try:
             config = self._config_manager.get_config()
-            self._load_folders_from_config(config)
+            self._load_folders_from_config(config, emit_signal=emit_signal)
             logger.debug("Workspace folders loaded: %d items", len(self._folders))
         except Exception as e:
             logger.error("Error loading workspace folders: %s", str(e))
             self._folders = []
 
-    def _load_folders_from_config(self, config: dict):
-        """Loads folders from configuration and emits update signal."""
+    def _load_folders_from_config(self, config: dict, emit_signal=False):
+        """Loads folders from configuration and optionally emits update signal."""
         try:
             self._folders = []
 
@@ -88,13 +90,16 @@ class WorkspaceFoldersModel(QObject):
             # Złóż wszystko w kolejności: aktywne, nieaktywne, puste
             self._folders = active_folders + inactive_folders + empty_folders
 
-            self.folders_updated.emit(self._folders)
+            if emit_signal:
+                self.folders_updated.emit(self._folders)
+                logger.info(f"🔧 DEBUG: folders_updated signal emitted with {len(self._folders)} folders")
             logger.debug(f"Załadowano {len(self._folders)} folderów roboczych (sortowanie alfabetyczne)")
 
         except Exception as e:
             logger.error(f"Błąd podczas ładowania folderów roboczych: {e}")
             self._folders = []
-            self.folders_updated.emit(self._folders)
+            if emit_signal:
+                self.folders_updated.emit(self._folders)
 
     def get_folders(self):
         """Returns the list of workspace folders"""
@@ -222,3 +227,8 @@ class WorkspaceFoldersModel(QObject):
     def get_enabled_folders(self) -> List[Dict]:
         """Returns only enabled folders"""
         return [folder for folder in self._folders if folder["enabled"]]
+
+    def init_after_setup(self):
+        """Called after signals are connected to emit initial data"""
+        logger.info(f"🔧 DEBUG: init_after_setup() - emitting folders_updated with {len(self._folders)} folders")
+        self.folders_updated.emit(self._folders)

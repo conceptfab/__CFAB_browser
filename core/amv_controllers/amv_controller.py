@@ -63,6 +63,10 @@ class AmvController(QObject):
         self.file_operation_controller.setup()
 
         self._connect_signals()
+        
+        # Initialize workspace folders after signals are connected
+        self.model.workspace_folders_model.init_after_setup()
+        
         logger.debug("AmvController initialized with dependency injection - STAGE 15")
 
     def _connect_signals(self):
@@ -83,7 +87,8 @@ class AmvController(QObject):
         logger.debug("Configuration loaded successfully")
 
     def _on_state_initialized(self):
-        self.model.workspace_folders_model.load_folders()
+        # Remove duplicate call - load_folders() is already called in WorkspaceFoldersModel.__init__()
+        # self.model.workspace_folders_model.load_folders()  # REMOVED: causes duplicate log messages
         logger.debug("Application state initialized")
 
     def _on_scan_started(self, folder_path: str):

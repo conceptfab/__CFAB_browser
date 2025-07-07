@@ -244,9 +244,8 @@ class FileRenamerWorker(BaseWorker):
             # Create new name with extension
             new_file_path = os.path.join(file_dir, new_name + file_ext)
 
-            # Check if new name already exists
-            if os.path.exists(new_file_path):
-                logger.warning(f"File named {new_name + file_ext} already exists")
+            # Use consolidated validation from base_worker
+            if not self._validate_file_paths(file_path, new_file_path):
                 return False
 
             # Rename

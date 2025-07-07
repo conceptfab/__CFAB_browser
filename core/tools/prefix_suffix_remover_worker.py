@@ -71,11 +71,8 @@ class PrefixSuffixRemoverWorker(BaseWorker):
                             self.folder_path, new_full_filename
                         )
 
-                        # Sprawdź czy nowa nazwa nie istnieje
-                        if os.path.exists(new_file_path):
-                            logger.warning(
-                                f"Plik o nazwie '{new_full_filename}' już istnieje. Pomijam."
-                            )
+                        # Use consolidated validation from base_worker
+                        if not self._validate_file_paths(file_path, new_file_path):
                             continue
 
                         # Zmień nazwę

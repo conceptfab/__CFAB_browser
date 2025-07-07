@@ -177,9 +177,19 @@ class FileOperationController(QObject):
             if not self._validate_optimization_inputs(success_messages):
                 return
             
-            self._update_asset_model_fast(success_messages)
-            self._remove_tiles_from_view_fast(success_messages)
-            self._update_controller_asset_list(success_messages)
+            # Synchronizacja dostępu do asset_tiles
+            from PyQt6.QtCore import QMutexLocker
+            if hasattr(self.controller.asset_grid_controller, '_tiles_mutex'):
+                with QMutexLocker(self.controller.asset_grid_controller._tiles_mutex):
+                    self._update_asset_model_fast(success_messages)
+                    self._remove_tiles_from_view_fast(success_messages)
+                    self._update_controller_asset_list(success_messages)
+            else:
+                # Fallback bez mutex jeśli nie istnieje
+                self._update_asset_model_fast(success_messages)
+                self._remove_tiles_from_view_fast(success_messages)
+                self._update_controller_asset_list(success_messages)
+            
             self._update_gallery_placeholder_state()
 
             logger.debug(f"OPTYMALIZACJA: Usunięto {len(success_messages)} assetów bez przebudowy galerii")

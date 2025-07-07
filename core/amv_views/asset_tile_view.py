@@ -38,6 +38,9 @@ class AssetTileView(QFrame):
 
     # Globalny QThreadPool do zarządzania workerami
     thread_pool = QThreadPool()
+    
+    # Stałe klasowe
+    MARGINS_SIZE = 8
 
     def __init__(
         self,
@@ -54,12 +57,7 @@ class AssetTileView(QFrame):
         self.total_tiles = total_tiles
         self.selection_model = selection_model  # Przypisz selection_model
         self.asset_id = self.model.get_name()  # Użyj nazwy assetu jako ID
-        self._drag_start_position = (
-            QPoint()
-        )  # Dodaj atrybut do przechowywania pozycji startowej przeciągania
         self.is_loading_thumbnail = False
-
-        self.margins_size = 8
         self.setObjectName("AssetTileViewFrame")  # Added object name
         self._setup_ui()
         self.model.data_changed.connect(self.update_ui)
@@ -585,7 +583,7 @@ class AssetTileView(QFrame):
         """Updates thumbnail size and recalculates layout."""
         self.thumbnail_size = new_size
         # Przelicz szerokość kafelka
-        tile_width = new_size + (2 * self.margins_size)
+        tile_width = new_size + (2 * self.MARGINS_SIZE)
         tile_height = new_size + 70
         self.setFixedSize(tile_width, tile_height)
         self.update_ui()  # Przeładuj UI, aby zastosować nowy rozmiar
@@ -682,7 +680,7 @@ class AssetTileView(QFrame):
         """Checks if stars fit on the tile."""
         # Oblicz dostępną szerokość dla gwiazdek
         # Szerokość kafelka - marginesy - numer - checkbox - odstępy
-        available_width = self.width() - (2 * self.margins_size) - 30 - 16 - 12
+        available_width = self.width() - (2 * self.MARGINS_SIZE) - 30 - 16 - 12
 
         # Szacowana szerokość 5 gwiazdek (każda ~12px) + odstępy
         stars_width = 5 * 12 + 4 * 6  # 5 gwiazdek po 12px + 4 odstępy po 6px
@@ -778,7 +776,7 @@ class AssetTileView(QFrame):
         """Updates thumbnail size based on available space."""
         if hasattr(self, "thumbnail_container"):
             # Oblicz dostępną przestrzeń dla miniatury
-            available_width = self.width() - (2 * self.margins_size)
+            available_width = self.width() - (2 * self.MARGINS_SIZE)
             available_height = (
                 self.height() - 70
             )  # Odejmij miejsce na tekst i kontrolki

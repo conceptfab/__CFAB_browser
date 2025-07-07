@@ -715,6 +715,9 @@ class MainWindow(QMainWindow):
         if self.selection_counter:
             return self.selection_counter.count_total_assets()
         return 0
+        if self.selection_counter:
+            return self.selection_counter.count_total_assets()
+        return 0
 
     def _calculate_asset_counts(self, controller_data: dict) -> AssetCounts:
         """Calculate visible and total asset counts using SelectionCounter"""

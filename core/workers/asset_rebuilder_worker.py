@@ -29,6 +29,10 @@ class AssetRebuilderWorker(QThread):
         """Safely requests the operation to stop"""
         self._should_stop = True
         self.requestInterruption()
+    
+    def _is_interruption_requested(self) -> bool:
+        """Ujednolicone sprawdzanie przerwania operacji"""
+        return self._should_stop or self.isInterruptionRequested()
 
     def run(self):
         """Main asset rebuild method"""
@@ -43,21 +47,21 @@ class AssetRebuilderWorker(QThread):
             )
 
             # Step 1: Removing .asset files
-            if self._should_stop or self.isInterruptionRequested():
+            if self._is_interruption_requested():
                 logger.debug("Rebuild was interrupted by the user")
                 return
             self.progress_updated.emit(0, 100, "Removing old .asset files...")
             self._remove_asset_files()
 
             # Step 2: Removing .cache folder
-            if self._should_stop or self.isInterruptionRequested():
+            if self._is_interruption_requested():
                 logger.debug("Rebuild was interrupted by the user")
                 return
             self.progress_updated.emit(20, 100, "Removing .cache folder...")
             self._remove_cache_folder()
 
             # Step 3: Running scanner.py
-            if self._should_stop or self.isInterruptionRequested():
+            if self._is_interruption_requested():
                 logger.debug("Rebuild was interrupted by the user")
                 return
             self.progress_updated.emit(
@@ -66,14 +70,14 @@ class AssetRebuilderWorker(QThread):
             self._run_scanner()
 
             # Finish only if not stopped
-            if not self._should_stop:
+            if not self._is_interruption_requested():
                 self.progress_updated.emit(100, 100, "Rebuild finished!")
                 self.finished.emit(
                     f"Successfully rebuilt assets in folder: {self.folder_path}"
                 )
 
         except Exception as e:
-            if not self._should_stop:
+            if not self._is_interruption_requested():
                 error_msg = f"Error during asset rebuild: {e}"
                 logger.error(error_msg)
                 self.error_occurred.emit(error_msg)
@@ -86,7 +90,7 @@ class AssetRebuilderWorker(QThread):
             ]
             for asset_file in asset_files:
                 # Check if the operation should be stopped
-                if self._should_stop or self.isInterruptionRequested():
+                if self._is_interruption_requested():
                     logger.debug("Removing .asset files was interrupted")
                     return
                     
@@ -122,7 +126,7 @@ class AssetRebuilderWorker(QThread):
 
             def progress_callback(current, total, message):
                 # Check if the operation should be stopped
-                if self._should_stop or self.isInterruptionRequested():
+                if self._is_interruption_requested():
                     return
                     
                 if total > 0:

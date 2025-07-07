@@ -581,9 +581,12 @@ class FolderClickRules:
 
             return result
 
-        except Exception as e:
+        except (OSError, PermissionError, ValueError) as e:
             logger.error(f"Folder analysis error: {e}")
             return FolderClickRules._create_error_result(f"Folder analysis error: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error during folder analysis: {e}")
+            return FolderClickRules._create_error_result(f"Unexpected error: {e}")
 
     @staticmethod
     def _log_folder_analysis(folder_path: str, content: Dict) -> None:
