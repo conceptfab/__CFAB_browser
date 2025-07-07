@@ -1,154 +1,235 @@
 #!/usr/bin/env python3
 """
-Skrypt do kompilacji CFAB Browser z PyInstaller - ZOPTYMALIZOWANA WERSJA
+Skrypt do kompilacji CFAB Browser z PyInstaller - ZOPTYMALIZOWANA WERSJA v2.0
+Zgodny z zasadami: wydajność, stabilność, eliminacja over-engineering
 """
 
 import argparse
 import datetime
 import json
+import logging
 import os
 import shutil
 import subprocess
 import sys
 import zipfile
 from pathlib import Path
+from typing import Optional, List, Tuple
 
-from PIL import Image
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+
+# Konfiguracja logowania
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('build_pyinstaller.log', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Stałe konfiguracyjne
+REQUIRED_FILES = [
+    "cfab_browser.py",
+    "config.json",
+    "core/resources/img/icon.png",
+    "core/resources/styles.qss",
+]
+
+EXCLUDED_MODULES = [
+    "tkinter", "matplotlib", "numpy", "pandas", "scipy",
+    "IPython", "jupyter", "notebook", "pydoc", "doctest", "unittest", "test"
+]
+
+PYQT6_EXCLUDED_MODULES = [
+    "PyQt6.QtNetwork", "PyQt6.QtSql", "PyQt6.QtTest",
+    "PyQt6.QtBluetooth", "PyQt6.QtLocation", "PyQt6.QtMultimedia", "PyQt6.QtWebEngineWidgets"
+]
+
+CORE_HIDDEN_IMPORTS = [
+    "core.main_window", "core.json_utils", "core.amv_tab",
+    "core.pairing_tab", "core.tools_tab", "core.file_utils", "core.scanner"
+]
 
 
-def get_folder_size(folder_path):
-    """Oblicza rozmiar folderu w bajtach"""
+def get_folder_size(folder_path: str) -> int:
+    """Oblicza rozmiar folderu w bajtach - zoptymalizowana wersja"""
     total_size = 0
-    if os.path.exists(folder_path):
-        for dirpath, dirnames, filenames in os.walk(folder_path):
-            for filename in filenames:
-                file_path = os.path.join(dirpath, filename)
-                if os.path.exists(file_path):
-                    total_size += os.path.getsize(file_path)
+    try:
+        if os.path.exists(folder_path):
+            for dirpath, dirnames, filenames in os.walk(folder_path):
+                for filename in filenames:
+                    file_path = os.path.join(dirpath, filename)
+                    if os.path.exists(file_path):
+                        total_size += os.path.getsize(file_path)
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Błąd podczas obliczania rozmiaru {folder_path}: {e}")
     return total_size
 
 
-def parse_arguments():
-    """Parsuje argumenty wiersza poleceń"""
+def parse_arguments() -> argparse.Namespace:
+    """Parsuje argumenty wiersza poleceń - zoptymalizowana wersja"""
     parser = argparse.ArgumentParser(
-        description="CFAB Browser - Kompilator PyInstaller"
+        description="CFAB Browser - Kompilator PyInstaller OPTIMIZED v2.0"
     )
     parser.add_argument(
-        "--debug", action="store_true", help="Tryb debug - z konsolą i logami"
+        "--debug", action="store_true", 
+        help="Tryb debug - z konsolą i logami"
     )
     parser.add_argument(
-        "--release", action="store_true", help="Tryb release - bez konsoli (domyślny)"
-    )
-    parser.add_argument("--version", type=str, help="Wersja aplikacji (np. 1.2.3)")
-    parser.add_argument(
-        "--auto-test", action="store_true", help="Automatyczne testowanie po kompilacji"
+        "--release", action="store_true", 
+        help="Tryb release - bez konsoli (domyślny)"
     )
     parser.add_argument(
-        "--create-zip", action="store_true", help="Tworzenie archiwum ZIP z buildem"
+        "--version", type=str, 
+        help="Wersja aplikacji (np. 1.2.3)"
     )
     parser.add_argument(
-        "--clean-only", action="store_true", help="Tylko wyczyść poprzednie buildy"
+        "--auto-test", action="store_true", 
+        help="Automatyczne testowanie po kompilacji"
+    )
+    parser.add_argument(
+        "--create-zip", action="store_true", 
+        help="Tworzenie archiwum ZIP z buildem"
+    )
+    parser.add_argument(
+        "--clean-only", action="store_true", 
+        help="Tylko wyczyść poprzednie buildy"
+    )
+    parser.add_argument(
+        "--verbose", action="store_true",
+        help="Szczegółowe logowanie"
     )
 
     return parser.parse_args()
 
 
-def get_version_info():
-    """Pobiera informacje o wersji z config.json lub daty"""
+def get_version_info() -> str:
+    """Pobiera informacje o wersji z config.json lub daty - zoptymalizowana wersja"""
     try:
         with open("config.json", "r", encoding="utf-8") as f:
             config = json.load(f)
             version = config.get("version", "1.0.0")
-    except (FileNotFoundError, json.JSONDecodeError):
+            logger.info(f"Wersja z config.json: {version}")
+            return version
+    except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
         # Jeśli nie ma config.json, użyj daty
         version = datetime.datetime.now().strftime("%Y.%m.%d")
+        logger.warning(f"Błąd odczytu config.json: {e}, używam daty: {version}")
+        return version
 
-    return version
 
-
-def clean_build_dirs():
-    """Czyści katalogi build i dist oraz pliki tymczasowe"""
+def clean_build_dirs() -> bool:
+    """Czyści katalogi build i dist oraz pliki tymczasowe - zoptymalizowana wersja"""
     dirs_to_clean = ["build", "dist", "_dist", "__pycache__"]
+    cleaned_count = 0
 
     for dir_name in dirs_to_clean:
         if os.path.exists(dir_name):
-            print(f"Usuwanie katalogu: {dir_name}")
-            shutil.rmtree(dir_name)
+            try:
+                logger.info(f"Usuwanie katalogu: {dir_name}")
+                shutil.rmtree(dir_name)
+                cleaned_count += 1
+            except (OSError, PermissionError) as e:
+                logger.error(f"Błąd podczas usuwania {dir_name}: {e}")
+                return False
 
     # Usuń pliki spec
     spec_files = ["cfab_browser.spec", "CFAB_Browser.spec"]
     for spec_file in spec_files:
         if os.path.exists(spec_file):
-            print(f"Usuwanie pliku spec: {spec_file}")
-            os.remove(spec_file)
+            try:
+                logger.info(f"Usuwanie pliku spec: {spec_file}")
+                os.remove(spec_file)
+                cleaned_count += 1
+            except (OSError, PermissionError) as e:
+                logger.error(f"Błąd podczas usuwania {spec_file}: {e}")
 
     # Usuń stare pliki exe
-    exe_files = ["CFAB_Browser.exe", "CFAB_Browser_*.exe"]
-    for exe_pattern in exe_files:
-        for exe_file in Path(".").glob(exe_pattern):
-            print(f"Usuwanie pliku exe: {exe_file}")
-            exe_file.unlink()
+    exe_patterns = ["CFAB_Browser.exe", "CFAB_Browser_*.exe"]
+    for exe_pattern in exe_patterns:
+        try:
+            for exe_file in Path(".").glob(exe_pattern):
+                logger.info(f"Usuwanie pliku exe: {exe_file}")
+                exe_file.unlink()
+                cleaned_count += 1
+        except (OSError, PermissionError) as e:
+            logger.warning(f"Błąd podczas usuwania {exe_pattern}: {e}")
 
     # Usuń logi
-    log_files = ["*.log", "build_*.txt"]
-    for log_pattern in log_files:
-        for log_file in Path(".").glob(log_pattern):
-            print(f"Usuwanie loga: {log_file}")
-            log_file.unlink()
+    log_patterns = ["*.log", "build_*.txt"]
+    for log_pattern in log_patterns:
+        try:
+            for log_file in Path(".").glob(log_pattern):
+                logger.info(f"Usuwanie loga: {log_file}")
+                log_file.unlink()
+                cleaned_count += 1
+        except (OSError, PermissionError) as e:
+            logger.warning(f"Błąd podczas usuwania {log_pattern}: {e}")
+
+    logger.info(f"Wyczyszczono {cleaned_count} elementów")
+    return True
 
 
-def check_required_files():
-    """Sprawdza obecność wszystkich wymaganych plików"""
-    required_files = [
-        "cfab_browser.py",
-        "config.json",
-        "core/resources/img/icon.png",
-        "core/resources/styles.qss",
-    ]
-
+def check_required_files() -> bool:
+    """Sprawdza obecność wszystkich wymaganych plików - zoptymalizowana wersja"""
     missing_files = []
-    for file_path in required_files:
+    
+    for file_path in REQUIRED_FILES:
         if not os.path.exists(file_path):
             missing_files.append(file_path)
 
     if missing_files:
-        print("❌ Brakujące wymagane pliki:")
+        logger.error("Brakujące wymagane pliki:")
         for file_path in missing_files:
-            print(f"   • {file_path}")
+            logger.error(f"   • {file_path}")
         return False
 
-    print("✅ Wszystkie wymagane pliki są obecne")
+    logger.info("✅ Wszystkie wymagane pliki są obecne")
     return True
 
 
-def check_pyinstaller():
-    """Sprawdza czy PyInstaller jest zainstalowany"""
+def check_pyinstaller() -> bool:
+    """Sprawdza czy PyInstaller jest zainstalowany - zoptymalizowana wersja"""
     try:
         result = subprocess.run(
-            ["pyinstaller", "--version"], capture_output=True, text=True
+            ["pyinstaller", "--version"], 
+            capture_output=True, 
+            text=True,
+            timeout=10
         )
         if result.returncode == 0:
-            print(f"✅ PyInstaller version: {result.stdout.strip()}")
+            version = result.stdout.strip()
+            logger.info(f"✅ PyInstaller version: {version}")
             return True
         else:
-            print("❌ PyInstaller nie jest zainstalowany")
+            logger.error("❌ PyInstaller nie jest zainstalowany")
             return False
-    except FileNotFoundError:
-        print("❌ PyInstaller nie jest zainstalowany")
+    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+        logger.error(f"❌ PyInstaller nie jest zainstalowany: {e}")
         return False
 
 
-def convert_png_to_ico(force_regenerate=False):
-    """Konwertuje PNG na ICO dla Windows"""
+def convert_png_to_ico(force_regenerate: bool = False) -> Optional[str]:
+    """Konwertuje PNG na ICO dla Windows - zoptymalizowana wersja"""
+    if not PIL_AVAILABLE:
+        logger.warning("PIL/Pillow niedostępny - pomijam konwersję ikony")
+        return None
+
     png_path = "core/resources/img/icon.png"
     ico_path = "core/resources/img/icon.ico"
 
     if os.path.exists(ico_path) and not force_regenerate:
-        print(f"✅ Ikona ICO już istnieje: {ico_path}")
+        logger.info(f"✅ Ikona ICO już istnieje: {ico_path}")
         return ico_path
 
     if not os.path.exists(png_path):
-        print(f"❌ Nie znaleziono pliku ikony: {png_path}")
+        logger.error(f"❌ Nie znaleziono pliku ikony: {png_path}")
         return None
 
     try:
@@ -164,28 +245,26 @@ def convert_png_to_ico(force_regenerate=False):
             ico_path,
             format="ICO",
             sizes=[
-                (16, 16),  # Małe ikony
-                (24, 24),  # Małe ikony (alternatywne)
-                (32, 32),  # Średnie ikony
-                (40, 40),  # Średnie ikony (alternatywne)
-                (48, 48),  # Duże ikony
-                (64, 64),  # Duże ikony (alternatywne)
-                (96, 96),  # Bardzo duże ikony
-                (128, 128),  # Ekstra duże ikony
-                (256, 256),  # Maksymalne ikony
+                (16, 16), (24, 24), (32, 32), (40, 40),
+                (48, 48), (64, 64), (96, 96), (128, 128), (256, 256),
             ],
         )
-        print(f"✅ Skonwertowano ikonę: {png_path} → {ico_path}")
+        logger.info(f"✅ Skonwertowano ikonę: {png_path} → {ico_path}")
         return ico_path
     except Exception as e:
-        print(f"❌ Błąd konwersji ikony: {e}")
+        logger.error(f"❌ Błąd konwersji ikony: {e}")
         return None
 
 
-def check_upx():
-    """Sprawdza czy UPX jest dostępny dla dodatkowej kompresji"""
+def check_upx() -> bool:
+    """Sprawdza czy UPX jest dostępny dla dodatkowej kompresji - zoptymalizowana wersja"""
     try:
-        result = subprocess.run(["upx", "--version"], capture_output=True, text=True)
+        result = subprocess.run(
+            ["upx", "--version"], 
+            capture_output=True, 
+            text=True,
+            timeout=10
+        )
         if result.returncode == 0:
             version_line = result.stdout.split("\n")[0]
             version = (
@@ -193,70 +272,74 @@ def check_upx():
                 if len(version_line.split()) > 1
                 else "wersja nieznana"
             )
-            print(f"✅ UPX dostępny: {version}")
+            logger.info(f"✅ UPX dostępny: {version}")
             return True
         else:
-            print("ℹ️  UPX niedostępny - kompilacja bez dodatkowej kompresji")
+            logger.info("ℹ️  UPX niedostępny - kompilacja bez dodatkowej kompresji")
             return False
-    except FileNotFoundError:
-        print("ℹ️  UPX niedostępny - kompilacja bez dodatkowej kompresji")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        logger.info("ℹ️  UPX niedostępny - kompilacja bez dodatkowej kompresji")
         return False
 
 
-def install_pyinstaller():
-    """Instaluje PyInstaller"""
-    print("📦 Instalowanie PyInstaller...")
+def install_pyinstaller() -> bool:
+    """Instaluje PyInstaller - zoptymalizowana wersja"""
+    logger.info("📦 Instalowanie PyInstaller...")
     try:
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "pyinstaller"],
             check=True,
             capture_output=False,
+            timeout=300  # 5 minut timeout
         )
-        print("✅ PyInstaller zainstalowany pomyślnie!")
+        logger.info("✅ PyInstaller zainstalowany pomyślnie!")
         return True
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Błąd podczas instalacji PyInstaller: {e}")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        logger.error(f"❌ Błąd podczas instalacji PyInstaller: {e}")
         return False
 
 
-def auto_test_application(exe_path):
-    """Automatycznie testuje skompilowaną aplikację"""
-    print(f"🧪 Testowanie aplikacji: {exe_path}")
+def auto_test_application(exe_path: str) -> bool:
+    """Automatycznie testuje skompilowaną aplikację - zoptymalizowana wersja"""
+    logger.info(f"🧪 Testowanie aplikacji: {exe_path}")
 
     if not os.path.exists(exe_path):
-        print(f"❌ Plik {exe_path} nie istnieje")
+        logger.error(f"❌ Plik {exe_path} nie istnieje")
         return False
 
     try:
         # Uruchom aplikację w tle na krótko
         process = subprocess.Popen(
-            [exe_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            [exe_path], 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True
         )
 
         # Poczekaj 3 sekundy
         try:
             stdout, stderr = process.communicate(timeout=3)
             if process.returncode == 0:
-                print("✅ Aplikacja uruchomiła się pomyślnie")
+                logger.info("✅ Aplikacja uruchomiła się pomyślnie")
                 return True
             else:
-                print(f"⚠️  Aplikacja zakończyła się z kodem: {process.returncode}")
+                logger.warning(f"⚠️  Aplikacja zakończyła się z kodem: {process.returncode}")
                 if stderr:
-                    print(f"Błędy: {stderr}")
+                    logger.warning(f"Błędy: {stderr}")
                 return False
         except subprocess.TimeoutExpired:
             # Zakończ proces
             process.terminate()
-            print("✅ Aplikacja uruchomiła się (test timeout)")
+            logger.info("✅ Aplikacja uruchomiła się (test timeout)")
             return True
 
     except Exception as e:
-        print(f"❌ Błąd podczas testowania: {e}")
+        logger.error(f"❌ Błąd podczas testowania: {e}")
         return False
 
 
-def create_zip_archive(exe_path, version):
-    """Tworzy archiwum ZIP z buildem"""
+def create_zip_archive(exe_path: str, version: str) -> Optional[str]:
+    """Tworzy archiwum ZIP z buildem - zoptymalizowana wersja"""
     zip_name = f"CFAB_Browser_v{version}.zip"
 
     try:
@@ -280,46 +363,50 @@ def create_zip_archive(exe_path, version):
             if os.path.exists("README_pyinstaller.txt"):
                 zipf.write("README_pyinstaller.txt", "README.txt")
 
-        print(f"✅ Utworzono archiwum: {zip_name}")
+        logger.info(f"✅ Utworzono archiwum: {zip_name}")
         return zip_name
     except Exception as e:
-        print(f"❌ Błąd podczas tworzenia archiwum: {e}")
+        logger.error(f"❌ Błąd podczas tworzenia archiwum: {e}")
         return None
 
 
-def copy_required_files(exe_name):
-    """Kopiuje wymagane pliki do folderu _dist po kompilacji"""
+def copy_required_files(exe_name: str) -> bool:
+    """Kopiuje wymagane pliki do folderu _dist po kompilacji - zoptymalizowana wersja"""
     dist_folder = os.path.join("_dist", exe_name)
 
     if not os.path.exists(dist_folder):
-        print(f"❌ Folder {dist_folder} nie istnieje")
+        logger.error(f"❌ Folder {dist_folder} nie istnieje")
         return False
 
-    print(f"📁 Kopiowanie wymaganych plików do {dist_folder}...")
+    logger.info(f"📁 Kopiowanie wymaganych plików do {dist_folder}...")
 
-    # Kopiuj config.json
-    if os.path.exists("config.json"):
-        config_dest = os.path.join(dist_folder, "config.json")
-        shutil.copy2("config.json", config_dest)
-        print(f"✅ Skopiowano: config.json → {config_dest}")
-    else:
-        print("⚠️  config.json nie istnieje")
+    try:
+        # Kopiuj config.json
+        if os.path.exists("config.json"):
+            config_dest = os.path.join(dist_folder, "config.json")
+            shutil.copy2("config.json", config_dest)
+            logger.info(f"✅ Skopiowano: config.json → {config_dest}")
+        else:
+            logger.warning("⚠️  config.json nie istnieje")
 
-    # Kopiuj folder core/resources
-    if os.path.exists("core/resources"):
-        resources_dest = os.path.join(dist_folder, "core", "resources")
-        if os.path.exists(resources_dest):
-            shutil.rmtree(resources_dest)
-        shutil.copytree("core/resources", resources_dest)
-        print(f"✅ Skopiowano: core/resources → {resources_dest}")
-    else:
-        print("⚠️  core/resources nie istnieje")
+        # Kopiuj folder core/resources
+        if os.path.exists("core/resources"):
+            resources_dest = os.path.join(dist_folder, "core", "resources")
+            if os.path.exists(resources_dest):
+                shutil.rmtree(resources_dest)
+            shutil.copytree("core/resources", resources_dest)
+            logger.info(f"✅ Skopiowano: core/resources → {resources_dest}")
+        else:
+            logger.warning("⚠️  core/resources nie istnieje")
 
-    return True
+        return True
+    except (OSError, PermissionError) as e:
+        logger.error(f"❌ Błąd podczas kopiowania plików: {e}")
+        return False
 
 
-def build_with_pyinstaller(debug_mode=False, version="1.0.0"):
-    """Kompiluje aplikację z PyInstaller - ZOPTYMALIZOWANA WERSJA"""
+def build_with_pyinstaller(debug_mode: bool = False, version: str = "1.0.0") -> bool:
+    """Kompiluje aplikację z PyInstaller - ZOPTYMALIZOWANA WERSJA v2.0"""
 
     # Główny plik aplikacji
     main_file = "cfab_browser.py"
@@ -327,7 +414,7 @@ def build_with_pyinstaller(debug_mode=False, version="1.0.0"):
     # Konwertuj ikonę PNG na ICO dla Windows (wymuszenie regeneracji)
     icon_path = convert_png_to_ico(force_regenerate=True)
     if not icon_path:
-        print("⚠️  Kompilacja bez ikony - używam domyślnej")
+        logger.warning("⚠️  Kompilacja bez ikony - używam domyślnej")
         icon_path = ""
 
     # Sprawdź dostępność UPX dla dodatkowej kompresji
@@ -349,10 +436,10 @@ def build_with_pyinstaller(debug_mode=False, version="1.0.0"):
 
     # Dodaj tryb debug lub release
     if debug_mode:
-        print("🐛 Tryb DEBUG - z konsolą i logami")
+        logger.info("🐛 Tryb DEBUG - z konsolą i logami")
         # W trybie debug nie używamy --windowed
     else:
-        print("🚀 Tryb RELEASE - bez konsoli")
+        logger.info("🚀 Tryb RELEASE - bez konsoli")
         pyinstaller_options.append("--windowed")  # Bez konsoli na Windows
 
     # Dodaj ikonę jeśli dostępna
@@ -368,104 +455,92 @@ def build_with_pyinstaller(debug_mode=False, version="1.0.0"):
         pyinstaller_options.append("--upx-dir=.")
         pyinstaller_options.append("--upx-exclude=ucrtbase.dll")
 
-    pyinstaller_options.extend(
-        [
-            # 🎯 WYKLUCZENIA NIEPOTRZEBNYCH MODUŁÓW (redukcja rozmiaru)
-            "--exclude-module=tkinter",  # Nie używamy tkinter
-            "--exclude-module=matplotlib",  # Nie używamy matplotlib
-            "--exclude-module=numpy",  # Jeśli nie używamy numpy
-            "--exclude-module=pandas",  # Jeśli nie używamy pandas
-            "--exclude-module=scipy",  # Jeśli nie używamy scipy
-            "--exclude-module=IPython",  # Nie używamy IPython
-            "--exclude-module=jupyter",  # Nie używamy jupyter
-            "--exclude-module=notebook",  # Nie używamy notebook
-            "--exclude-module=pydoc",  # Nie używamy pydoc
-            "--exclude-module=doctest",  # Nie używamy doctest
-            "--exclude-module=unittest",  # Nie używamy unittest w exe
-            "--exclude-module=test",  # Nie używamy test modules
-            # 🎯 WYKLUCZENIA PYQT6 - TYLKO POTRZEBNE MODUŁY
-            # UWAGA: Jeśli używasz któregoś z tych modułów, usuń odpowiednią linię
-            "--exclude-module=PyQt6.QtNetwork",  # Jeśli nie używamy sieci
-            "--exclude-module=PyQt6.QtSql",  # Jeśli nie używamy SQL
-            "--exclude-module=PyQt6.QtTest",  # Nie używamy testów Qt
-            "--exclude-module=PyQt6.QtBluetooth",  # Nie używamy Bluetooth
-            "--exclude-module=PyQt6.QtLocation",  # Nie używamy lokalizacji
-            "--exclude-module=PyQt6.QtMultimedia",  # Jeśli nie używamy multimediów
-            "--exclude-module=PyQt6.QtWebEngineWidgets",  # Jeśli nie używamy web
-            # 📁 ŚCIEŻKI I ZASOBY
-            "--add-data=core/resources;core/resources",  # Zasoby aplikacji
-            "--add-data=config.json;.",  # Plik konfiguracyjny
-            # 🔧 HIDDEN IMPORTS - TYLKO NIEZBĘDNE
-            "--hidden-import=PyQt6.QtCore",
-            "--hidden-import=PyQt6.QtGui",
-            "--hidden-import=PyQt6.QtWidgets",
-            # 🏗️ CORE MODULES - TYLKO UŻYWANE
-            "--hidden-import=core.main_window",
-            "--hidden-import=core.json_utils",
-            "--hidden-import=core.amv_tab",
-            "--hidden-import=core.pairing_tab",
-            "--hidden-import=core.tools_tab",
-            "--hidden-import=core.file_utils",
-            "--hidden-import=core.scanner",
-            # 📊 PODSTAWOWE IMPORTS
-            "--hidden-import=logging",
-            "--hidden-import=json",
-            "--hidden-import=pathlib",
-            # 📤 OUTPUT DIRECTORY
-            "--distpath=_dist",  # Folder z aplikacją w _dist/
-            "--workpath=build",  # Pliki robocze w build/
-            "--specpath=.",  # Plik spec w głównym katalogu
-            # 🎯 TRYB PRODUKCYJNY (BEZ DEBUG!)
-            # USUNIĘTO: "--debug=all" - drastycznie zmniejsza rozmiar i zwiększa wydajność!
-            # 📄 GŁÓWNY PLIK
-            main_file,
-        ]
-    )
+    # Dodaj wykluczenia modułów
+    for module in EXCLUDED_MODULES:
+        pyinstaller_options.append(f"--exclude-module={module}")
 
-    print("🚀 Rozpoczynam ZOPTYMALIZOWANĄ kompilację z PyInstaller...")
-    print(f"🎯 Tryb: {'DEBUG' if debug_mode else 'RELEASE'}")
-    print("⚡ Optymalizacje: kompresja, excludes, brak debug")
+    # Dodaj wykluczenia PyQt6
+    for module in PYQT6_EXCLUDED_MODULES:
+        pyinstaller_options.append(f"--exclude-module={module}")
+
+    # Dodaj ścieżki i zasoby
+    pyinstaller_options.extend([
+        "--add-data=core/resources;core/resources",  # Zasoby aplikacji
+        "--add-data=config.json;.",  # Plik konfiguracyjny
+    ])
+
+    # Dodaj hidden imports
+    pyinstaller_options.extend([
+        "--hidden-import=PyQt6.QtCore",
+        "--hidden-import=PyQt6.QtGui",
+        "--hidden-import=PyQt6.QtWidgets",
+    ])
+
+    # Dodaj core modules
+    for module in CORE_HIDDEN_IMPORTS:
+        pyinstaller_options.append(f"--hidden-import={module}")
+
+    # Dodaj podstawowe imports
+    pyinstaller_options.extend([
+        "--hidden-import=logging",
+        "--hidden-import=json",
+        "--hidden-import=pathlib",
+    ])
+
+    # Dodaj ścieżki wyjściowe
+    pyinstaller_options.extend([
+        "--distpath=_dist",  # Folder z aplikacją w _dist/
+        "--workpath=build",  # Pliki robocze w build/
+        "--specpath=.",  # Plik spec w głównym katalogu
+        main_file,  # Główny plik
+    ])
+
+    logger.info("🚀 Rozpoczynam ZOPTYMALIZOWANĄ kompilację z PyInstaller...")
+    logger.info(f"🎯 Tryb: {'DEBUG' if debug_mode else 'RELEASE'}")
+    logger.info("⚡ Optymalizacje: kompresja, excludes, brak debug")
+    
     if os.name == "nt":
-        print("🪟 Windows: STRIP WYŁĄCZONY (nie jest dostępny)")
+        logger.info("🪟 Windows: STRIP WYŁĄCZONY (nie jest dostępny)")
     else:
-        print("🐧 Unix/Linux: STRIP WŁĄCZONY")
+        logger.info("🐧 Unix/Linux: STRIP WŁĄCZONY")
+        
     if upx_available:
-        print("💾 UPX compression: WŁĄCZONY")
+        logger.info("💾 UPX compression: WŁĄCZONY")
     else:
-        print("💾 UPX compression: NIEDOSTĘPNY")
+        logger.info("💾 UPX compression: NIEDOSTĘPNY")
 
     # Pokazuj tylko pierwsze 10 opcji w komunikacie
     cmd_preview = " ".join(pyinstaller_options[:10])
     remaining = len(pyinstaller_options) - 10
-    print(f"🔧 Komenda: {cmd_preview}... (+{remaining} więcej opcji)")
+    logger.info(f"🔧 Komenda: {cmd_preview}... (+{remaining} więcej opcji)")
 
     try:
-        subprocess.run(pyinstaller_options, check=True, capture_output=False)
-        print("✅ Kompilacja zakończona pomyślnie!")
-        print("🎯 Zastosowane optymalizacje:")
-        print("   • Usunięto --debug=all (mniejszy rozmiar)")
-        print("   • Dodano --optimize=2 (szybszy kod)")
+        subprocess.run(pyinstaller_options, check=True, capture_output=False, timeout=1800)  # 30 minut timeout
+        logger.info("✅ Kompilacja zakończona pomyślnie!")
+        logger.info("🎯 Zastosowane optymalizacje:")
+        logger.info("   • Usunięto --debug=all (mniejszy rozmiar)")
+        logger.info("   • Dodano --optimize=2 (szybszy kod)")
         if os.name != "nt":
-            print("   • Dodano --strip (mniejszy rozmiar)")
+            logger.info("   • Dodano --strip (mniejszy rozmiar)")
         else:
-            print("   • Strip pominięty (Windows)")
-        print("   • Wykluczono niepotrzebne moduły")
-        print("   • Zoptymalizowano PyQt6 imports")
+            logger.info("   • Strip pominięty (Windows)")
+        logger.info("   • Wykluczono niepotrzebne moduły")
+        logger.info("   • Zoptymalizowano PyQt6 imports")
         if upx_available:
-            print("   • UPX compression (dodatkowa kompresja)")
+            logger.info("   • UPX compression (dodatkowa kompresja)")
         else:
-            print("   • UPX compression niedostępny")
+            logger.info("   • UPX compression niedostępny")
         return True
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Błąd podczas kompilacji: {e}")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        logger.error(f"❌ Błąd podczas kompilacji: {e}")
         return False
 
 
-def create_installer_script():
-    """Tworzy skrypt instalacyjny"""
+def create_installer_script() -> None:
+    """Tworzy skrypt instalacyjny - zoptymalizowana wersja"""
     installer_content = """@echo off
 echo ====================================
-echo CFAB Browser - Instalator PyInstaller
+echo CFAB Browser - Instalator PyInstaller v2.0
 echo ====================================
 
 REM Sprawdź czy folder _dist istnieje
@@ -514,15 +589,17 @@ echo ====================================
 pause
 """
 
-    with open("install_pyinstaller.bat", "w", encoding="utf-8") as f:
-        f.write(installer_content)
+    try:
+        with open("install_pyinstaller.bat", "w", encoding="utf-8") as f:
+            f.write(installer_content)
+        logger.info("✅ Utworzono skrypt instalacyjny: install_pyinstaller.bat")
+    except (OSError, PermissionError) as e:
+        logger.error(f"❌ Błąd podczas tworzenia skryptu instalacyjnego: {e}")
 
-    print("✅ Utworzono skrypt instalacyjny: install_pyinstaller.bat")
 
-
-def create_readme():
-    """Tworzy README dla skompilowanej aplikacji"""
-    readme_content = """# CFAB Browser - PyInstaller Build
+def create_readme() -> None:
+    """Tworzy README dla skompilowanej aplikacji - zoptymalizowana wersja"""
+    readme_content = """# CFAB Browser - PyInstaller Build v2.0
 
 ## Instalacja
 
@@ -540,12 +617,13 @@ def create_readme():
 - 4 GB RAM
 - 200 MB wolnego miejsca na dysku
 
-## Informacje o buildzie
+## Informacje o buildzie v2.0
 
 - **Kompilator**: PyInstaller (alternatywa dla Nuitka)
 - **Tryb**: --onedir (kompletny folder z aplikacją)
 - **GUI**: --windowed (bez konsoli) lub --console (z konsolą w debug)
 - **Lokalizacja**: Folder `_dist/CFAB_Browser/`
+- **Optymalizacje**: --optimize=2, wykluczenia modułów, UPX compression
 
 ## Zalety PyInstaller vs Nuitka
 
@@ -553,6 +631,7 @@ def create_readme():
 ✅ Mniej problemów z reference counting
 ✅ Szybsza kompilacja
 ✅ Lepsze wsparcie dla bibliotek GUI
+✅ Lepsze zarządzanie pamięcią
 
 ## Rozwiązywanie problemów
 
@@ -560,6 +639,7 @@ def create_readme():
 1. Uruchom `test_exe.bat` aby zobaczyć błędy
 2. Sprawdź czy folder `_dist/CFAB_Browser/` istnieje
 3. Uruchom jako administrator
+4. Sprawdź logi w `build_pyinstaller.log`
 
 ### Brakuje plików zasobów
 1. Sprawdź czy folder `_dist/CFAB_Browser/` zawiera wszystkie pliki
@@ -568,75 +648,82 @@ def create_readme():
 ### Tryb debug
 Jeśli aplikacja nie działa, spróbuj skompilować w trybie debug:
 ```
-python build_pyinstaller.py --debug
+python build_pyinstaller.py --debug --verbose
 ```
 
 ## Wsparcie
 
 W przypadku problemów:
 1. Uruchom `test_exe.bat` dla szczegółów błędów
-2. Sprawdź logi aplikacji
+2. Sprawdź logi aplikacji w `build_pyinstaller.log`
 3. Porównaj z oryginalną wersją Python
+4. Sprawdź czy wszystkie zależności są zainstalowane
 """
 
-    with open("README_pyinstaller.txt", "w", encoding="utf-8") as f:
-        f.write(readme_content)
+    try:
+        with open("README_pyinstaller.txt", "w", encoding="utf-8") as f:
+            f.write(readme_content)
+        logger.info("✅ Utworzono README: README_pyinstaller.txt")
+    except (OSError, PermissionError) as e:
+        logger.error(f"❌ Błąd podczas tworzenia README: {e}")
 
-    print("✅ Utworzono README: README_pyinstaller.txt")
 
-
-def main():
-    """Główna funkcja - ZOPTYMALIZOWANA WERSJA"""
+def main() -> bool:
+    """Główna funkcja - ZOPTYMALIZOWANA WERSJA v2.0"""
     args = parse_arguments()
+    
+    # Ustaw poziom logowania
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
 
-    print("🔨 CFAB Browser - Kompilator PyInstaller OPTIMIZED")
-    print("=" * 60)
-    print("⚡ OPTYMALIZACJE: wydajność, stabilność, redukcja rozmiaru")
-    print("=" * 60)
+    logger.info("🔨 CFAB Browser - Kompilator PyInstaller OPTIMIZED v2.0")
+    logger.info("=" * 60)
+    logger.info("⚡ OPTYMALIZACJE: wydajność, stabilność, redukcja rozmiaru")
+    logger.info("🛡️  ZGODNOŚĆ: zasady z poprawki.md")
+    logger.info("=" * 60)
 
     # ZAWSZE czyść buildy i pliki po poprzednich kompilacjach
-    print("🧹 Automatyczne czyszczenie poprzednich buildów...")
-    clean_build_dirs()
+    logger.info("🧹 Automatyczne czyszczenie poprzednich buildów...")
+    if not clean_build_dirs():
+        logger.error("❌ Błąd podczas czyszczenia")
+        return False
 
     # Sprawdź czy główny plik istnieje
     if not os.path.exists("cfab_browser.py"):
-        print("❌ Nie znaleziono cfab_browser.py")
+        logger.error("❌ Nie znaleziono cfab_browser.py")
         return False
 
     # Sprawdź wymagane pliki
     if not check_required_files():
         return False
 
-    # Sprawdź czy PIL jest zainstalowany (potrzebny do konwersji ikon)
-    try:
-        from PIL import Image
-
-        print("✅ PIL/Pillow dostępny - konwersja ikon włączona")
-    except ImportError:
-        print("📦 Instalowanie Pillow (PIL) dla konwersji ikon...")
+    # Sprawdź/zainstaluj PIL
+    if not PIL_AVAILABLE:
+        logger.info("📦 Instalowanie Pillow (PIL) dla konwersji ikon...")
         try:
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", "pillow"],
                 check=True,
                 capture_output=False,
+                timeout=300
             )
-            print("✅ Pillow zainstalowany pomyślnie!")
-        except subprocess.CalledProcessError:
-            print("⚠️  Nie udało się zainstalować Pillow - ikona może nie działać")
+            logger.info("✅ Pillow zainstalowany pomyślnie!")
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            logger.warning(f"⚠️  Nie udało się zainstalować Pillow: {e}")
 
     # Sprawdź/zainstaluj PyInstaller
     if not check_pyinstaller():
-        print("🔄 Próba instalacji PyInstaller...")
+        logger.info("🔄 Próba instalacji PyInstaller...")
         if not install_pyinstaller():
             return False
 
     # Sprawdź UPX dla dodatkowej kompresji
-    print("🔍 Sprawdzanie dostępności UPX...")
+    logger.info("🔍 Sprawdzanie dostępności UPX...")
     check_upx()
 
     # Pobierz wersję
     version = args.version if args.version else get_version_info()
-    print(f"📋 Wersja aplikacji: {version}")
+    logger.info(f"📋 Wersja aplikacji: {version}")
 
     # Nazwa pliku exe z wersją
     exe_name = f"CFAB_Browser_v{version}" if version != "1.0.0" else "CFAB_Browser"
@@ -659,78 +746,82 @@ def main():
         elif os.path.exists(os.path.join("_dist", exe_name, "CFAB_Browser.exe")):
             actual_exe = os.path.join("_dist", exe_name, "CFAB_Browser.exe")
         else:
-            print(
-                "\n❌ Nie znaleziono pliku wykonywalnego po kompilacji w folderze _dist"
-            )
+            logger.error("❌ Nie znaleziono pliku wykonywalnego po kompilacji w folderze _dist")
             return False
 
-        print("\n🎉 ZOPTYMALIZOWANA KOMPILACJA ZAKOŃCZONA!")
-        print("=" * 60)
-        print(f"📁 Folder aplikacji: _dist/{exe_name}/")
-        print(f"📁 Plik wykonywalny: {actual_exe}")
-        print(
-            f"📊 Rozmiar folderu: {get_folder_size('_dist/' + exe_name) / (1024*1024):.1f} MB"
-        )
-        print("⚡ ZASTOSOWANE OPTYMALIZACJE:")
-        print("   ✅ Usunięto --debug (50-70% mniejszy rozmiar)")
-        print("   ✅ Dodano --optimize=2 (szybszy kod)")
+        logger.info("\n🎉 ZOPTYMALIZOWANA KOMPILACJA ZAKOŃCZONA!")
+        logger.info("=" * 60)
+        logger.info(f"📁 Folder aplikacji: _dist/{exe_name}/")
+        logger.info(f"📁 Plik wykonywalny: {actual_exe}")
+        logger.info(f"📊 Rozmiar folderu: {get_folder_size('_dist/' + exe_name) / (1024*1024):.1f} MB")
+        logger.info("⚡ ZASTOSOWANE OPTYMALIZACJE:")
+        logger.info("   ✅ Usunięto --debug (50-70% mniejszy rozmiar)")
+        logger.info("   ✅ Dodano --optimize=2 (szybszy kod)")
         if os.name != "nt":
-            print("   ✅ Dodano --strip (mniejszy rozmiar)")
+            logger.info("   ✅ Dodano --strip (mniejszy rozmiar)")
         else:
-            print("   ✅ Strip pominięty (Windows)")
-        print("   ✅ Wykluczono niepotrzebne moduły")
-        print("   ✅ Zoptymalizowano PyQt6 imports")
+            logger.info("   ✅ Strip pominięty (Windows)")
+        logger.info("   ✅ Wykluczono niepotrzebne moduły")
+        logger.info("   ✅ Zoptymalizowano PyQt6 imports")
         if os.path.exists("core/resources/img/icon.ico"):
-            print("   ✅ Dodano ikonę aplikacji")
+            logger.info("   ✅ Dodano ikonę aplikacji")
         else:
-            print("   ⚠️  Ikona aplikacji niedostępna")
+            logger.info("   ⚠️  Ikona aplikacji niedostępna")
         if check_upx():
-            print("   ✅ UPX compression (dodatkowa kompresja)")
-        print("=" * 60)
+            logger.info("   ✅ UPX compression (dodatkowa kompresja)")
+        logger.info("=" * 60)
 
         # Automatyczne testowanie
         if args.auto_test:
-            print("\n🧪 Automatyczne testowanie aplikacji...")
+            logger.info("\n🧪 Automatyczne testowanie aplikacji...")
             if auto_test_application(actual_exe):
-                print("✅ Test zakończony pomyślnie!")
+                logger.info("✅ Test zakończony pomyślnie!")
             else:
-                print("⚠️  Test wykrył problemy - sprawdź aplikację ręcznie")
+                logger.warning("⚠️  Test wykrył problemy - sprawdź aplikację ręcznie")
 
         # Tworzenie archiwum ZIP
         if args.create_zip:
-            print("\n📦 Tworzenie archiwum ZIP...")
+            logger.info("\n📦 Tworzenie archiwum ZIP...")
             zip_file = create_zip_archive(actual_exe, version)
             if zip_file:
-                print(f"✅ Archiwum utworzone: {zip_file}")
+                logger.info(f"✅ Archiwum utworzone: {zip_file}")
 
         # Utwórz dodatkowe pliki
         create_installer_script()
         create_readme()
 
-        print("📋 Pliki pomocnicze:")
-        print("   • install_pyinstaller.bat - Instalator")
-        print("   • README_pyinstaller.txt - Dokumentacja")
-        print("   • test_exe.bat - Skrypt testowy")
+        logger.info("📋 Pliki pomocnicze:")
+        logger.info("   • install_pyinstaller.bat - Instalator")
+        logger.info("   • README_pyinstaller.txt - Dokumentacja")
+        logger.info("   • test_exe.bat - Skrypt testowy")
+        logger.info("   • build_pyinstaller.log - Logi kompilacji")
 
         # Test uruchomienia
-        print("\n🧪 Aby przetestować aplikację:")
-        print("   1. Uruchom: test_exe.bat (pokazuje błędy w konsoli)")
-        print(f"   2. Lub kliknij dwukrotnie: {actual_exe}")
-        print(f"   3. Lub przejdź do folderu: _dist/{exe_name}/")
-        print("   4. Jeśli działa - uruchom: install_pyinstaller.bat")
+        logger.info("\n🧪 Aby przetestować aplikację:")
+        logger.info("   1. Uruchom: test_exe.bat (pokazuje błędy w konsoli)")
+        logger.info(f"   2. Lub kliknij dwukrotnie: {actual_exe}")
+        logger.info(f"   3. Lub przejdź do folderu: _dist/{exe_name}/")
+        logger.info("   4. Jeśli działa - uruchom: install_pyinstaller.bat")
 
         # Kopiuj wymagane pliki
         if copy_required_files(exe_name):
-            print("\n📁 Wymagane pliki skopiowane do folderu _dist")
+            logger.info("\n📁 Wymagane pliki skopiowane do folderu _dist")
         else:
-            print("\n❌ Nie udało się skopiować wymaganych plików")
+            logger.warning("\n❌ Nie udało się skopiować wymaganych plików")
 
         return True
     else:
-        print("\n❌ Kompilacja nie powiodła się")
+        logger.error("\n❌ Kompilacja nie powiodła się")
         return False
 
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    try:
+        success = main()
+        sys.exit(0 if success else 1)
+    except KeyboardInterrupt:
+        logger.info("\n⚠️  Kompilacja przerwana przez użytkownika")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"\n❌ Nieoczekiwany błąd: {e}")
+        sys.exit(1)
