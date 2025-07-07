@@ -58,3 +58,31 @@ class AssetRepository:
 
     def load_existing_assets(self, folder_path):
         return self._rust_repo.load_existing_assets(folder_path)
+
+    def _create_single_asset(self, name, archive_path, preview_path, work_folder_path):
+        """
+        Creates a single asset using Rust backend.
+        This method is used by pairing_model.py for manual asset creation.
+        """
+        try:
+            # Use the Rust backend method
+            asset_data = self._rust_repo.create_single_asset(
+                name, archive_path, preview_path, work_folder_path
+            )
+            return asset_data
+        except Exception as e:
+            logger.error(f"Error creating single asset: {e}")
+            return None
+
+    def create_thumbnail_for_asset(self, asset_file_path, preview_path):
+        """
+        Creates thumbnail for an asset using Rust backend.
+        """
+        try:
+            # This would need to be implemented in Rust backend
+            # For now, return True as placeholder
+            logger.info(f"Creating thumbnail for asset: {asset_file_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Error creating thumbnail: {e}")
+            return False

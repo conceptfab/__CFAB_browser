@@ -267,6 +267,51 @@ impl RustAssetRepository {
 
         Ok((py_archives.into(), py_images.into()))
     }
+
+    /// Creates a single asset
+    fn create_single_asset(
+        &self,
+        py: Python,
+        name: String,
+        archive_path: String,
+        preview_path: String,
+        work_folder_path: String,
+    ) -> PyResult<PyObject> {
+        let archive_path = Path::new(&archive_path);
+        let preview_path = Path::new(&preview_path);
+        let work_folder_path = Path::new(&work_folder_path);
+
+        match self.asset_builder.create_single_asset(
+            &name,
+            archive_path,
+            preview_path,
+            work_folder_path,
+        ) {
+            Ok(asset) => {
+                // Save asset to file
+                let asset_file_path = work_folder_path.join(format!("{}.asset", name));
+                if let Err(e) = self.asset_builder.save_asset_to_file(&asset, &asset_file_path) {
+                    return Err(py_runtime_error!("Error saving asset file: {}", e));
+                }
+
+                // Convert to Python dict
+                let py_dict = PyDict::new_bound(py);
+                py_dict.set_item("type", &asset.asset_type)?;
+                py_dict.set_item("name", &asset.name)?;
+                py_dict.set_item("archive", &asset.archive)?;
+                py_dict.set_item("preview", &asset.preview)?;
+                py_dict.set_item("size_mb", asset.size_mb)?;
+                py_dict.set_item("thumbnail", &asset.thumbnail)?;
+                py_dict.set_item("stars", &asset.stars)?;
+                py_dict.set_item("color", &asset.color)?;
+                py_dict.set_item("textures_in_the_archive", asset.textures_in_archive)?;
+                py_dict.set_item("meta", asset.meta.to_string())?;
+
+                Ok(py_dict.into())
+            }
+            Err(e) => Err(py_runtime_error!("Error creating asset: {}", e)),
+        }
+    }
 }
 
 impl RustAssetRepository {
