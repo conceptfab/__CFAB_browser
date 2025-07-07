@@ -3,13 +3,18 @@ use serde::{Deserialize, Serialize};
 /// Struktura reprezentująca asset
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Asset {
+    #[serde(rename = "type")]
+    pub asset_type: String,
     pub name: String,
-    pub archive_path: String,
-    pub image_path: String,
-    pub folder_path: String,
-    pub archive_size_mb: f64,
-    pub texture_in_archive: bool,
-    pub thumbnail_path: Option<String>,
+    pub archive: String,
+    pub preview: String,
+    pub size_mb: f64,
+    pub thumbnail: String,
+    pub stars: Option<i32>,
+    pub color: Option<String>,
+    #[serde(rename = "textures_in_the_archive")]
+    pub textures_in_archive: bool,
+    pub meta: serde_json::Value,
 }
 
 /// Struktura reprezentująca folder specjalny

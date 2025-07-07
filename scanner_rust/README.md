@@ -201,3 +201,37 @@ W przypadku problemów:
 - Progress callback
 - Obsługa folderów specjalnych
 - Benchmark wydajności
+
+## Budowanie
+
+```bash
+cd scanner_rust
+maturin build --release
+```
+
+## Testy Rust
+
+```bash
+cargo test
+```
+
+## Testy Python (integracja)
+
+```bash
+cd scanner_rust
+python test_progress_callback.py
+python simple_rust_test.py
+```
+
+## Wymagania
+
+- Python 3.8+
+- Rust (zalecane: stable)
+- `maturin` (do budowania biblioteki dla Pythona)
+
+## Struktura
+
+- `src/` – kod źródłowy Rust
+- `tests/` – testy Rust
+- `test_progress_callback.py`, `simple_rust_test.py` – testy integracyjne Python
+- `Cargo.toml`, `pyproject.toml` – konfiguracja

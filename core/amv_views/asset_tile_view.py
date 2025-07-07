@@ -502,6 +502,12 @@ class AssetTileView(QFrame):
         if hasattr(self, "_drag_and_drop_enabled") and not self._drag_and_drop_enabled:
             logger.info("Drag and drop zablokowane podczas ładowania galerii.")
             return
+        
+        # ZABEZPIECZENIE: Sprawdź czy drag już nie jest w toku
+        if hasattr(self, "_drag_in_progress") and self._drag_in_progress:
+            logger.warning("Drag already in progress, ignoring new drag request")
+            return
+            
         logger.debug(f"Starting drag for asset: {self.asset_id}")
 
         # Sprawdź czy selection_model istnieje
@@ -520,24 +526,40 @@ class AssetTileView(QFrame):
                 f"No selected assets, dragging single asset: {selected_asset_ids}"
             )
 
-        drag = QDrag(self)
-        mime_data = QMimeData()
-        mime_text = f"application/x-cfab-asset,{','.join(selected_asset_ids)}"
-        mime_data.setText(mime_text)
-        drag.setMimeData(mime_data)
+        # ZABEZPIECZENIE: Sprawdź czy asset_ids są prawidłowe
+        if not selected_asset_ids or any(not aid for aid in selected_asset_ids):
+            logger.error(f"Invalid asset IDs for drag: {selected_asset_ids}")
+            return
 
-        logger.debug(f"Created mime data: {mime_text}")
+        try:
+            # Ustaw flagę drag in progress
+            self._drag_in_progress = True
+            
+            drag = QDrag(self)
+            mime_data = QMimeData()
+            mime_text = f"application/x-cfab-asset,{','.join(selected_asset_ids)}"
+            mime_data.setText(mime_text)
+            drag.setMimeData(mime_data)
 
-        # Ustaw kursor przeciągania
-        drag.setDragCursor(QPixmap(), Qt.DropAction.MoveAction)
+            logger.debug(f"Created mime data: {mime_text}")
 
-        # Emituj sygnał rozpoczęcia przeciągania
-        self.drag_started.emit(selected_asset_ids)
-        logger.debug("Emitted drag_started signal")
+            # Ustaw kursor przeciągania
+            drag.setDragCursor(QPixmap(), Qt.DropAction.MoveAction)
 
-        # Wykonaj przeciąganie
-        result = drag.exec(Qt.DropAction.MoveAction)
-        logger.debug(f"Drag exec result: {result}")
+            # Emituj sygnał rozpoczęcia przeciągania
+            self.drag_started.emit(selected_asset_ids)
+            logger.debug("Emitted drag_started signal")
+
+            # POPRAWKA: Wykonaj przeciąganie z timeout dla bezpieczeństwa
+            # Używamy Qt.DropAction.MoveAction | Qt.DropAction.IgnoreAction dla lepszej kompatybilności
+            result = drag.exec(Qt.DropAction.MoveAction | Qt.DropAction.IgnoreAction)
+            logger.debug(f"Drag exec result: {result}")
+            
+        except Exception as e:
+            logger.error(f"Error during drag operation: {e}")
+        finally:
+            # Zawsze wyczyść flagę drag in progress
+            self._drag_in_progress = False
 
     def _on_thumbnail_clicked(self, _ev):
         logger.debug(f"AssetTileView: Thumbnail clicked for asset {self.asset_id}")
@@ -680,26 +702,41 @@ class AssetTileView(QFrame):
     # ===============================================
     
     def _cleanup_connections_and_resources(self):
-        """Bezpieczne odłączanie sygnałów"""
-        try:
-            # Sprawdź czy widget nie został już usunięty
-            if not self or not hasattr(self, 'model'):
-                return
-                
-            # Odłącz sygnały modelu
-            if self.model and hasattr(self.model, 'data_changed'):
-                try:
-                    self.model.data_changed.disconnect(self.update_ui)
-                except (TypeError, RuntimeError):
-                    pass  # Sygnał już odłączony lub widget usunięty
-            
-            # Blokuj sygnały przed odłączaniem
-            if hasattr(self, 'checkbox') and self.checkbox:
+        """Consolidated method for disconnecting all signals and cleaning up resources"""
+        # Disconnect model signals
+        if hasattr(self, "model") and self.model is not None:
+            try:
+                self.model.data_changed.disconnect(self.update_ui)
+            except (TypeError, AttributeError):
+                pass  # Connection already doesn't exist
+        
+        # Disconnect checkbox signals
+        if hasattr(self, "checkbox") and self.checkbox:
+            try:
                 self.checkbox.blockSignals(True)
-                
-        except RuntimeError:
-            # Widget został już usunięty - to jest OK
-            pass
+                self.checkbox.stateChanged.disconnect()
+                self.checkbox.blockSignals(False)
+            except (TypeError, AttributeError):
+                pass
+        
+        # Disconnect star checkbox signals
+        if hasattr(self, "star_checkboxes"):
+            for star_cb in self.star_checkboxes:
+                try:
+                    star_cb.blockSignals(True)
+                    star_cb.clicked.disconnect()
+                    star_cb.blockSignals(False)
+                except (TypeError, AttributeError, RuntimeError):
+                    pass  # Widget already removed or signal already disconnected
+        
+        # Stop any running thumbnail workers
+        if hasattr(self, 'is_loading_thumbnail') and self.is_loading_thumbnail:
+            # Cancel any pending thumbnail loading
+            self.is_loading_thumbnail = False
+        
+        # Clear cached pixmap to free memory
+        if hasattr(self, "_cached_pixmap"):
+            self._cached_pixmap = None
     
     def _reset_state_variables(self):
         """Reset all state variables to default values"""

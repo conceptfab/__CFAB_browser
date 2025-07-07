@@ -1,0 +1,18 @@
+# Ignoruj katalog buildów Rust
+/target/
+
+# Ignoruj pliki binarne
+*.dll
+*.so
+*.pyd
+*.exe
+
+# Ignoruj pliki tymczasowe
+*.tmp
+*.log
+*.cache
+
+# Ignoruj wheel i buildy Pythona
+*.whl
+/build/
+/dist/ 

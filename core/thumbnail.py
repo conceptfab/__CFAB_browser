@@ -103,7 +103,7 @@ class ThumbnailGenerator:
             image_path (str): Path to the image file
 
         Returns:
-            Tuple[str, int]: (path to file, thumbnail size)
+            Tuple[str, int]: (thumbnail filename, thumbnail size)
 
         Raises:
             FileNotFoundError: If the file does not exist
@@ -131,7 +131,7 @@ class ThumbnailGenerator:
         if thumbnail_path.exists() and self._is_thumbnail_current(path, thumbnail_path):
             msg = f"Używam istniejącej miniaturki: {thumbnail_path}"
             logger.debug(msg)
-            return str(thumbnail_path), self.thumbnail_size
+            return thumbnail_path.name, self.thumbnail_size
 
         # Generuj miniaturkę
         try:
@@ -168,7 +168,7 @@ class ThumbnailGenerator:
                 thumbnail.save(final_thumbnail_path, format_name, **save_kwargs)
 
             logger.debug(f"Wygenerowano miniaturkę ({format_name}): {final_thumbnail_path}")
-            return str(final_thumbnail_path), self.thumbnail_size
+            return final_thumbnail_path.name, self.thumbnail_size
 
         except Exception as e:
             msg = f"Błąd generowania miniaturki dla {image_path}: {e}"
@@ -268,7 +268,7 @@ def generate_thumbnail(image_path: str) -> Tuple[str, int]:
         image_path (str): Path to the image file
 
     Returns:
-        Tuple[str, int]: (path to file, thumbnail size)
+        Tuple[str, int]: (thumbnail filename, thumbnail size)
     """
     generator = get_generator()
     return generator.generate_thumbnail(image_path)
