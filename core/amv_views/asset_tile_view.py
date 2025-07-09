@@ -58,6 +58,7 @@ class AssetTileView(QFrame):
         self.selection_model = selection_model  # Assign selection_model
         self.asset_id = self.model.get_name()  # Use asset name as ID
         self.is_loading_thumbnail = False
+        self._drag_in_progress = False  # Initialize drag state
         self.setObjectName("AssetTileViewFrame")  # Added object name
         self._setup_ui()
         self.model.data_changed.connect(self.update_ui)
@@ -104,10 +105,43 @@ class AssetTileView(QFrame):
 
     def reset_for_pool(self):
         """Resets the tile to a state ready for reuse in the pool."""
-        self._cleanup_connections_and_resources()
-        self._reset_state_variables()
-        self._clear_ui_elements()
-        self._remove_from_parent()
+        # Disconnect all signals
+        if hasattr(self, "model") and self.model:
+            try:
+                self.model.data_changed.disconnect(self.update_ui)
+            except (TypeError, AttributeError):
+                pass
+        
+        # Reset state variables
+        self.model = None
+        self.selection_model = None
+        self.asset_id = ""
+        self.tile_number = 0
+        self.total_tiles = 0
+        self.is_loading_thumbnail = False
+        self._drag_in_progress = False
+        
+        # Clear UI elements
+        if hasattr(self, "thumbnail_container"):
+            self.thumbnail_container.clear()
+        if hasattr(self, "name_label"):
+            self.name_label.clear()
+        if hasattr(self, "tile_number_label"):
+            self.tile_number_label.clear()
+        if hasattr(self, "checkbox"):
+            self.checkbox.setChecked(False)
+        
+        # Clear star checkboxes
+        if hasattr(self, "star_checkboxes"):
+            for star_cb in self.star_checkboxes:
+                try:
+                    star_cb.setChecked(False)
+                except RuntimeError:
+                    pass
+        
+        # Remove from parent
+        if self.parent():
+            self.setParent(None)
         
         logger.debug("AssetTileView reset for pool reuse with proper signal cleanup")
 
@@ -515,7 +549,7 @@ class AssetTileView(QFrame):
             return
         
         # SECURITY: Check if drag is already in progress
-        if hasattr(self, "_drag_in_progress") and self._drag_in_progress:
+        if self._drag_in_progress:
             logger.warning("Drag already in progress, ignoring new drag request")
             return
             
@@ -609,8 +643,18 @@ class AssetTileView(QFrame):
                 star_cb.setVisible(stars_visible)
 
     def release_resources(self):
-        """Releases resources associated with the tile, including cached_pixmap."""
-        self._cleanup_connections_and_resources()
+        """Releases resources associated with the tile."""
+        # Disconnect model signals
+        if hasattr(self, "model") and self.model:
+            try:
+                self.model.data_changed.disconnect(self.update_ui)
+            except (TypeError, AttributeError):
+                pass
+        
+        # Stop any running thumbnail workers
+        if hasattr(self, 'is_loading_thumbnail') and self.is_loading_thumbnail:
+            self.is_loading_thumbnail = False
+        
         logger.debug("Resources released for tile: %s with complete cleanup", self.asset_id)
 
     def is_checked(self) -> bool:
@@ -708,80 +752,7 @@ class AssetTileView(QFrame):
         # Update thumbnail size to fill available space
         self._update_thumbnail_size()
 
-    # ===============================================
-    # CONSOLIDATED CLEANUP METHODS
-    # ===============================================
-    
-    def _cleanup_connections_and_resources(self):
-        """Consolidated method for disconnecting all signals and cleaning up resources"""
-        # Disconnect model signals
-        if hasattr(self, "model") and self.model is not None:
-            try:
-                self.model.data_changed.disconnect(self.update_ui)
-            except (TypeError, AttributeError):
-                pass  # Connection already doesn't exist
-        
-        # Disconnect checkbox signals
-        if hasattr(self, "checkbox") and self.checkbox:
-            try:
-                self.checkbox.blockSignals(True)
-                self.checkbox.stateChanged.disconnect()
-                self.checkbox.blockSignals(False)
-            except (TypeError, AttributeError):
-                pass
-        
-        # Disconnect star checkbox signals
-        if hasattr(self, "star_checkboxes"):
-            for star_cb in self.star_checkboxes:
-                try:
-                    star_cb.blockSignals(True)
-                    star_cb.clicked.disconnect()
-                    star_cb.blockSignals(False)
-                except (TypeError, AttributeError, RuntimeError):
-                    pass  # Widget already removed or signal already disconnected
-        
-        # Stop any running thumbnail workers
-        if hasattr(self, 'is_loading_thumbnail') and self.is_loading_thumbnail:
-            # Cancel any pending thumbnail loading
-            self.is_loading_thumbnail = False
-        
-        # Clear cached pixmap to free memory
-        if hasattr(self, "_cached_pixmap"):
-            self._cached_pixmap = None
-    
-    def _reset_state_variables(self):
-        """Reset all state variables to default values"""
-        self.model = None
-        self.selection_model = None
-        self.asset_id = ""
-        self.tile_number = 0
-        self.total_tiles = 0
-        self.is_loading_thumbnail = False
-    
-    def _clear_ui_elements(self):
-        """Clear all UI elements safely"""
-        # Clear containers and labels
-        if hasattr(self, "thumbnail_container"):
-            self.thumbnail_container.clear()
-        if hasattr(self, "name_label"):
-            self.name_label.clear()
-        if hasattr(self, "tile_number_label"):
-            self.tile_number_label.clear()
-        if hasattr(self, "checkbox"):
-            self.checkbox.setChecked(False)
-        
-        # Clear star checkboxes
-        if hasattr(self, "star_checkboxes"):
-            for star_cb in self.star_checkboxes:
-                try:
-                    star_cb.setChecked(False)
-                except RuntimeError:
-                    pass  # Widget already removed
-    
-    def _remove_from_parent(self):
-        """Remove tile from parent layout if present"""
-        if self.parent():
-            self.setParent(None)
+
 
 
 
