@@ -1,174 +1,118 @@
-1. Problem z kolejnością operacji
-W amv_controller.py w metodzie _on_scan_completed:
-pythondef _on_scan_completed(self, assets: list, duration: float, operation_type: str):
-    # Clear placeholder and ensure gallery is shown
-    self.view.update_gallery_placeholder("")
-    self.view.stacked_layout.setCurrentIndex(0)  # ❌ PROBLEM: Za wcześnie!
-    
-    # Instead of resetting filters, apply the current filter to the new data
-    self.model.asset_grid_model.set_assets(assets)
-Problem: Galeria jest pokazywana zanim kafelki są rzeczywiście utworzone.
-2. Problem z throttling
-W asset_grid_controller.py:
-pythondef rebuild_asset_grid(self, assets: list):
-    # OPTIMIZATION: Throttling - delay rebuild by 50ms
-    self._pending_assets = assets
-    self._rebuild_timer.start(50)  # ❌ PROBLEM: Może być nadpisane
-Problem: Kolejne wywołania mogą nadpisywać _pending_assets.
-3. Problem z filtrowaniem
-Po odświeżeniu mogą być aktywne filtry, które ukrywają wszystkie assety.
-📝 Rozwiązanie
-Oto zmiany do wprowadzenia:
-Zmiana 1: Poprawka w amv_controller.py
-pythondef _on_scan_completed(self, assets: list, duration: float, operation_type: str):
-    with measure_operation(
-        "amv_controller.scan_completed",
-        {
-            "assets_count": len(assets),
-            "duration": duration,
-            "operation_type": operation_type,
-        },
-    ):
-        logger.info(
-            "Controller: Scan completed - %d assets in %.2fs (%s)",
-            len(assets),
-            duration,
-            operation_type,
-        )
-        self.model.control_panel_model.set_progress(100)
-        
-        # ❌ USUŃ TE LINIE - pozwól _finalize_grid_update to obsłużyć
-        # self.view.update_gallery_placeholder("")
-        # self.view.stacked_layout.setCurrentIndex(0)  # Show gallery
+Raport Analizy Kodu - Problemy do Naprawienia
+📁 Pliki wymagające poprawek
+1. core/amv_views/asset_tile_view.py
+Problemy:
 
-        # Instead of resetting filters, apply the current filter to the new data
-        self.model.asset_grid_model.set_assets(assets)
-Zmiana 2: Ulepszenie throttling w asset_grid_controller.py
-pythondef rebuild_asset_grid(self, assets: list):
-    """
-    Throttled version of asset grid rebuild to prevent excessive calls.
-    """
-    # OPTIMIZATION: Improved throttling - stop previous timer
-    if self._rebuild_timer.isActive():
-        self._rebuild_timer.stop()
-        logger.debug("Stopped previous rebuild timer")
-    
-    # Set new pending assets
-    self._pending_assets = assets
-    self._rebuild_timer.start(50)  # 50ms delay
-    logger.debug(f"Started rebuild timer for {len(assets)} assets")
-Zmiana 3: Dodanie debugowania w asset_grid_controller.py
-pythondef _rebuild_asset_grid_immediate(self, assets: list):
-    """
-    Intelligently synchronizes the grid with the new asset list, minimizing
-    UI operations to eliminate flickering and loading errors.
-    """
-    logger.debug(f"_rebuild_asset_grid_immediate called with {len(assets)} assets")
-    
-    # Check if assets list is empty
-    if not assets:
-        logger.debug("No assets provided - showing empty state")
-        self._finalize_grid_update(empty=True)
-        return
-        
-    # First, extract the folder tile (is_special_folder), sort the rest alphabetically
-    folder_tile = [a for a in assets if a.get("type") == "special_folder"]
-    other_tiles = [a for a in assets if a.get("type") != "special_folder"]
-    other_tiles.sort(key=lambda x: x.get("name", "").lower())
-    assets = folder_tile + other_tiles
-    
-    logger.debug(f"Processing {len(folder_tile)} special folders and {len(other_tiles)} regular assets")
-    
-    with measure_operation(
-        "asset_grid_controller.rebuild_asset_grid", {"assets_count": len(assets)}
-    ):
-        (
-            new_asset_map,
-            current_tile_map,
-            new_ids,
-            current_ids,
-            ids_to_remove,
-            ids_to_add,
-            ids_to_update,
-        ) = self._prepare_asset_maps(assets)
-        
-        logger.debug(f"Asset mapping: new_ids={len(new_ids)}, current_ids={len(current_ids)}, "
-                    f"to_remove={len(ids_to_remove)}, to_add={len(ids_to_add)}, to_update={len(ids_to_update)}")
-        
-        self._remove_unnecessary_tiles(ids_to_remove, current_tile_map)
-        self._update_existing_tiles(assets, ids_to_update, current_tile_map)
-        self._add_new_tiles(assets, ids_to_add, current_tile_map)
-        
-        if not new_ids and not current_ids:
-            # No assets at all - show empty state
-            logger.debug("No assets after processing - showing empty state")
-            self._finalize_grid_update(empty=True)
-            return
-            
-        logger.debug(f"Final tile count: {len(self.asset_tiles)}")
-        self._reorganize_layout(assets, current_tile_map)
-        self._finalize_grid_update()
-Zmiana 4: Poprawa _reorganize_layout w asset_grid_controller.py
-pythondef _reorganize_layout(self, assets, current_tile_map):
-    logger.debug(f"_reorganize_layout called with {len(assets)} assets")
-    
-    if not assets:
-        logger.debug("No assets for layout - showing placeholder")
-        self.view.update_gallery_placeholder("No assets in this folder.")
-        self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
-        return
-        
-    cols = self.model.asset_grid_model.get_columns()
-    sorted_tiles = [
-        current_tile_map[asset["name"]]
-        for asset in assets
-        if asset["name"] in current_tile_map
-    ]
-    
-    logger.debug(f"Created sorted_tiles list with {len(sorted_tiles)} tiles from {len(current_tile_map)} available")
-    
-    # Check if we have any tiles to display
-    if not sorted_tiles:
-        logger.warning("No sorted tiles available - showing placeholder")
-        self.view.update_gallery_placeholder("No assets in this folder.")
-        self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
-        return
-    
-    # OPTIMIZATION: Check if layout actually needs rebuilding using hash
-    new_layout_hash = hash(tuple(asset["name"] for asset in assets))
-    
-    if hasattr(self, '_last_layout_hash') and self._last_layout_hash == new_layout_hash:
-        logger.debug("Layout unchanged - skipping full rebuild")
-        # ✅ DODAJ: Upewnij się, że galeria jest pokazana
-        self.view.update_gallery_placeholder("")
-        self.view.stacked_layout.setCurrentIndex(0)
-        return
-    
-    self._last_layout_hash = new_layout_hash
-    
-    # Clear placeholder and show gallery
-    self.view.update_gallery_placeholder("")
-    
-    # Full rebuild only when necessary
-    logger.debug("Layout changed - performing full rebuild")
-    while self.view.gallery_layout.count():
-        item = self.view.gallery_layout.takeAt(0)
-        if item.widget():
-            item.widget().hide()
-    
-    for i, tile in enumerate(sorted_tiles):
-        row, col = divmod(i, cols)
-        self.view.gallery_layout.addWidget(tile, row, col)
-        tile.show()
-    
-    logger.debug(f"Layout rebuilt with {len(sorted_tiles)} tiles in {cols} columns")
-    
-    # Ensure gallery is shown after rebuild
-    self.view.stacked_layout.setCurrentIndex(0)
-Zmiana 5: Resetowanie filtrów przy odświeżeniu
-W folder_tree_controller.py w metodzie _scan_folder_safely:
-pythondef _scan_folder_safely(self, folder_path: str, force_rescan: bool = False):
-    # ... existing code ...
-    
-    try:
-        # FIX: Reset gallery before scanning a new folder
+Duplikowane metody cleanup w sekcji końcowej (_cleanup_connections_and_resources, _reset_state_variables, _clear_ui_elements, _remove_from_parent)
+Nieużywana zmienna _cached_pixmap wspomniana w komentarzach
+Potencjalny problem z _drag_in_progress - może powodować deadlock
+
+Akcje:
+
+Usunąć duplikowane metody cleanup i pozostawić tylko release_resources()
+Usunąć nieużywane zmienne i komentarze o nich
+Dodać timeout do _drag_in_progress lub użyć context managera
+
+2. core/tools/ (wszystkie pliki worker)
+Problemy:
+
+Duplikowane wzorce obsługi sygnałów w każdym workerze
+Redundantne importy z komentarzami # pyright: ignore
+Podobne metody walidacji ścieżek
+
+Akcje:
+4. Wydzielić wspólny BaseToolWorker z obsługą sygnałów
+5. Usunąć duplikaty walidacji ścieżek - użyć metod z base_worker.py
+6. Naprawić importy Rust bez używania # pyright: ignore
+3. core/main_window.py
+Problemy:
+
+Zbyt duża klasa z wieloma odpowiedzialnościami
+Duplikowane metody helper dla zliczania zasobów
+Nieużywane pola w default_config
+
+Akcje:
+7. Wydzielić StatusBarManager jako osobną klasę
+8. Usunąć duplikaty w metodach _calculate_asset_counts i podobnych
+9. Oczyścić default_config z nieużywanych kluczy
+4. core/amv_controllers/handlers/file_operation_controller.py
+Problemy:
+
+Duplikowane metody optymalizacji (_remove_moved_assets_optimized i pomocnicze)
+Zbyt skomplikowana logika usuwania kafelków
+Nieużywane _tiles_mutex w niektórych miejscach
+
+Akcje:
+10. Uprościć optymalizację usuwania kafelków do 2-3 metod
+11. Usunąć nieużywane referencje do _tiles_mutex
+12. Wydzielić AssetRemovalOptimizer jako osobną klasę
+5. core/thumbnail_cache.py
+Problemy:
+
+Potencjalne problemy z thread safety w singleton pattern
+Duplikowane sprawdzania rozmiaru cache
+
+Akcje:
+13. Przepisać singleton na thread-safe implementację
+14. Usunąć duplikaty w _evict_oldest() i podobnych metodach
+6. core/tools_tab.py
+Problemy:
+
+Duplikowane metody obsługi workerów (_handle_worker_*)
+Redundantne połączenia sygnałów
+Nieużywane importy
+
+Akcje:
+15. Użyć WorkerManager konsekwentnie dla wszystkich workerów
+16. Usunąć nieużywane importy (QThread, pyqtSignal w niektórych miejscach)
+17. Uprościć _start_operation_with_confirmation() - zbyt skomplikowana
+7. core/amv_models/file_operations_model.py
+Problemy:
+
+Błędne przypisanie w linii 245: asset_file_path = new_asset_path
+Duplikowane sprawdzania ścieżek plików
+Nieużywana metoda _mark_asset_as_duplicate()
+
+Akcje:
+18. Naprawić błędne przypisanie w _update_asset_file_after_rename()
+19. Usunąć nieużywaną metodę _mark_asset_as_duplicate()
+20. Wydzielić wspólne sprawdzenia ścieżek do metody pomocniczej
+8. core/amv_controllers/handlers/asset_grid_controller.py
+Problemy:
+
+Nieużywany _last_layout_hash w niektórych scenariuszach
+Duplikowane logiki w _rebuild_asset_grid_immediate()
+Zbyt skomplikowana metoda on_assets_changed()
+
+Akcje:
+21. Uprościć on_assets_changed() - wydzielić części do metod pomocniczych
+22. Usunąć nieużywane optymalizacje layoutu jeśli nie są potrzebne
+23. Wydzielić logikę sortowania do osobnej metody
+9. core/workers/worker_manager.py
+Problemy:
+
+Nieużywane parametry w niektórych metodach
+Duplikowana logika resetowania stanu przycisków
+
+Akcje:
+24. Usunąć nieużywane parametry z metod statycznych
+25. Dodać abstrakcyjną klasę ManagedWorker dla lepszej integracji
+10. Pliki init.py
+Problemy:
+
+Niektóre pliki __init__.py są puste gdy powinny eksportować klasy
+Brak konsystentnych eksportów
+
+Akcje:
+26. Dodać eksporty w pustych plikach __init__.py gdzie potrzebne
+27. Ujednolicić style eksportów (__all__)
+📊 Podsumowanie
+Znalezione problemy:
+
+❌ 15+ duplikowanych funkcji/metod
+❌ 8 nieużywanych zmiennych/metod
+❌ 3 potencjalne błędy logiczne
+❌ 5 problemów z architekturą kodu
+
+Szacowany czas naprawy: 4-6 godzin
+Priorytet: Średni (kod działa, ale wymaga refaktoryzacji)
