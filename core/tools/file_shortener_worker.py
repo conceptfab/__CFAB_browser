@@ -8,16 +8,14 @@ import os
 from typing import Dict, List
 from PyQt6.QtCore import pyqtSignal
 
-from .base_worker import BaseWorker
+from .base_worker import BaseToolWorker
 
 logger = logging.getLogger(__name__)
 
 
-class FileShortenerWorker(BaseWorker):
+class FileShortenerWorker(BaseToolWorker):
     """Worker for shortening file names with duplicate handling"""
 
-    # Changed signal name to 'finished' according to BaseWorker
-    finished = pyqtSignal(str)  # message
     pairs_found = pyqtSignal(list)  # list of pairs to display
     user_confirmation_needed = pyqtSignal(list)  # waits for user confirmation
 
@@ -34,13 +32,13 @@ class FileShortenerWorker(BaseWorker):
     def _run_operation(self):
         """Main method for shortening file names"""
         try:
-            logger.info(f"Starting name shortening in folder: {self.folder_path}")
+            self._log_operation_start()
 
             # Find pairs and files to shorten
             self.files_info = self._analyze_files()
 
             if not self.files_info["all_files"]:
-                self.finished.emit("No files to process")
+                self._log_operation_end("No files to process")
                 return
 
             # Send list of pairs for display and wait for confirmation
@@ -56,9 +54,7 @@ class FileShortenerWorker(BaseWorker):
             self._perform_shortening()
 
         except Exception as e:
-            error_msg = f"Error during name shortening: {e}"
-            logger.error(error_msg)
-            self.error_occurred.emit(error_msg)
+            self._log_error(f"Error during name shortening: {e}")
 
     def _perform_shortening(self):
         """Performs the actual name shortening"""
@@ -68,12 +64,8 @@ class FileShortenerWorker(BaseWorker):
 
             # First, pairs
             if self.files_info and self.files_info["pairs"]:
-                self.progress_updated.emit(
-                    0, len(self.files_info["pairs"]), "Skracanie nazw par..."
-                )
-                for i, (archive_file, preview_file) in enumerate(
-                    self.files_info["pairs"]
-                ):
+                self._log_progress(0, len(self.files_info["pairs"]), "Skracanie nazw par...")
+                for i, (archive_file, preview_file) in enumerate(self.files_info["pairs"]):
                     try:
                         # Check if name needs shortening
                         archive_name = os.path.splitext(os.path.basename(archive_file))[0]
@@ -95,11 +87,7 @@ class FileShortenerWorker(BaseWorker):
                         else:
                             logger.debug(f"Skipped pair (name within limits): {archive_name}")
 
-                        self.progress_updated.emit(
-                            i + 1,
-                            len(self.files_info["pairs"]),
-                            f"Shortened pair: {archive_name[:20]}...",
-                        )
+                        self._log_progress(i + 1, len(self.files_info["pairs"]), f"Shortened pair: {archive_name[:20]}...")
 
                     except Exception as e:
                         error_count += 1
@@ -107,11 +95,7 @@ class FileShortenerWorker(BaseWorker):
 
             # Then unpaired files
             if self.files_info and self.files_info["unpaired"]:
-                self.progress_updated.emit(
-                    0,
-                    len(self.files_info["unpaired"]),
-                    "Shortening names of unpaired files...",
-                )
+                self._log_progress(0, len(self.files_info["unpaired"]), "Shortening names of unpaired files...")
                 for i, file_path in enumerate(self.files_info["unpaired"]):
                     try:
                         filename = os.path.basename(file_path)
@@ -129,11 +113,7 @@ class FileShortenerWorker(BaseWorker):
                         else:
                             logger.debug(f"Skipped (name within limits): {filename}")
 
-                        self.progress_updated.emit(
-                            i + 1,
-                            len(self.files_info["unpaired"]),
-                            f"Przetwarzanie: {filename[:20]}...",
-                        )
+                        self._log_progress(i + 1, len(self.files_info["unpaired"]), f"Przetwarzanie: {filename[:20]}...")
 
                     except Exception as e:
                         error_count += 1
@@ -144,12 +124,10 @@ class FileShortenerWorker(BaseWorker):
             if error_count > 0:
                 message += f", {error_count} errors"
 
-            self.finished.emit(message)
+            self._log_operation_end(message)
 
         except Exception as e:
-            error_msg = f"Error during name shortening: {e}"
-            logger.error(error_msg)
-            self.error_occurred.emit(error_msg)
+            self._log_error(f"Error during name shortening: {e}")
 
     def _generate_unique_name(self, base_name: str) -> str:
         """Generates a unique name by adding suffix _D_01, _D_02 if needed"""
@@ -183,24 +161,8 @@ class FileShortenerWorker(BaseWorker):
 
         try:
             # File extensions
-            archive_extensions = {
-                ".zip",
-                ".rar",
-                ".7z",
-                ".tar",
-                ".gz",
-                ".bz2",
-                ".sbsar",
-            }
-            preview_extensions = {
-                ".jpg",
-                ".jpeg",
-                ".png",
-                ".gif",
-                ".bmp",
-                ".tiff",
-                ".webp",
-            }
+            archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar"}
+            preview_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
 
             # Collect all files
             archive_files = []
@@ -223,52 +185,45 @@ class FileShortenerWorker(BaseWorker):
 
             # Find common names (pairs)
             common_names = set(archive_names.keys()) & set(preview_names.keys())
-
             for name in common_names:
                 files_info["pairs"].append((archive_names[name], preview_names[name]))
 
             # Find unpaired files
-            all_archive_paths = set(archive_names.values())
-            all_preview_paths = set(preview_names.values())
-            paired_archive_paths = {archive_names[name] for name in common_names}
-            paired_preview_paths = {preview_names[name] for name in common_names}
+            unpaired_archive = set(archive_names.keys()) - common_names
+            unpaired_preview = set(preview_names.keys()) - common_names
 
-            unpaired_archives = all_archive_paths - paired_archive_paths
-            unpaired_images = all_preview_paths - paired_preview_paths
+            for name in unpaired_archive:
+                files_info["unpaired"].append(archive_names[name])
+            for name in unpaired_preview:
+                files_info["unpaired"].append(preview_names[name])
 
-            files_info["unpaired"] = list(unpaired_archives | unpaired_images)
-            files_info["all_files"] = list(all_archive_paths | all_preview_paths)
+            # All files
+            files_info["all_files"] = files_info["pairs"] + files_info["unpaired"]
 
-            logger.info(
-                f"Found {len(files_info['pairs'])} pairs and {len(files_info['unpaired'])} unpaired files"
-            )
+            logger.info(f"Found {len(files_info['pairs'])} pairs and {len(files_info['unpaired'])} unpaired files")
             return files_info
 
         except Exception as e:
-            logger.error(f"Error during file analysis: {e}")
+            logger.error(f"Error analyzing files: {e}")
             return files_info
 
     def _rename_file(self, file_path: str, new_name: str) -> bool:
-        """Zmienia nazwę pliku zachowując rozszerzenie"""
+        """Renames a file with error handling"""
         try:
-            # Pobierz rozszerzenie
-            file_dir = os.path.dirname(file_path)
-            file_ext = os.path.splitext(file_path)[1]
-
-            # Utwórz nową nazwę z rozszerzeniem
-            new_file_path = os.path.join(file_dir, new_name + file_ext)
-
-            # Use consolidated validation from base_worker
-            if not self._validate_file_paths(file_path, new_file_path):
+            if not self._validate_single_file_path(file_path):
                 return False
 
-            # Zmień nazwę
-            os.rename(file_path, new_file_path)
-            logger.debug(
-                f"Zmieniono nazwę: {os.path.basename(file_path)} -> {new_name + file_ext}"
-            )
-            return True
+            directory = os.path.dirname(file_path)
+            file_ext = os.path.splitext(os.path.basename(file_path))[1]
+            new_path = os.path.join(directory, new_name + file_ext)
+
+            # Check if target file already exists
+            if os.path.exists(new_path):
+                logger.error(f"Target file already exists: {new_path}")
+                return False
+
+            return self._safe_file_operation(os.rename, file_path, new_path)
 
         except Exception as e:
-            logger.error(f"Błąd podczas zmiany nazwy {file_path}: {e}")
+            logger.error(f"Error renaming file {file_path}: {e}")
             return False 

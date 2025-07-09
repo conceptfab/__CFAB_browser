@@ -6,29 +6,7 @@
 2. [Podsumowanie statystyk](#-podsumowanie-statystyk)
 3. [Priorytet i czas naprawy](#-priorytet-i-czas-naprawy)
 
----
 
-## 📁 Pliki wymagające poprawek
-
-### 1. **core/amv_views/asset_tile_view.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Duplikowane metody cleanup** w sekcji końcowej
-  - `_cleanup_connections_and_resources()`
-  - `_reset_state_variables()`
-  - `_clear_ui_elements()`
-  - `_remove_from_parent()`
-- **Nieużywana zmienna** `_cached_pixmap` wspomniana w komentarzach
-- **Potencjalny problem** z `_drag_in_progress` - może powodować deadlock
-
-#### ✅ **Planowane akcje:**
-
-1. Usunąć duplikowane metody cleanup i pozostawić tylko `release_resources()`
-2. Usunąć nieużywane zmienne i komentarze o nich
-3. Dodać timeout do `_drag_in_progress` lub użyć context managera
-
----
 
 ### 2. **core/tools/** (wszystkie pliki worker)
 

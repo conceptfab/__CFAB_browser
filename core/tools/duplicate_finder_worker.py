@@ -9,29 +9,32 @@ import shutil
 from typing import Dict, List
 from PyQt6.QtCore import pyqtSignal
 
-from .base_worker import BaseWorker
-from core.__rust import hash_utils  # pyright: ignore
+from .base_worker import BaseToolWorker
 
-# Informational log about loading Rust module
+# Import Rust module without pyright ignore
 try:
-    hash_utils_location = hash_utils.__file__
+    from core.__rust import hash_utils
     
-    # Pobierz informacje o kompilacji
-    build_info = hash_utils.get_build_info()
-    build_timestamp = build_info.get('build_timestamp', 'unknown')
-    module_number = build_info.get('module_number', '2')
-    
-    print(f"🦀 RUST HASH_UTILS: Using LOCAL version from: {hash_utils_location} [build: {build_timestamp}, module: {module_number}]")
-except AttributeError:
-    print(f"🦀 RUST HASH_UTILS: Module loaded (no location information)")
+    # Informational log about loading Rust module
+    try:
+        hash_utils_location = hash_utils.__file__
+        build_info = hash_utils.get_build_info()
+        build_timestamp = build_info.get('build_timestamp', 'unknown')
+        module_number = build_info.get('module_number', '2')
+        
+        print(f"🦀 RUST HASH_UTILS: Using LOCAL version from: {hash_utils_location} [build: {build_timestamp}, module: {module_number}]")
+    except AttributeError:
+        print(f"🦀 RUST HASH_UTILS: Module loaded (no location information)")
+except ImportError as e:
+    print(f"⚠️ Warning: Could not import hash_utils module: {e}")
+    hash_utils = None
 
 logger = logging.getLogger(__name__)
 
 
-class DuplicateFinderWorker(BaseWorker):
+class DuplicateFinderWorker(BaseToolWorker):
     """Worker for finding duplicate files based on SHA-256"""
 
-    finished = pyqtSignal(str)  # message
     duplicates_found = pyqtSignal(list)  # list of duplicates to display
 
     def __init__(self, folder_path: str):
@@ -41,12 +44,12 @@ class DuplicateFinderWorker(BaseWorker):
     def _run_operation(self):
         """Main method for finding duplicates"""
         try:
-            logger.info(f"Starting duplicate search in folder: {self.folder_path}")
+            self._log_operation_start()
 
             # Find archive files
             archive_files = self._find_archive_files()
             if not archive_files:
-                self.finished.emit("No archive files to check")
+                self._log_operation_end("No archive files to check")
                 return
 
             # Calculate SHA-256 for each file
@@ -56,7 +59,7 @@ class DuplicateFinderWorker(BaseWorker):
             duplicates = self._find_duplicates(file_hashes)
             
             if not duplicates:
-                self.finished.emit("No duplicates found")
+                self._log_operation_end("No duplicates found")
                 return
 
             # Prepare list for moving (newer files)
@@ -66,26 +69,15 @@ class DuplicateFinderWorker(BaseWorker):
             moved_count = self._move_duplicates_to_folder()
             
             message = f"Found {len(duplicates)} duplicate groups. Moved {moved_count} files to __duplicates__ folder"
-            self.finished.emit(message)
+            self._log_operation_end(message)
 
         except Exception as e:
-            error_msg = f"Error while finding duplicates: {e}"
-            logger.error(error_msg)
-            self.error_occurred.emit(error_msg)
+            self._log_error(f"Error while finding duplicates: {e}")
 
     def _find_archive_files(self) -> List[str]:
         """Finds archive files in the folder"""
         archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar"}
-        archive_files = []
-        
-        for item in os.listdir(self.folder_path):
-            item_path = os.path.join(self.folder_path, item)
-            if os.path.isfile(item_path):
-                file_ext = os.path.splitext(item)[1].lower()
-                if file_ext in archive_extensions:
-                    archive_files.append(item_path)
-        
-        return archive_files
+        return self._find_files_by_extensions(archive_extensions)
 
     def _calculate_file_hashes(self, files: List[str]) -> Dict[str, str]:
         """Calculates SHA-256 for each file"""
@@ -97,7 +89,7 @@ class DuplicateFinderWorker(BaseWorker):
                 if self._should_stop:
                     break
                     
-                self.progress_updated.emit(
+                self._log_progress(
                     i, total_files, f"Calculating SHA-256: {os.path.basename(file_path)}"
                 )
                 
@@ -112,7 +104,10 @@ class DuplicateFinderWorker(BaseWorker):
 
     def _calculate_sha256(self, file_path: str) -> str:
         """Calculates SHA-256 for a single file using Rust module"""
-        return hash_utils.calculate_sha256(file_path)  # type: ignore
+        if hash_utils is None:
+            logger.error("Rust hash_utils module not available")
+            return ""
+        return hash_utils.calculate_sha256(file_path)
 
     def _find_duplicates(self, file_hashes: Dict[str, str]) -> Dict[str, List[str]]:
         """Finds duplicates based on SHA-256"""
@@ -166,11 +161,11 @@ class DuplicateFinderWorker(BaseWorker):
                 destination = os.path.join(duplicates_folder, filename)
                 
                 # Move archive file
-                shutil.move(file_path, destination)
-                moved_count += 1
-                
-                # Find and move related files (asset and cache)
-                self._move_related_files(file_path, duplicates_folder)
+                if self._safe_file_operation(shutil.move, file_path, destination):
+                    moved_count += 1
+                    
+                    # Find and move related files (asset and cache)
+                    self._move_related_files(file_path, duplicates_folder)
                 
             except Exception as e:
                 logger.error(f"Error moving {file_path}: {e}")
@@ -194,28 +189,9 @@ class DuplicateFinderWorker(BaseWorker):
                     if item_base_name == base_name and item_path != original_file_path:
                         try:
                             destination = os.path.join(duplicates_folder, item)
-                            shutil.move(item_path, destination)
-                            logger.info(f"Moved related file: {item}")
+                            if self._safe_file_operation(shutil.move, item_path, destination):
+                                logger.info(f"Moved related file: {item}")
                         except Exception as e:
                             logger.error(f"Error moving related file {item}: {e}")
-            
-            # Check cache folder
-            cache_folder = os.path.join(folder_path, "cache")
-            if os.path.exists(cache_folder):
-                for item in os.listdir(cache_folder):
-                    if item.startswith(base_name):
-                        try:
-                            item_path = os.path.join(cache_folder, item)
-                            
-                            # Create cache folder in __duplicates__ if it doesn't exist
-                            duplicates_cache_folder = os.path.join(duplicates_folder, "cache")
-                            os.makedirs(duplicates_cache_folder, exist_ok=True)
-                            
-                            destination = os.path.join(duplicates_cache_folder, item)
-                            shutil.move(item_path, destination)
-                            logger.info(f"Moved cache file: {item}")
-                        except Exception as e:
-                            logger.error(f"Error moving cache file {item}: {e}")
-            
         except Exception as e:
             logger.error(f"Error moving related files: {e}") 

@@ -135,9 +135,62 @@ Pamiętaj: Żaden etap nie może być pominięty. Wszystkie etapy muszą być wy
 
 ---
 
-## Następne pliki do poprawy:
+### 2. **core/tools/** (wszystkie pliki worker) ✅ ZAKOŃCZONE
 
-### 2. **core/tools/** (wszystkie pliki worker) - W TRAKCIE
+#### 🔧 **Wykonane poprawki:**
+
+1. **Utworzono klasę `BaseToolWorker`:**
+
+   - Rozszerza `BaseWorker` o wspólne wzorce dla tool workerów
+   - Dodano metody: `_log_operation_start()`, `_log_operation_end()`, `_log_error()`, `_log_progress()`
+   - Dodano metodę `_find_files_by_extensions()` dla wspólnego wyszukiwania plików
+   - Dodano metodę `_safe_file_operation()` dla bezpiecznych operacji na plikach
+
+2. **Zrefaktoryzowano wszystkie pliki worker:**
+
+   - **WebPConverterWorker** - używa `BaseToolWorker`, usunięto duplikaty logowania
+   - **DuplicateFinderWorker** - używa `BaseToolWorker`, usunięto duplikaty walidacji ścieżek
+   - **FileRenamerWorker** - używa `BaseToolWorker`, uproszczono logikę analizy plików
+   - **ImageResizerWorker** - używa `BaseToolWorker`, usunięto duplikaty logowania
+   - **PrefixSuffixRemoverWorker** - używa `BaseToolWorker`, uproszczono operacje na plikach
+   - **FileShortenerWorker** - używa `BaseToolWorker`, uproszczono logikę analizy plików
+
+3. **Naprawiono importy Rust:**
+
+   - Usunięto komentarze `# pyright: ignore`
+   - Dodano obsługę `ImportError` z fallbackiem
+   - Dodano sprawdzanie dostępności modułów Rust przed użyciem
+
+4. **Usunięto duplikowane wzorce:**
+   - Wszystkie workery używają teraz wspólnych metod logowania
+   - Wszystkie workery używają wspólnych metod walidacji ścieżek
+   - Wszystkie workery używają wspólnych metod wyszukiwania plików
+
+#### 📊 **Statystyki:**
+
+- **Usunięte linie kodu:** ~200 linii (duplikowane wzorce)
+- **Dodane linie kodu:** ~100 linii (BaseToolWorker + refaktoryzacja)
+- **Netto oszczędność:** ~100 linii kodu
+- **Poprawione problemy:** 3/3 zidentyfikowanych
+
+#### ✅ **Weryfikacja:**
+
+- Wszystkie pliki kompilują się bez błędów
+- Zachowana kompatybilność wsteczna
+- Wszystkie sygnały i interfejsy pozostają nienaruszone
+- Lepsze zarządzanie błędami i logowaniem
+
+#### 🎯 **Korzyści:**
+
+- Spójne logowanie we wszystkich workerach
+- Lepsze zarządzanie błędami
+- Mniejsza duplikacja kodu
+- Łatwiejsze utrzymanie kodu
+- Bezpieczniejsze operacje na plikach
+
+---
+
+## Następne pliki do poprawy:
 
 ### 3. **core/main_window.py** - OCZEKUJE
 
@@ -157,5 +210,5 @@ Pamiętaj: Żaden etap nie może być pominięty. Wszystkie etapy muszą być wy
 
 ---
 
-**Status projektu:** 1/10 plików zakończonych (10%)
-**Szacowany czas pozostały:** 3-5 godzin
+**Status projektu:** 2/10 plików zakończonych (20%)
+**Szacowany czas pozostały:** 2-4 godziny

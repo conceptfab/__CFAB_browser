@@ -146,4 +146,56 @@ class BaseWorker(QThread):
                 logger.error(f"No overwrite permissions: {output_path}")
                 return False
         
-        return True 
+        return True
+
+
+class BaseToolWorker(BaseWorker):
+    """Enhanced base class for tool workers with common patterns"""
+    
+    def __init__(self, folder_path: str):
+        super().__init__(folder_path)
+        self._operation_name = self.__class__.__name__.replace('Worker', '')
+    
+    def _log_operation_start(self, message: str = None):
+        """Logs operation start with consistent format"""
+        if message is None:
+            message = f"Starting {self._operation_name} in folder: {self.folder_path}"
+        logger.info(f"[{self._operation_name}] {message}")
+    
+    def _log_operation_end(self, message: str):
+        """Logs operation end with consistent format"""
+        logger.info(f"[{self._operation_name}] {message}")
+        self.finished.emit(message)
+    
+    def _log_error(self, error_msg: str):
+        """Logs error with consistent format"""
+        logger.error(f"[{self._operation_name}] {error_msg}")
+        self.error_occurred.emit(error_msg)
+    
+    def _log_progress(self, current: int, total: int, message: str):
+        """Logs progress with consistent format"""
+        logger.info(f"[{self._operation_name}] {message}")
+        self.progress_updated.emit(current, total, message)
+    
+    def _find_files_by_extensions(self, extensions: set) -> list:
+        """Finds files with specified extensions in the folder"""
+        files = []
+        try:
+            for item in os.listdir(self.folder_path):
+                item_path = os.path.join(self.folder_path, item)
+                if os.path.isfile(item_path):
+                    file_ext = os.path.splitext(item)[1].lower()
+                    if file_ext in extensions:
+                        files.append(item_path)
+            return files
+        except Exception as e:
+            logger.error(f"Error searching for files: {e}")
+            return []
+    
+    def _safe_file_operation(self, operation_func, *args, **kwargs):
+        """Safely executes file operation with error handling"""
+        try:
+            return operation_func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Error during file operation: {e}")
+            return False 
