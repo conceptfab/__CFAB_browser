@@ -190,13 +190,55 @@ Pamiętaj: Żaden etap nie może być pominięty. Wszystkie etapy muszą być wy
 
 ---
 
+### 5. **core/thumbnail_cache.py** ✅ ZAKOŃCZONE
+
+#### 🔧 **Wykonane poprawki:**
+
+1. **Przepisano singleton na thread-safe implementację:**
+
+   - Poprawiono double-checked locking pattern
+   - Dodano `threading.RLock()` dla operacji na cache
+   - Dodano thread safety do wszystkich metod (`get`, `put`, `clear`)
+
+2. **Usunięto duplikowane sprawdzania rozmiaru cache:**
+
+   - Wydzielono metodę `_ensure_cache_space()` z logiki sprawdzania miejsca
+   - Usunięto duplikowane sprawdzania w pętli `while`
+   - Dodano sprawdzenie `and self.cache` w `_ensure_cache_space()`
+
+3. **Dodano nowe funkcjonalności:**
+   - Metoda `get_stats()` do monitorowania stanu cache
+   - Lepsze logowanie i debugowanie
+   - Thread-safe operacje na wszystkich metodach
+
+#### 📊 **Statystyki:**
+
+- **Usunięte linie kodu:** ~10 linii (duplikowane sprawdzania)
+- **Dodane linie kodu:** ~25 linii (thread safety + nowe funkcje)
+- **Netto dodane linie:** ~15 linii (dla lepszej funkcjonalności)
+- **Poprawione problemy:** 2/2 zidentyfikowanych
+
+#### ✅ **Weryfikacja:**
+
+- Kod kompiluje się bez błędów
+- Zachowana kompatybilność wsteczna
+- Thread safety zapewniony dla wszystkich operacji
+- Lepsze zarządzanie pamięcią cache
+
+#### 🎯 **Korzyści:**
+
+- Bezpieczne używanie z wielu wątków
+- Eliminacja potencjalnych race conditions
+- Lepsze monitorowanie stanu cache
+- Bardziej niezawodne zarządzanie pamięcią
+
+---
+
 ## Następne pliki do poprawy:
 
 ### 3. **core/main_window.py** - OCZEKUJE
 
 ### 4. **core/amv_controllers/handlers/file_operation_controller.py** - OCZEKUJE
-
-### 5. **core/thumbnail_cache.py** - OCZEKUJE
 
 ### 6. **core/tools_tab.py** - OCZEKUJE
 
@@ -210,5 +252,5 @@ Pamiętaj: Żaden etap nie może być pominięty. Wszystkie etapy muszą być wy
 
 ---
 
-**Status projektu:** 2/10 plików zakończonych (20%)
-**Szacowany czas pozostały:** 2-4 godziny
+**Status projektu:** 3/10 plików zakończonych (30%)
+**Szacowany czas pozostały:** 2-3 godziny

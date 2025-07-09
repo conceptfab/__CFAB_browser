@@ -8,21 +8,7 @@
 
 
 
-### 2. **core/tools/** (wszystkie pliki worker)
 
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Duplikowane wzorce obsługi sygnałów** w każdym workerze
-- **Redundantne importy** z komentarzami `# pyright: ignore`
-- **Podobne metody walidacji** ścieżek
-
-#### ✅ **Planowane akcje:**
-
-1. Wydzielić wspólny `BaseToolWorker` z obsługą sygnałów
-2. Usunąć duplikaty walidacji ścieżek - użyć metod z `base_worker.py`
-3. Naprawić importy Rust bez używania `# pyright: ignore`
-
----
 
 ### 3. **core/main_window.py**
 
@@ -56,19 +42,6 @@
 
 ---
 
-### 5. **core/thumbnail_cache.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Potencjalne problemy z thread safety** w singleton pattern
-- **Duplikowane sprawdzania** rozmiaru cache
-
-#### ✅ **Planowane akcje:**
-
-1. Przepisać singleton na thread-safe implementację
-2. Usunąć duplikaty w `_evict_oldest()` i podobnych metodach
-
----
 
 ### 6. **core/tools_tab.py**
 
