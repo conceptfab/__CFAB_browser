@@ -654,9 +654,14 @@ dependencies = [
 name = "image_tools"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "env_logger",
  "image",
+ "log",
+ "once_cell",
  "pyo3",
  "vergen",
+ "webp",
 ]
 
 [[package]]

@@ -1,9 +1,32 @@
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyDict, PyType};
 use pyo3::exceptions::PyRuntimeError;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use rayon::prelude::*;
+use thiserror::Error;
+use log::error;
+
+#[derive(Error, Debug)]
+enum ScannerError {
+    #[error("Folder nie istnieje: {0}")]
+    #[allow(dead_code)]
+    FolderNotFound(String),
+
+    #[error("Brak uprawnień do odczytu folderu: {0}")]
+    #[allow(dead_code)]
+    PermissionDenied(String),
+
+    #[error("Błąd I/O: {0}")]
+    IoError(#[from] std::io::Error),
+
+    #[error("Błąd serializacji JSON: {0}")]
+    JsonError(#[from] serde_json::Error),
+
+    #[error("Błąd tworzenia asetu: {0}")]
+    #[allow(dead_code)]
+    AssetCreationError(String),
+}
 
 use crate::types::*;
 use crate::file_utils::*;
@@ -19,10 +42,30 @@ macro_rules! py_runtime_error {
     };
 }
 
+use std::sync::Mutex;
+use once_cell::sync::Lazy;
+
+/// Cache dla powtórnych skanowań
+struct ScannerCache {
+    last_scan_path: Option<String>,
+    archive_files: HashMap<String, std::path::PathBuf>,
+    image_files: HashMap<String, std::path::PathBuf>,
+}
+
+static SCANNER_CACHE: Lazy<Mutex<ScannerCache>> = Lazy::new(|| {
+    Mutex::new(ScannerCache {
+        last_scan_path: None,
+        archive_files: HashMap::new(),
+        image_files: HashMap::new(),
+    })
+});
+
 #[pyclass]
 pub struct RustAssetRepository {
     file_extensions: FileExtensions,
     asset_builder: AssetBuilder,
+    #[allow(dead_code)]
+    use_cache: bool,
 }
 
 #[pymethods]
@@ -32,11 +75,34 @@ impl RustAssetRepository {
         Self {
             file_extensions: FileExtensions::default(),
             asset_builder: AssetBuilder::new(),
+            use_cache: true,
+        }
+    }
+
+    /// Tworzy nową instancję z wyłączonym cachem (przydatne dla testów)
+    #[classmethod]
+    #[pyo3(name = "new_without_cache")]
+    fn new_without_cache(_cls: &Bound<'_, PyType>) -> Self {
+        Self {
+            file_extensions: FileExtensions::default(),
+            asset_builder: AssetBuilder::new(),
+            use_cache: false,
         }
     }
 
     /// Main function for scanning and creating assets
-    #[pyo3(signature = (folder_path, progress_callback = None))]
+    /// Resetuje cache skanera
+    #[pyo3(name = "reset_cache")]
+    fn reset_scanner_cache(&self) -> PyResult<()> {
+        if let Ok(mut cache) = SCANNER_CACHE.lock() {
+            cache.last_scan_path = None;
+            cache.archive_files.clear();
+            cache.image_files.clear();
+        }
+        Ok(())
+    }
+
+    #[pyo3(signature = (folder_path, progress_callback=None))]
     fn find_and_create_assets(
         &self,
         py: Python,
@@ -315,11 +381,19 @@ impl RustAssetRepository {
 }
 
 impl RustAssetRepository {
-    /// Scans folder and groups files by names
+    /// Scans folder and groups files by names - zoptymalizowana wersja równoległa
     fn scan_and_group_files(&self, folder_path: &Path) -> Result<(HashMap<String, std::path::PathBuf>, HashMap<String, std::path::PathBuf>), Box<dyn std::error::Error>> {
-        let archive_files = get_files_by_extensions(folder_path, &self.file_extensions.archives)?;
-        let image_files = get_files_by_extensions(folder_path, &self.file_extensions.images)?;
 
+        // Równoległe skanowanie folderów
+        let (archive_files, image_files) = rayon::join(
+            || get_files_by_extensions(folder_path, &self.file_extensions.archives),
+            || get_files_by_extensions(folder_path, &self.file_extensions.images)
+        );
+
+        let archive_files = archive_files?;
+        let image_files = image_files?;
+
+        // Grupowanie plików równolegle
         let archive_by_name = group_files_by_name(archive_files);
         let image_by_name = group_files_by_name(image_files);
 
@@ -334,6 +408,17 @@ impl RustAssetRepository {
         image_by_name: &HashMap<String, std::path::PathBuf>,
         common_names: &HashSet<String>,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        // Sprawdź czy folder istnieje
+        if !folder_path.exists() || !folder_path.is_dir() {
+            return Err(format!("Folder nie istnieje: {:?}", folder_path).into());
+        }
+
+        // Upewnij się, że mamy prawa zapisu do folderu
+        let test_path = folder_path.join(".write_test");
+        if let Err(e) = std::fs::write(&test_path, "") {
+            return Err(format!("Brak uprawnień do zapisu w folderze: {}", e).into());
+        }
+        let _ = std::fs::remove_file(test_path);
         let mut unpaired_files = UnpairedFiles {
             archives: Vec::new(),
             images: Vec::new(),

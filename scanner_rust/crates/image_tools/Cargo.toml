@@ -9,6 +9,11 @@ vergen = "7.5.1"
 [dependencies]
 pyo3 = { workspace = true }
 image = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+once_cell = { workspace = true }
+webp = { workspace = true }
+env_logger = { workspace = true }
 
 [lib]
 name = "image_tools"
