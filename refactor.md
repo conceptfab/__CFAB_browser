@@ -1,109 +1,93 @@
-Przeanalizowałem kod i znalazłem główny problem z odświeżaniem galerii. Problem leży w optymalizacji hash w metodzie _reorganize_layout() w pliku core/amv_controllers/handlers/asset_grid_controller.py.
-Zmiana w pliku core/amv_controllers/handlers/asset_grid_controller.py
-W funkcji _reorganize_layout(), linia 196-202:
-python# OPTIMIZATION: Check if layout actually needs rebuilding using hash
-new_layout_hash = hash(tuple(asset["name"] for asset in assets))
+🐛 Raport audytu kodu
+📁 Pliki wymagające poprawek
+1. core/amv_controllers/handlers/asset_rebuild_controller.py
+python# PROBLEM: Duplikowanie klasy AssetRebuilderWorker 
+from core.workers.asset_rebuilder_worker import AssetRebuilderWorker
+# thumbnail_cache imported w utilities.clear_thumbnail_cache_after_rebuild()
+Zmiany:
 
-if hasattr(self, '_last_layout_hash') and self._last_layout_hash == new_layout_hash:
-    logger.debug("Layout unchanged - skipping full rebuild")
-    return
-Problem: Gdy użytkownik odświeża folder, assety mogą mieć te same nazwy co poprzednio, ale ich zawartość (thumbnail, metadane, rozmiar itp.) mogła się zmienić. Optymalizacja hash sprawdza tylko nazwy plików i blokuje przebudowę layoutu.
-Proponowana zmiana:
-pythondef _reorganize_layout(self, assets, current_tile_map, force_rebuild=False):
-    if not assets:
-        self.view.update_gallery_placeholder("No assets in this folder.")
-        self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
-        return
-        
-    cols = self.model.asset_grid_model.get_columns()
-    sorted_tiles = [
-        current_tile_map[asset["name"]]
-        for asset in assets
-        if asset["name"] in current_tile_map
-    ]
-    
-    # Check if we have any tiles to display
-    if not sorted_tiles:
-        self.view.update_gallery_placeholder("No assets in this folder.")
-        self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
-        return
-    
-    # OPTIMIZATION: Check if layout actually needs rebuilding using hash
-    # Skip optimization during force rebuild (e.g., folder refresh)
-    if not force_rebuild:
-        new_layout_hash = hash(tuple(asset["name"] for asset in assets))
-        
-        if hasattr(self, '_last_layout_hash') and self._last_layout_hash == new_layout_hash:
-            logger.debug("Layout unchanged - skipping full rebuild")
+Usunąć nieużywany import thumbnail_cache (linia 11)
+Sprawdzić czy klasa AssetRebuilderWorker nie jest duplikowana
+
+2. core/amv_controllers/handlers/file_operation_controller.py
+pythondef _remove_moved_assets_optimized(self, success_messages: list):
+    """OPTIMIZATION: Fast removal of only moved assets without gallery rebuild"""
+    try:
+        if not self._validate_optimization_inputs(success_messages):
             return
-        
-        self._last_layout_hash = new_layout_hash
-    else:
-        # Force rebuild - update hash but don't skip rebuild
-        new_layout_hash = hash(tuple(asset["name"] for asset in assets))
-        self._last_layout_hash = new_layout_hash
-        logger.debug("Force rebuild requested - performing full rebuild")
-    
-    # Clear placeholder and show gallery
-    self.view.update_gallery_placeholder("")
-    
-    # Full rebuild only when necessary
-    logger.debug("Layout changed - performing full rebuild")
-    while self.view.gallery_layout.count():
-        item = self.view.gallery_layout.takeAt(0)
-        if item.widget():
-            item.widget().hide()
-    for i, tile in enumerate(sorted_tiles):
-        row, col = divmod(i, cols)
-        self.view.gallery_layout.addWidget(tile, row, col)
-        tile.show()
-    
-    # Ensure gallery is shown after rebuild
-    self.view.stacked_layout.setCurrentIndex(0)
-W funkcji _rebuild_asset_grid_immediate(), linia 170:
-pythonself._reorganize_layout(assets, current_tile_map)
-Zmienić na:
-python# Check if this is a forced refresh operation
-force_rebuild = getattr(self, '_force_rebuild_requested', False)
-self._reorganize_layout(assets, current_tile_map, force_rebuild)
-# Reset force rebuild flag
-if hasattr(self, '_force_rebuild_requested'):
-    self._force_rebuild_requested = False
-W funkcji rebuild_asset_grid(), dodać parametr force:
-pythondef rebuild_asset_grid(self, assets: list, force_rebuild: bool = False):
-    """
-    Throttled version of asset grid rebuild to prevent excessive calls.
-    """
-    # OPTIMIZATION: Throttling - delay rebuild by 50ms
-    self._pending_assets = assets
-    if force_rebuild:
-        self._force_rebuild_requested = True
-    self._rebuild_timer.start(50)  # 50ms delay
-Zmiana w pliku core/amv_controllers/handlers/folder_tree_controller.py
-W funkcji on_folder_refresh_requested(), linia 130:
-python# SET folder as current and refresh assets - FORCE_RESCAN=True for refresh
-if self._scan_folder_safely(folder_path, force_rescan=True):
-    self.controller.control_panel_controller.update_button_states()
-    logger.info(f"FOLDER AND ASSETS REFRESHED: {folder_path}")
-Zmienić na:
-python# SET folder as current and refresh assets - FORCE_RESCAN=True for refresh
-if self._scan_folder_safely(folder_path, force_rescan=True):
-    # Mark that this is a forced rebuild for gallery
-    self.controller.asset_grid_controller._force_rebuild_requested = True
-    self.controller.control_panel_controller.update_button_states()
-    logger.info(f"FOLDER AND ASSETS REFRESHED: {folder_path}")
-Zmiana w pliku core/amv_controllers/handlers/asset_grid_controller.py
-W funkcji on_assets_changed(), linia 66:
-pythonself.rebuild_asset_grid(assets)
-Zmienić na:
-python# Check if force rebuild was requested
-force_rebuild = getattr(self, '_force_rebuild_requested', False)
-self.rebuild_asset_grid(assets, force_rebuild)
-Te zmiany rozwiążą problem poprzez:
+        # ... bardzo długa metoda (150+ linii)
+Zmiany:
+3. Podzielić metodę _remove_moved_assets_optimized() na mniejsze funkcje
+4. Usunąć duplikowaną logikę walidacji ścieżek
+3. core/amv_models/file_operations_model.py
+pythondef _update_asset_file_after_rename(self, original_asset_path, new_asset_path):
+    # Upewnij się, że asset_file_path ma rozszerzenie .asset
+    asset_file_path = new_asset_path
+    if not asset_file_path.endswith('.asset'):
+        asset_file_path = os.path.splitext(asset_file_path)[0] + '.asset'
+Zmiany:
+5. Naprawić polskie komentarze na angielskie
+6. Ujednolicić obsługę błędów w metodach _move_single_asset_*
+4. core/amv_views/asset_tile_view.py
+pythondef reset_for_pool(self):
+    """Resets the tile to a state ready for reuse in the pool."""
+    # ... metoda nieużywana przez AssetTilePool
+Zmiany:
+7. Usunąć nieużywaną metodę reset_for_pool()
+8. Uprościć logikę w update_asset_data() - za dużo sprawdzeń
+5. core/main_window.py
+pythondef _validate_grid_controller(self, controller_data: dict) -> bool:
+def _filter_non_special_assets(self, assets) -> list:
+def _calculate_asset_counts(self, controller_data: dict) -> AssetCounts:
+# ... duplikowana logika z SelectionCounter
+Zmiany:
+9. Usunąć zduplikowane metody liczenia assetów - używać tylko SelectionCounter
+10. Usunąć nieużywane struktury danych AssetCounts, AssetCountsDetailed
+6. core/pairing_tab.py
+python# PROBLEM: Polskie komentarze i niekonsequentne nazewnictwo
+self._log_progress(i + 1, len(self.files_info["unpaired"]), f"Przetwarzanie: {filename}")
+Zmiany:
+11. Zmienić wszystkie polskie stringi na angielskie
+12. Usunąć nieużywane importy json, subprocess, Path
+7. core/tools_tab.py
+pythondef _handle_worker_progress(self, button: QPushButton, current: int, total: int, message: str):
+    WorkerManager.handle_progress(button, current, total, message)
+# Metoda tylko przekazuje wywołanie - niepotrzebna
+Zmiany:
+13. Usunąć niepotrzebne metody proxy (_handle_worker_*)
+14. Naprawić polskie stringi w UI (linia 394, 428)
+8. core/utilities.py
+pythondef clear_thumbnail_cache_after_rebuild(is_error: bool = False):
+    """Simplified version - removed duplicate logic and excessive logging."""
+    # Funkcja ma bardzo mało logiki
+Zmiany:
+15. Sprawdzić czy funkcja update_main_window_status() nie jest duplikatowana
+16. Rozważyć połączenie z innymi modułami utility
+9. core/workers/worker_manager.py
+python# PROBLEM: Brak thread safety w metodach statycznych
+@staticmethod
+def start_worker_lifecycle(worker, button, original_text, parent_instance):
+Zmiany:
+17. Dodać thread safety do metod statycznych
+18. Ujednolicić obsługę błędów we wszystkich metodach
+10. core/tools/ (wszystkie pliki worker)*
+python# PROBLEM: Duplikowana logika walidacji we wszystkich workerach
+def _validate_working_directory(self) -> bool:
+    # Ta sama logika w 6 plikach
+Zmiany:
+19. Przenieść wspólną logikę walidacji do BaseToolWorker
+20. Usunąć duplikowaną logikę ładowania modułów Rust
+🎯 Priorytety napraw
+Wysokie (błędy krytyczne):
 
-Dodanie parametru force_rebuild do kluczowych funkcji
-Ominięcie optymalizacji hash podczas force rebuild
-Propagację flagi force rebuild przez cały pipeline odświeżania
-Zagwarantowanie przebudowy galerii nawet jeśli nazwy assetów się nie zmieniły
+Punkty 1, 9, 17, 19
 
-Po tych zmianach odświeżenie folderu z menu kontekstowego będzie zawsze odświeżać galerię, niezależnie od tego czy nazwy plików się zmieniły.
+Średnie (optymalizacja):
+
+Punkty 3, 7, 8, 13
+
+Niskie (czyszczenie kodu):
+
+Punkty 11, 14, 15, 18, 20
+
+Szacowany czas: ~4-6 godzin pracy na wszystkie poprawki.
