@@ -148,9 +148,20 @@ class FolderSystemModel(QObject):
 
     def _format_folder_display_name(self, folder_name: str, folder_path: str) -> str:
         """Formats folder name with asset count (if enabled)"""
+        if folder_name == "__duplicates__":
+            try:
+                if os.path.isdir(folder_path):
+                    dupe_count = len([
+                        f for f in os.listdir(folder_path)
+                        if os.path.isfile(os.path.join(folder_path, f))
+                    ])
+                else:
+                    dupe_count = 0
+            except Exception:
+                dupe_count = 0
+            return f"__duplicates__ ({dupe_count} duplicates)"
         if not self._show_asset_counts:
             return folder_name
-        
         asset_count = self._count_assets_in_folder(folder_path)
         if asset_count > 0:
             suffix = "+" if self._recursive_asset_counts else ""
