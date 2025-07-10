@@ -8,22 +8,6 @@
 
 
 
-### 4. **core/amv_controllers/handlers/file_operation_controller.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Duplikowane metody optymalizacji** (`_remove_moved_assets_optimized` i pomocnicze)
-- **Zbyt skomplikowana logika** usuwania kafelków
-- **Nieużywane `_tiles_mutex`** w niektórych miejscach
-
-#### ✅ **Planowane akcje:**
-
-1. Uprościć optymalizację usuwania kafelków do 2-3 metod
-2. Usunąć nieużywane referencje do `_tiles_mutex`
-3. Wydzielić `AssetRemovalOptimizer` jako osobną klasę
-
----
-
 
 ### 7. **core/amv_models/file_operations_model.py**
 
