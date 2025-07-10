@@ -35,6 +35,99 @@ AssetCounts = namedtuple('AssetCounts', ['visible', 'total'])
 AssetCountsDetailed = namedtuple('AssetCountsDetailed', ['selected', 'filtered', 'total'])
 
 
+class StatusBarManager:
+    def __init__(self, parent, logger):
+        self.logger = logger
+        self.status_bar = QStatusBar(parent)
+        parent.setStatusBar(self.status_bar)
+
+        # Container with three columns
+        status_container = QWidget()
+        status_layout = QHBoxLayout()
+        status_layout.setContentsMargins(0, 0, 0, 0)
+        status_layout.setSpacing(0)
+
+        # Left column: messages
+        self.status_message_label = QLabel("")
+        self.status_message_label.setMinimumWidth(200)
+        self.status_message_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        status_layout.addWidget(self.status_message_label, 2)
+
+        # Center: centered progress bar
+        center_widget = QWidget()
+        center_layout = QHBoxLayout()
+        center_layout.setContentsMargins(0, 0, 0, 0)
+        center_layout.setSpacing(0)
+        center_layout.addStretch(1)
+        self.status_progress_bar = QProgressBar()
+        self.status_progress_bar.setFixedHeight(12)
+        self.status_progress_bar.setMinimumWidth(300)
+        self.status_progress_bar.setMaximumWidth(360)
+        self.status_progress_bar.setValue(0)
+        self.status_progress_bar.setVisible(True)
+        center_layout.addWidget(self.status_progress_bar)
+        center_layout.addStretch(1)
+        center_widget.setLayout(center_layout)
+        status_layout.addWidget(center_widget, 1)
+
+        # Right column: number of selected tiles
+        self.selected_label = QLabel("Selected: 0")
+        self.selected_label.setMinimumWidth(100)
+        self.selected_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        status_layout.addWidget(self.selected_label, 2)
+
+        status_container.setLayout(status_layout)
+        self.status_bar.addWidget(status_container, 1)
+        self.logger.debug("Status bar created successfully (StatusBarManager)")
+
+    def update_status(self, message, timeout=5000):
+        try:
+            if self.status_message_label:
+                self.status_message_label.setText(message)
+                self.logger.debug(f"Status updated: {message}")
+        except Exception as e:
+            self.logger.error(f"Error updating status: {e}")
+
+    def show_log_info(self, log_level, message):
+        try:
+            level_mapping = {
+                "INFO": "ℹ️",
+                "WARNING": "⚠️",
+                "ERROR": "❌",
+                "DEBUG": "🔍",
+                "CRITICAL": "🚨",
+            }
+            icon = level_mapping.get(log_level.upper(), "ℹ️")
+            if len(message) > 100:
+                message = message[:97] + "..."
+            status_message = f"{icon} {message}"
+            self.update_status(status_message)
+        except Exception as e:
+            self.logger.error(f"Error showing log info: {e}")
+
+    def update_working_directory_status(self, directory_path):
+        try:
+            if directory_path:
+                if len(directory_path) > 80:
+                    parts = directory_path.split("\\")
+                    if len(parts) > 3:
+                        short_path = f"...\\{'\\'.join(parts[-3:])}"
+                    else:
+                        short_path = directory_path
+                else:
+                    short_path = directory_path
+                status_message = f"📁 Working directory: {short_path}"
+                self.update_status(status_message, timeout=0)
+                self.logger.debug(f"Working directory status updated: {directory_path}")
+        except Exception as e:
+            self.logger.error(f"Error updating working directory status: {e}")
+
+    def update_selection_status(self, status_text: str):
+        if self.selected_label:
+            self.selected_label.setText(status_text)
+            self.logger.debug(f"Updated status bar: {status_text}")
+
+
 class MainWindow(QMainWindow):
 
     def __init__(self, config_path="config.json"):
@@ -46,6 +139,7 @@ class MainWindow(QMainWindow):
         
         # Initialize SelectionCounter (will be properly set up after AMV tab creation)
         self.selection_counter = None
+        self.status_bar_manager = None
 
         # Default configuration as class field
         self.default_config = {
@@ -71,7 +165,7 @@ class MainWindow(QMainWindow):
             self._createMenuBar()
 
             self.logger.info("Creating status bar...")
-            self._createStatusBar()
+            self.status_bar_manager = StatusBarManager(self, self.logger)
 
             self.logger.info("Creating tabs...")
             self._createTabs()
@@ -246,63 +340,20 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error creating status bar: {e}")
 
     def update_status(self, message, timeout=5000):
-        """Updates the status message label with a new message"""
-        try:
-            if hasattr(self, "status_message_label") and self.status_message_label:
-                self.status_message_label.setText(message)
-                self.logger.debug(f"Status updated: {message}")
-        except Exception as e:
-            self.logger.error(f"Error updating status: {e}")
+        if self.status_bar_manager:
+            self.status_bar_manager.update_status(message, timeout)
 
     def show_log_info(self, log_level, message):
-        """Displays log info in the status message label in a user-friendly way"""
-        try:
-            # Mapping log levels to friendly messages
-            level_mapping = {
-                "INFO": "ℹ️",
-                "WARNING": "⚠️",
-                "ERROR": "❌",
-                "DEBUG": "🔍",
-                "CRITICAL": "🚨",
-            }
-
-            icon = level_mapping.get(log_level.upper(), "ℹ️")
-
-            # Truncate long messages
-            if len(message) > 100:
-                message = message[:97] + "..."
-
-            status_message = f"{icon} {message}"
-            self.update_status(status_message)
-
-        except Exception as e:
-            self.logger.error(f"Error showing log info: {e}")
+        if self.status_bar_manager:
+            self.status_bar_manager.show_log_info(log_level, message)
 
     def update_working_directory_status(self, directory_path):
-        """Updates the status bar with information about the current working directory"""
-        try:
-            if directory_path:
-                # Truncate long path for better readability
-                if len(directory_path) > 80:
-                    # Show only last parts of path
-                    parts = directory_path.split("\\")
-                    if len(parts) > 3:
-                        short_path = f"...\\{'\\'.join(parts[-3:])}"
-                    else:
-                        short_path = directory_path
-                else:
-                    short_path = directory_path
-
-                status_message = f"📁 Working directory: {short_path}"
-                self.update_status(status_message, timeout=0)  # No timeout
-                self.logger.debug(f"Working directory status updated: {directory_path}")
-        except Exception as e:
-            self.logger.error(f"Error updating working directory status: {e}")
+        if self.status_bar_manager:
+            self.status_bar_manager.update_working_directory_status(directory_path)
 
     def update_selection_status(
         self, selected_count=None, filtered_count=None, total_count=None
     ):
-        """Updates the number of selected assets on the right side of the status bar"""
         try:
             if not self._validate_components():
                 return
@@ -321,7 +372,8 @@ class MainWindow(QMainWindow):
             
             # Generate and set status text
             status_text = self.selection_counter.get_status_text(summary)
-            self._update_status_label(status_text)
+            if self.status_bar_manager:
+                self.status_bar_manager.update_selection_status(status_text)
             
         except Exception as e:
             self._handle_status_error(e)
@@ -343,16 +395,13 @@ class MainWindow(QMainWindow):
         return selected_count is not None and filtered_count is not None and total_count is not None
     
     def _update_status_label(self, status_text: str):
-        """Update the status label with new text"""
-        if hasattr(self, "selected_label") and self.selected_label:
-            self.selected_label.setText(status_text)
-            self.logger.debug(f"Updated status bar: {status_text}")
+        if self.status_bar_manager:
+            self.status_bar_manager.update_selection_status(status_text)
     
     def _handle_status_error(self, error: Exception):
-        """Handle errors in status update with fallback"""
         self.logger.error(f"Error updating selection status: {error}")
-        if hasattr(self, "selected_label") and self.selected_label:
-            self.selected_label.setText("Selected: 0")
+        if self.status_bar_manager:
+            self.status_bar_manager.update_selection_status("Selected: 0")
 
     def show_operation_status(self, operation_name, status="completed"):
         """Displays operation status in the status bar"""
@@ -432,6 +481,9 @@ class MainWindow(QMainWindow):
 
     def _connect_amv_signals(self):
         """Connects AMV Tab signals"""
+        if not self.amv_tab:
+            self.logger.error("AMV tab is not initialized; cannot connect signals.")
+            return
         amv_controller = self.amv_tab.get_controller()
         if not amv_controller:
             self.logger.error("Could not get AMV controller to connect signals.")

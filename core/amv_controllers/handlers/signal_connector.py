@@ -52,7 +52,7 @@ class SignalConnector:
         # --- Control panel signals ---
         if self.main_window is not None:
             self.model.control_panel_model.progress_changed.connect(
-                self.main_window.status_progress_bar.setValue
+                self.main_window.status_bar_manager.status_progress_bar.setValue
             )
         self.model.control_panel_model.thumbnail_size_changed.connect(
             asset_grid_controller.on_thumbnail_size_changed
