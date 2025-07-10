@@ -78,17 +78,15 @@ pub fn group_files_by_name(files: Vec<PathBuf>) -> HashMap<String, PathBuf> {
 }
 
 /// Checks presence of texture folders
-pub fn check_texture_folders_presence(folder_path: &Path) -> bool {
+pub fn has_texture_folders(folder_path: &Path) -> bool {
     let texture_folders = ["tex", "textures", "maps"];
-
     for folder_name in &texture_folders {
         let texture_path = folder_path.join(folder_name);
         if texture_path.is_dir() {
-            return false; // Found texture folder - external textures
+            return true; // Found texture folder
         }
     }
-
-    true // No texture folders - textures in archive
+    false // No texture folders
 }
 
 /// Scans for special folders

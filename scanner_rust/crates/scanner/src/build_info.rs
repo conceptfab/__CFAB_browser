@@ -36,7 +36,7 @@ pub fn get_build_datetime() -> String {
 /// Returns Git commit hash
 #[pyfunction]
 pub fn get_git_commit() -> String {
-    "unknown".to_string()
+    option_env!("VERGEN_GIT_SHA").unwrap_or("unknown").to_string()
 }
 
 /// Returns module number

@@ -203,18 +203,7 @@ impl RustAssetRepository {
         // Convert assets to Python objects (sequential, but fast)
         let mut py_assets = Vec::new();
         for asset in created_assets {
-            let py_dict = PyDict::new_bound(py);
-            py_dict.set_item("type", &asset.asset_type)?;
-            py_dict.set_item("name", &asset.name)?;
-            py_dict.set_item("archive", &asset.archive)?;
-            py_dict.set_item("preview", &asset.preview)?;
-            py_dict.set_item("size_mb", asset.size_mb)?;
-            py_dict.set_item("thumbnail", &asset.thumbnail)?;
-            py_dict.set_item("stars", &asset.stars)?;
-            py_dict.set_item("color", &asset.color)?;
-            py_dict.set_item("textures_in_the_archive", asset.textures_in_archive)?;
-            py_dict.set_item("meta", asset.meta.to_string())?;
-            py_assets.push(py_dict.into());
+            py_assets.push(self.asset_builder.asset_to_pydict(py, &asset)?);
         }
 
         // Message about adding special folders (95%)
@@ -276,18 +265,7 @@ impl RustAssetRepository {
             if path.is_file() && path.extension().map_or(false, |ext| ext == "asset") {
                 match self.asset_builder.load_asset_from_file(&path) {
                     Ok(asset) => {
-                        let py_dict = PyDict::new_bound(py);
-                        py_dict.set_item("type", &asset.asset_type)?;
-                        py_dict.set_item("name", &asset.name)?;
-                        py_dict.set_item("archive", &asset.archive)?;
-                        py_dict.set_item("preview", &asset.preview)?;
-                        py_dict.set_item("size_mb", asset.size_mb)?;
-                        py_dict.set_item("thumbnail", &asset.thumbnail)?;
-                        py_dict.set_item("stars", &asset.stars)?;
-                        py_dict.set_item("color", &asset.color)?;
-                        py_dict.set_item("textures_in_the_archive", asset.textures_in_archive)?;
-                        py_dict.set_item("meta", asset.meta.to_string())?;
-                        assets.push(py_dict.into());
+                        assets.push(self.asset_builder.asset_to_pydict(py, &asset)?);
                     }
                     Err(e) => {
                         eprintln!("🦀 Error loading asset from {:?}: {:?} [build: {}, module: 1]", path, e, env!("VERGEN_BUILD_TIMESTAMP"));
@@ -360,20 +338,7 @@ impl RustAssetRepository {
                     return Err(py_runtime_error!("Error saving asset file: {}", e));
                 }
 
-                // Convert to Python dict
-                let py_dict = PyDict::new_bound(py);
-                py_dict.set_item("type", &asset.asset_type)?;
-                py_dict.set_item("name", &asset.name)?;
-                py_dict.set_item("archive", &asset.archive)?;
-                py_dict.set_item("preview", &asset.preview)?;
-                py_dict.set_item("size_mb", asset.size_mb)?;
-                py_dict.set_item("thumbnail", &asset.thumbnail)?;
-                py_dict.set_item("stars", &asset.stars)?;
-                py_dict.set_item("color", &asset.color)?;
-                py_dict.set_item("textures_in_the_archive", asset.textures_in_archive)?;
-                py_dict.set_item("meta", asset.meta.to_string())?;
-
-                Ok(py_dict.into())
+                Ok(self.asset_builder.asset_to_pydict(py, &asset)?)
             }
             Err(e) => Err(py_runtime_error!("Error creating asset: {}", e)),
         }
