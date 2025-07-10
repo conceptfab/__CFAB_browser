@@ -4,7 +4,7 @@ import subprocess
 import sys
 from typing import Dict, List
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -100,6 +100,7 @@ class ToolsTab(QWidget):
             "image resizing": ("image_resizer_button", "image_resizer"),
             "file name shortening": ("file_renamer_button", "file_renamer"),
             "remove prefix/suffix": ("remove_button", "remove_worker"),
+            "find duplicates": ("find_duplicates_button", "duplicate_finder"),
         }
 
         button_name, worker_attr = button_mapping.get(
@@ -742,48 +743,12 @@ class ToolsTab(QWidget):
                 return
 
             selected_mode = "prefix" if prefix_radio.isChecked() else "suffix"
-            self._start_remove(text_to_remove, selected_mode)
-
-    def _start_remove(self, text_to_remove: str, mode: str):  # Starts removing prefix/suffix from file names
-        """Starts removing prefix/suffix from file names"""
-        try:
-            # Disable button during removal
-            self.remove_button.setEnabled(False)
-            self.remove_button.setText("Removing...")
-
-            # Create worker for removal
-            self.remove_worker = PrefixSuffixRemoverWorker(
-                self.current_working_directory, text_to_remove, mode
+            # Użyj uniwersalnej metody z WorkerManager
+            self._start_operation_with_confirmation(
+                "remove prefix/suffix",
+                f"Remove {selected_mode}: {text_to_remove}",
+                lambda: PrefixSuffixRemoverWorker(self.current_working_directory, text_to_remove, selected_mode),
             )
-
-            # Connect signals
-            self.remove_worker.progress_updated.connect(
-                lambda c, t, m: self._handle_worker_progress(
-                    self.remove_button, c, t, m
-                )
-            )
-            self.remove_worker.finished.connect(
-                lambda m: self._handle_worker_finished(
-                    self.remove_button, m, "Remove prefix/suffix"
-                )
-            )
-            self.remove_worker.error_occurred.connect(
-                lambda e: self._handle_worker_error(
-                    self.remove_button, e, "Remove prefix/suffix"
-                )
-            )
-
-            # Uruchom worker
-            self.remove_worker.start()
-
-            logger.info(
-                f"Started removing {mode} in folder: {self.current_working_directory}"
-            )
-
-        except Exception as e:
-            logger.error(f"Error starting removal: {e}")
-            QMessageBox.critical(self, "Error", f"Cannot start removal: {e}")
-            self._reset_button_state(self.remove_button, "Remove prefix/suffix")
 
     def _on_find_duplicates_clicked(self):
         """Handles find duplicates button click"""
@@ -801,61 +766,12 @@ class ToolsTab(QWidget):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            self._start_find_duplicates()
-
-    def _start_find_duplicates(self):
-        """Starts finding duplicates"""
-        try:
-            # Disable button during operation
-            self.find_duplicates_button.setEnabled(False)
-            self.find_duplicates_button.setText("Searching...")
-
-            # Create worker for finding duplicates
-            self.duplicate_finder = DuplicateFinderWorker(self.current_working_directory)
-
-            # Connect signals
-            self.duplicate_finder.progress_updated.connect(
-                lambda c, t, m: self._handle_worker_progress(
-                    self.find_duplicates_button, c, t, m
-                )
+            # Użyj uniwersalnej metody z WorkerManager
+            self._start_operation_with_confirmation(
+                "find duplicates",
+                "Find duplicate archives and move them to __duplicates__",
+                lambda: DuplicateFinderWorker(self.current_working_directory),
             )
-            self.duplicate_finder.finished.connect(
-                lambda m: self._handle_worker_finished(
-                    self.find_duplicates_button, m, "Find Duplicates"
-                )
-            )
-            # Additional connection for folder tree refresh
-            self.duplicate_finder.finished.connect(
-                lambda m: self._handle_duplicates_finished(m)
-            )
-            self.duplicate_finder.error_occurred.connect(
-                lambda e: self._handle_worker_error(
-                    self.find_duplicates_button, e, "Find Duplicates"
-                )
-            )
-
-            # Start worker
-            self.duplicate_finder.start()
-
-            logger.info(
-                f"Started finding duplicates in folder: {self.current_working_directory}"
-            )
-
-        except Exception as e:
-            logger.error(f"Error starting duplicate search: {e}")
-            QMessageBox.critical(self, "Error", f"Cannot start finding duplicates: {e}")
-            self._reset_button_state(self.find_duplicates_button, "Find Duplicates")
-
-    def _handle_duplicates_finished(self, message: str):
-        """Handles completion of duplicate finding operation"""
-        try:
-            # If operation moved files (doesn't contain "No duplicates found" or "No archive files")
-            if "Moved" in message and "files to __duplicates__" in message:
-                # Emit signal about folder structure change
-                self.folder_structure_changed.emit(self.current_working_directory)
-                logger.info(f"Emitted folder_structure_changed signal for: {self.current_working_directory}")
-        except Exception as e:
-            logger.error(f"Error handling duplicate finding completion: {e}")
 
     def _show_pairs_dialog(self, pairs):
         """Displays a window with a list of pairs to be renamed"""
