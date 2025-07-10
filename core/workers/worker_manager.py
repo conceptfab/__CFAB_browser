@@ -8,6 +8,16 @@ from typing import Callable, Optional
 logger = logging.getLogger(__name__)
 
 
+class ManagedWorker:
+    """Abstrakcyjna klasa bazowa dla workerów"""
+    def start(self):
+        raise NotImplementedError
+    def stop(self):
+        raise NotImplementedError
+    def isRunning(self):
+        raise NotImplementedError
+
+
 class WorkerManager:
     """Common class for managing workers"""
 
@@ -40,11 +50,12 @@ class WorkerManager:
         WorkerManager.reset_button_state(button, original_text, parent_instance)
 
     @staticmethod
-    def reset_button_state(button, original_text, parent_instance):
+    def reset_button_state(button, original_text, parent_instance=None):
         """Common logic for resetting button state"""
         if button:
             button.setText(original_text)
-            parent_instance._update_button_states()
+            if parent_instance:
+                parent_instance._update_button_states()
     
     @staticmethod
     def start_worker_lifecycle(worker, button, original_text, parent_instance):

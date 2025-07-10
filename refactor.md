@@ -8,21 +8,7 @@
 
 
 
-### 8. **core/amv_controllers/handlers/asset_grid_controller.py**
 
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Nieużywany `_last_layout_hash`** w niektórych scenariuszach
-- **Duplikowane logiki** w `_rebuild_asset_grid_immediate()`
-- **Zbyt skomplikowana metoda** `on_assets_changed()`
-
-#### ✅ **Planowane akcje:**
-
-1. Uprościć `on_assets_changed()` - wydzielić części do metod pomocniczych
-2. Usunąć nieużywane optymalizacje layoutu jeśli nie są potrzebne
-3. Wydzielić logikę sortowania do osobnej metody
-
----
 
 ### 9. **core/workers/worker_manager.py**
 
