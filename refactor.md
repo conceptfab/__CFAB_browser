@@ -8,23 +8,6 @@
 
 
 
-
-### 7. **core/amv_models/file_operations_model.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Błędne przypisanie** w linii 245: `asset_file_path = new_asset_path`
-- **Duplikowane sprawdzania** ścieżek plików
-- **Nieużywana metoda** `_mark_asset_as_duplicate()`
-
-#### ✅ **Planowane akcje:**
-
-1. Naprawić błędne przypisanie w `_update_asset_file_after_rename()`
-2. Usunąć nieużywaną metodę `_mark_asset_as_duplicate()`
-3. Wydzielić wspólne sprawdzenia ścieżek do metody pomocniczej
-
----
-
 ### 8. **core/amv_controllers/handlers/asset_grid_controller.py**
 
 #### 🔍 **Zidentyfikowane problemy:**
