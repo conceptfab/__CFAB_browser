@@ -61,8 +61,12 @@ class AssetGridController(QObject):
             self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
             return
         self.set_original_assets(assets)
-        self.rebuild_asset_grid(assets)
-
+        # Check if force rebuild was requested
+        force_rebuild = getattr(self, '_force_rebuild_requested', False)
+        self.rebuild_asset_grid(assets, force_rebuild)
+        # Reset force rebuild flag
+        if hasattr(self, '_force_rebuild_requested'):
+            self._force_rebuild_requested = False
         # After rebuilding the grid, if a filter is active, apply it
         current_star_filter = (
             self.active_star_filter
@@ -71,16 +75,17 @@ class AssetGridController(QObject):
             # Trigger filter by updating the grid - filter will be applied automatically
             # via signal connections, avoiding cross-controller dependencies
             pass
-
         # Update button states after asset change
         self.controller.control_panel_controller.update_button_states()
 
-    def rebuild_asset_grid(self, assets: list):
+    def rebuild_asset_grid(self, assets: list, force_rebuild: bool = False):
         """
         Throttled version of asset grid rebuild to prevent excessive calls.
         """
         # OPTIMIZATION: Throttling - delay rebuild by 50ms
         self._pending_assets = assets
+        if force_rebuild:
+            self._force_rebuild_requested = True
         self._rebuild_timer.start(50)  # 50ms delay
     
     def _perform_delayed_rebuild(self):
@@ -125,7 +130,12 @@ class AssetGridController(QObject):
                 # No assets at all - show empty state
                 self._finalize_grid_update(empty=True)
                 return
-            self._reorganize_layout(assets, current_tile_map)
+            # Check if this is a forced refresh operation
+            force_rebuild = getattr(self, '_force_rebuild_requested', False)
+            self._reorganize_layout(assets, current_tile_map, force_rebuild)
+            # Reset force rebuild flag
+            if hasattr(self, '_force_rebuild_requested'):
+                self._force_rebuild_requested = False
             self._finalize_grid_update()
 
     def _prepare_asset_maps(self, assets):
@@ -185,7 +195,7 @@ class AssetGridController(QObject):
                 self.asset_tiles.append(tile)
                 current_tile_map[asset_id] = tile
 
-    def _reorganize_layout(self, assets, current_tile_map):
+    def _reorganize_layout(self, assets, current_tile_map, force_rebuild=False):
         if not assets:
             self.view.update_gallery_placeholder("No assets in this folder.")
             self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
@@ -205,13 +215,18 @@ class AssetGridController(QObject):
             return
         
         # OPTIMIZATION: Check if layout actually needs rebuilding using hash
-        new_layout_hash = hash(tuple(asset["name"] for asset in assets))
-        
-        if hasattr(self, '_last_layout_hash') and self._last_layout_hash == new_layout_hash:
-            logger.debug("Layout unchanged - skipping full rebuild")
-            return
-        
-        self._last_layout_hash = new_layout_hash
+        # Skip optimization during force rebuild (e.g., folder refresh)
+        if not force_rebuild:
+            new_layout_hash = hash(tuple(asset["name"] for asset in assets))
+            if hasattr(self, '_last_layout_hash') and self._last_layout_hash == new_layout_hash:
+                logger.debug("Layout unchanged - skipping full rebuild")
+                return
+            self._last_layout_hash = new_layout_hash
+        else:
+            # Force rebuild - update hash but don't skip rebuild
+            new_layout_hash = hash(tuple(asset["name"] for asset in assets))
+            self._last_layout_hash = new_layout_hash
+            logger.debug("Force rebuild requested - performing full rebuild")
         
         # Clear placeholder and show gallery
         self.view.update_gallery_placeholder("")
