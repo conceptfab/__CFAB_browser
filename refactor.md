@@ -8,24 +8,6 @@
 
 
 
-
-
-### 3. **core/main_window.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Zbyt duża klasa** z wieloma odpowiedzialnościami
-- **Duplikowane metody helper** dla zliczania zasobów
-- **Nieużywane pola** w `default_config`
-
-#### ✅ **Planowane akcje:**
-
-1. Wydzielić `StatusBarManager` jako osobną klasę
-2. Usunąć duplikaty w metodach `_calculate_asset_counts` i podobnych
-3. Oczyścić `default_config` z nieużywanych kluczy
-
----
-
 ### 4. **core/amv_controllers/handlers/file_operation_controller.py**
 
 #### 🔍 **Zidentyfikowane problemy:**
