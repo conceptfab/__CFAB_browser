@@ -43,22 +43,6 @@
 ---
 
 
-### 6. **core/tools_tab.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Duplikowane metody obsługi workerów** (`_handle_worker_*`)
-- **Redundantne połączenia sygnałów**
-- **Nieużywane importy**
-
-#### ✅ **Planowane akcje:**
-
-1. Użyć `WorkerManager` konsekwentnie dla wszystkich workerów
-2. Usunąć nieużywane importy (`QThread`, `pyqtSignal` w niektórych miejscach)
-3. Uprościć `_start_operation_with_confirmation()` - zbyt skomplikowana
-
----
-
 ### 7. **core/amv_models/file_operations_model.py**
 
 #### 🔍 **Zidentyfikowane problemy:**
