@@ -1,9 +1,6 @@
 import logging
 import os
-import subprocess
 import sys
-import json
-from pathlib import Path
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal, QObject
 from PyQt6.QtGui import QAction, QFont

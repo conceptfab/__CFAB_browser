@@ -212,7 +212,7 @@ class FileOperationsWorker(QThread):
 
     def _update_asset_file_after_rename(self, original_asset_path, new_asset_path):
         try:
-            # Upewnij się, że asset_file_path ma rozszerzenie .asset
+            # Ensure asset_file_path has .asset extension
             asset_file_path = new_asset_path
             if not asset_file_path.endswith('.asset'):
                 asset_file_path = os.path.splitext(asset_file_path)[0] + '.asset'

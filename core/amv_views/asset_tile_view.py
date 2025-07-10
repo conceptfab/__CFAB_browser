@@ -72,78 +72,23 @@ class AssetTileView(QFrame):
         Updates tile data for Object Pooling.
         Allows reuse of an existing AssetTileView instance.
         """
-        # Disconnect old signal connection - safe disconnection
-        if hasattr(self, "model") and self.model:
-            try:
-                self.model.data_changed.disconnect(self.update_ui)
-            except (TypeError, AttributeError):
-                pass  # Connection already doesn't exist
-
-        # Reset thumbnail loading state
-        self.is_loading_thumbnail = False
-
-        # Update data
-        self.model = tile_model
-        self.tile_number = tile_number
-        self.total_tiles = total_tiles
-        self.asset_id = self.model.get_name()
-
-        # Connect new signal connection - only if model exists
-        if self.model:
-            self.model.data_changed.connect(self.update_ui)
-
-        # Immediately update UI with new data
-        self.update_ui()
-
-        # ADDED: Set initial checkbox state based on SelectionModel
-        if hasattr(self, "selection_model") and self.selection_model:
-            is_selected = self.selection_model.is_selected(self.asset_id)
-            self.set_checked(is_selected)
-            logger.debug(f"Set checkbox state for {self.asset_id}: {is_selected}")
-
-        logger.debug(f"AssetTileView data updated for asset: {self.asset_id}")
-
-    def reset_for_pool(self):
-        """Resets the tile to a state ready for reuse in the pool."""
-        # Disconnect all signals
+        # Disconnect old signal connection
         if hasattr(self, "model") and self.model:
             try:
                 self.model.data_changed.disconnect(self.update_ui)
             except (TypeError, AttributeError):
                 pass
-        
-        # Reset state variables
-        self.model = None
-        self.selection_model = None
-        self.asset_id = ""
-        self.tile_number = 0
-        self.total_tiles = 0
         self.is_loading_thumbnail = False
-        self._drag_in_progress = False
-        
-        # Clear UI elements
-        if hasattr(self, "thumbnail_container"):
-            self.thumbnail_container.clear()
-        if hasattr(self, "name_label"):
-            self.name_label.clear()
-        if hasattr(self, "tile_number_label"):
-            self.tile_number_label.clear()
-        if hasattr(self, "checkbox"):
-            self.checkbox.setChecked(False)
-        
-        # Clear star checkboxes
-        if hasattr(self, "star_checkboxes"):
-            for star_cb in self.star_checkboxes:
-                try:
-                    star_cb.setChecked(False)
-                except RuntimeError:
-                    pass
-        
-        # Remove from parent
-        if self.parent():
-            self.setParent(None)
-        
-        logger.debug("AssetTileView reset for pool reuse with proper signal cleanup")
+        self.model = tile_model
+        self.tile_number = tile_number
+        self.total_tiles = total_tiles
+        self.asset_id = self.model.get_name()
+        if self.model:
+            self.model.data_changed.connect(self.update_ui)
+        self.update_ui()
+        if hasattr(self, "selection_model") and self.selection_model:
+            self.set_checked(self.selection_model.is_selected(self.asset_id))
+        logger.debug(f"AssetTileView data updated for asset: {self.asset_id}")
 
     def _setup_ui(self):
         # Removed duplicate thumbnail_container creation - moved to _setup_ui_without_styles()
