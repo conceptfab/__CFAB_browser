@@ -172,78 +172,13 @@ class FileOperationController(QObject):
             )
 
     def _remove_moved_assets_optimized(self, success_messages: list):
-        """OPTIMIZATION: Fast removal of only moved assets without gallery rebuild"""
+        """Uproszczona optymalizacja usuwania kafelków"""
         try:
-            if not self._validate_optimization_inputs(success_messages):
-                return
-            
-            self._execute_asset_removal_with_sync(success_messages)
-            self._update_gallery_placeholder_state()
-
-            logger.debug(f"OPTIMIZATION: Removed {len(success_messages)} assets without gallery rebuild")
-
+            optimizer = AssetRemovalOptimizer(self.model, self.view, self.controller, logger)
+            optimizer.remove_assets(success_messages)
         except Exception as e:
             logger.error(f"Error during optimized asset removal: {e}")
             self._fallback_refresh_gallery()
-    
-    def _execute_asset_removal_with_sync(self, success_messages: list):
-        """Execute asset removal with proper synchronization"""
-        from PyQt6.QtCore import QMutexLocker
-        
-        if hasattr(self.controller.asset_grid_controller, '_tiles_mutex'):
-            with QMutexLocker(self.controller.asset_grid_controller._tiles_mutex):
-                self._perform_asset_removal_operations(success_messages)
-        else:
-            # Fallback without mutex if it doesn't exist
-            self._perform_asset_removal_operations(success_messages)
-    
-    def _perform_asset_removal_operations(self, success_messages: list):
-        """Perform all asset removal operations in sequence"""
-        self._update_asset_model_fast(success_messages)
-        self._remove_tiles_from_view_fast(success_messages)
-        self._update_controller_asset_list(success_messages)
-    
-    def _validate_optimization_inputs(self, success_messages: list) -> bool:
-        """Validates inputs for optimization"""
-        if not success_messages:
-            logger.debug("OPTIMIZATION: No success messages - skipping optimized removal")
-            return False
-        
-        current_assets = self.model.asset_grid_model.get_assets()
-        if not current_assets:
-            logger.debug("OPTIMIZATION: No current assets - skipping optimized removal")
-            return False
-            
-        return True
-    
-    def _update_asset_model_fast(self, success_messages: list):
-        """Fast asset model update without emitting signals"""
-        current_assets = self.model.asset_grid_model.get_assets()
-        logger.debug(f"Current assets count: {len(current_assets)}")
-
-        updated_assets = [
-            asset
-            for asset in current_assets
-            if asset.get("name") not in success_messages
-        ]
-        logger.debug(f"Updated assets count: {len(updated_assets)}")
-        
-        # Direct update without emitting signals
-        self.model.asset_grid_model._assets = updated_assets
-    
-    def _update_controller_asset_list(self, success_messages: list):
-        """Updates the asset list in the controller"""
-        asset_tiles = self.controller.asset_grid_controller.get_asset_tiles()
-        if asset_tiles:
-            logger.debug(f"Active tiles count before removal: {len(asset_tiles)}")
-            
-            updated_tiles = [
-                tile
-                for tile in asset_tiles
-                if tile.asset_id not in success_messages
-            ]
-            self.controller.asset_grid_controller.asset_tiles = updated_tiles
-            logger.debug(f"Active tiles count after removal: {len(updated_tiles)}")
     
     def _update_gallery_placeholder_state(self):
         """Updates the gallery placeholder depending on the asset state"""
@@ -387,3 +322,47 @@ class FileOperationController(QObject):
             logger.warning(
                 "FileOperationController: No assets found for drag & drop operation."
             )
+
+
+class AssetRemovalOptimizer:
+    """Uproszczony optymalizator usuwania kafelków"""
+    def __init__(self, model, view, controller, logger):
+        self.model = model
+        self.view = view
+        self.controller = controller
+        self.logger = logger
+
+    def remove_assets(self, asset_ids: list):
+        if not asset_ids:
+            self.logger.debug("No asset IDs to remove (AssetRemovalOptimizer)")
+            return
+        self._remove_from_model(asset_ids)
+        self._remove_from_view(asset_ids)
+        self._update_gallery_placeholder()
+        self.logger.debug(f"AssetRemovalOptimizer: removed {len(asset_ids)} assets")
+
+    def _remove_from_model(self, asset_ids):
+        current_assets = self.model.asset_grid_model.get_assets()
+        updated_assets = [asset for asset in current_assets if asset.get("name") not in asset_ids]
+        self.model.asset_grid_model._assets = updated_assets
+
+    def _remove_from_view(self, asset_ids):
+        if not hasattr(self.controller.asset_grid_controller, 'asset_tiles'):
+            return
+        asset_tiles = self.controller.asset_grid_controller.get_asset_tiles()
+        updated_tiles = [tile for tile in asset_tiles if tile.asset_id not in asset_ids]
+        self.controller.asset_grid_controller.asset_tiles = updated_tiles
+        # Usuwanie widgetów z layoutu
+        if hasattr(self.view, 'gallery_layout'):
+            for tile in asset_tiles:
+                if hasattr(tile, 'asset_id') and tile.asset_id in asset_ids:
+                    self.view.gallery_layout.removeWidget(tile)
+                    if hasattr(self.controller.asset_grid_controller, 'tile_pool'):
+                        self.controller.asset_grid_controller.tile_pool.release(tile)
+
+    def _update_gallery_placeholder(self):
+        current_assets = self.model.asset_grid_model.get_assets()
+        if not current_assets:
+            self.view.update_gallery_placeholder("No assets found in this folder.")
+        else:
+            self.view.update_gallery_placeholder("")

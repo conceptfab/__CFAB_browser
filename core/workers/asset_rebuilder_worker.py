@@ -53,14 +53,21 @@ class AssetRebuilderWorker(QThread):
             self.progress_updated.emit(0, 100, "Removing old .asset files...")
             self._remove_asset_files()
 
-            # Step 2: Removing .cache folder
+            # Step 2: Removing unpair_files.json
+            if self._is_interruption_requested():
+                logger.debug("Rebuild was interrupted by the user")
+                return
+            self.progress_updated.emit(15, 100, "Removing unpair_files.json...")
+            self._remove_unpair_files()
+
+            # Step 3: Removing .cache folder
             if self._is_interruption_requested():
                 logger.debug("Rebuild was interrupted by the user")
                 return
             self.progress_updated.emit(20, 100, "Removing .cache folder...")
             self._remove_cache_folder()
 
-            # Step 3: Running scanner.py
+            # Step 4: Running scanner.py
             if self._is_interruption_requested():
                 logger.debug("Rebuild was interrupted by the user")
                 return
@@ -100,6 +107,19 @@ class AssetRebuilderWorker(QThread):
             logger.debug("Removed %d .asset files", len(asset_files))
         except Exception as e:
             logger.error(f"Error removing .asset files: {e}")
+            raise
+
+    def _remove_unpair_files(self):
+        """Removes the unpair_files.json file if it exists."""
+        try:
+            unpair_file_path = os.path.join(self.folder_path, "unpair_files.json")
+            if os.path.exists(unpair_file_path):
+                os.remove(unpair_file_path)
+                logger.debug("Removed unpair_files.json: %s", unpair_file_path)
+            else:
+                logger.debug("unpair_files.json did not exist")
+        except Exception as e:
+            logger.error(f"Error removing unpair_files.json: {e}")
             raise
 
     def _remove_cache_folder(self):

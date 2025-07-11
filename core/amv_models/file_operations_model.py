@@ -212,8 +212,11 @@ class FileOperationsWorker(QThread):
 
     def _update_asset_file_after_rename(self, original_asset_path, new_asset_path):
         try:
+            # Ensure asset_file_path has .asset extension
             asset_file_path = new_asset_path
-            if os.path.exists(asset_file_path):
+            if not asset_file_path.endswith('.asset'):
+                asset_file_path = os.path.splitext(asset_file_path)[0] + '.asset'
+            if self._file_exists(asset_file_path):
                 with open(asset_file_path, "r", encoding="utf-8") as f:
                     asset_data = json.load(f)
                 original_basename = os.path.splitext(
@@ -247,7 +250,7 @@ class FileOperationsWorker(QThread):
 
     def _mark_asset_as_duplicate(self, asset_path, original_asset_path):
         try:
-            if os.path.exists(asset_path):
+            if self._file_exists(asset_path):
                 with open(asset_path, "r", encoding="utf-8") as f:
                     asset_data = json.load(f)
 
@@ -262,7 +265,7 @@ class FileOperationsWorker(QThread):
                 )
 
                 # Save updated data
-                with open(asset_file_path, "w", encoding="utf-8") as f:
+                with open(asset_path, "w", encoding="utf-8") as f:
                     json.dump(asset_data, f, indent=2, ensure_ascii=False)
 
                 logger.debug(f"Marked asset as duplicate: {asset_path}")
@@ -354,6 +357,10 @@ class FileOperationsWorker(QThread):
         files.append(thumb_file)
 
         return files
+
+    def _file_exists(self, path):
+        """Helper to check if a file exists."""
+        return os.path.exists(path)
 
 
 class FileOperationsModel(QObject):

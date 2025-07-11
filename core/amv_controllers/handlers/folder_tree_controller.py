@@ -196,12 +196,12 @@ class FolderTreeController(QObject):
         try:
             # Refresh the folder tree structure
             self.model.folder_system_model.refresh_folder(folder_path)
-
-            # SET folder as current and refresh assets - FORCE_RESCAN=True for refresh
+            # SET folder as current i refresh assets - FORCE_RESCAN=True for refresh
             if self._scan_folder_safely(folder_path, force_rescan=True):
+                # Mark that this is a forced rebuild for gallery
+                self.controller.asset_grid_controller._force_rebuild_requested = True
                 self.controller.control_panel_controller.update_button_states()
                 logger.info(f"FOLDER AND ASSETS REFRESHED: {folder_path}")
-
             logger.debug(f"Successfully refreshed folder: {folder_path}")
         except Exception as e:
             logger.error(f"Error while refreshing folder {folder_path}: {e}")

@@ -141,9 +141,20 @@ impl RustAssetRepository {
             .collect();
 
         if common_names.is_empty() {
-            // Final message if no assets found
+            // Message if no assets found, but still create unpaired files list
             if let Some(ref callback) = progress_callback {
-                if let Err(e) = callback.call1(py, (100, 100, "No assets found".to_string())) {
+                if let Err(e) = callback.call1(py, (95, 100, "No assets found, creating unpaired files list...".to_string())) {
+                    eprintln!("Progress callback error: {:?}", e);
+                }
+            }
+            
+            // Create unpaired files list even when no assets are found
+            self.create_unpaired_files_json(folder_path, &archive_by_name, &image_by_name, &common_names)
+                .map_err(|e| py_runtime_error!("Error creating unpaired files: {}", e))?;
+            
+            // Final message
+            if let Some(ref callback) = progress_callback {
+                if let Err(e) = callback.call1(py, (100, 100, "Scan completed - no assets found".to_string())) {
                     eprintln!("Progress callback error: {:?}", e);
                 }
             }
@@ -439,6 +450,10 @@ impl RustAssetRepository {
                 unpaired_files.images.push(path.file_name().unwrap_or_default().to_string_lossy().to_string());
             }
         }
+
+        // Sort lists alphabetically
+        unpaired_files.archives.sort();
+        unpaired_files.images.sort();
 
         // Set counters
         unpaired_files.total_archives = unpaired_files.archives.len();

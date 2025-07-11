@@ -128,16 +128,25 @@ class DuplicateFinderWorker(BaseToolWorker):
         return duplicates
 
     def _prepare_files_to_move(self, duplicates: Dict[str, List[str]]) -> List[str]:
-        """Prepares a list of files to move (newer files)"""
+        """Zawsze zostawia najstarszy wg ctime (data utworzenia), resztę przenosi"""
         files_to_move = []
         
         for file_hash, file_list in duplicates.items():
-            # Sort files by modification date (oldest first)
-            sorted_files = sorted(file_list, key=lambda x: os.path.getmtime(x))
-            
-            # Move all but the oldest
-            for file_path in sorted_files[1:]:
-                files_to_move.append(file_path)
+            # Tworzymy listę (plik, ctime)
+            files_with_ctime = []
+            for file_path in file_list:
+                try:
+                    ctime = os.path.getctime(file_path)
+                    files_with_ctime.append((file_path, ctime))
+                except Exception as e:
+                    logger.error(f"Błąd pobierania czasu utworzenia pliku {file_path}: {e}")
+                    continue
+            if len(files_with_ctime) > 1:
+                # Sortujemy po ctime rosnąco
+                files_sorted = sorted(files_with_ctime, key=lambda x: x[1])
+                # Najstarszy zostaje, resztę przenosimy
+                files_to_move.extend([f[0] for f in files_sorted[1:]])
+            # Jeśli tylko jeden plik, nic nie przenosimy
         
         return files_to_move
 
@@ -163,9 +172,8 @@ class DuplicateFinderWorker(BaseToolWorker):
                 # Move archive file
                 if self._safe_file_operation(shutil.move, file_path, destination):
                     moved_count += 1
-                    
-                    # Find and move related files (asset and cache)
-                    self._move_related_files(file_path, duplicates_folder)
+                #    # Find and move related files (asset and cache)
+                #    self._move_related_files(file_path, duplicates_folder)
                 
             except Exception as e:
                 logger.error(f"Error moving {file_path}: {e}")

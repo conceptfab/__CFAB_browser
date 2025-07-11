@@ -45,6 +45,11 @@ class PairingModel:
                 data = json.load(f)
                 self.unpaired_archives = data.get("unpaired_archives", [])
                 self.unpaired_images = data.get("unpaired_images", [])
+                
+                # Sort lists alphabetically after loading
+                self.unpaired_archives.sort()
+                self.unpaired_images.sort()
+                
                 logger.info(
                     f"Successfully loaded {self.unpair_files_path}. "
                     f"Found {len(self.unpaired_archives)} archives and "
@@ -89,11 +94,16 @@ class PairingModel:
     def save_unpair_files(self):
         if not self.unpair_files_path:
             return  # Do not save if path is not set
+        
+        # Sort lists alphabetically before saving
+        sorted_archives = sorted(self.unpaired_archives)
+        sorted_images = sorted(self.unpaired_images)
+        
         data = {
-            "unpaired_archives": self.unpaired_archives,
-            "unpaired_images": self.unpaired_images,  # FIX: save as unpaired_images
-            "total_unpaired_archives": len(self.unpaired_archives),
-            "total_unpaired_images": len(self.unpaired_images),
+            "unpaired_archives": sorted_archives,
+            "unpaired_images": sorted_images,
+            "total_unpaired_archives": len(sorted_archives),
+            "total_unpaired_images": len(sorted_images),
         }
         try:
             with open(self.unpair_files_path, "w", encoding="utf-8") as f:

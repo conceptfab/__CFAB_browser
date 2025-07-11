@@ -234,23 +234,3 @@ Pamiętaj: Żaden etap nie może być pominięty. Wszystkie etapy muszą być wy
 
 ---
 
-## Następne pliki do poprawy:
-
-### 3. **core/main_window.py** - OCZEKUJE
-
-### 4. **core/amv_controllers/handlers/file_operation_controller.py** - OCZEKUJE
-
-### 6. **core/tools_tab.py** - OCZEKUJE
-
-### 7. **core/amv_models/file_operations_model.py** - OCZEKUJE
-
-### 8. **core/amv_controllers/handlers/asset_grid_controller.py** - OCZEKUJE
-
-### 9. **core/workers/worker_manager.py** - OCZEKUJE
-
-### 10. **Pliki **init**.py** - OCZEKUJE
-
----
-
-**Status projektu:** 3/10 plików zakończonych (30%)
-**Szacowany czas pozostały:** 2-3 godziny
