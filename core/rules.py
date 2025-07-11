@@ -301,7 +301,7 @@ class FolderClickRules:
 
     The class handles the following file types:
     - .asset files - main asset files
-    - Archive files (.rar, .zip, .sbsar) - sources for processing
+    - Archive files (.rar, .zip, .sbsar, .spsm) - sources for processing
     - Preview files (.jpg, .png, .jpeg, .gif) - preview images
     - .cache folder - cache with generated thumbnails
     """
@@ -312,7 +312,7 @@ class FolderClickRules:
 
     # File extension sets for efficient lookup
     ASSET_EXTENSIONS: Set[str] = {".asset"}
-    ARCHIVE_EXTENSIONS: Set[str] = {".rar", ".zip", ".sbsar", ".7z"}
+    ARCHIVE_EXTENSIONS: Set[str] = {".rar", ".zip", ".sbsar", ".7z", ".spsm"}
     PREVIEW_EXTENSIONS: Set[str] = {".jpg", ".jpeg", ".png",".webp", ".gif"}
 
     # Cache TTL (Time To Live) in seconds
@@ -490,7 +490,7 @@ class FolderClickRules:
 
         Method scans the folder for different types of files:
         - .asset files (main asset files)
-        - Archive files (.rar, .zip, .sbsar)
+        - Archive files (.rar, .zip, .sbsar, .spsm)
         - Preview files (.jpg, .png, .jpeg, .gif)
         - .cache folder with thumbnails
 

@@ -137,7 +137,7 @@ class FileRenamerWorker(BaseToolWorker):
 
         try:
             # File extensions
-            archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar"}
+            archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar", ".spsm"}
             preview_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
 
             # Collect all files

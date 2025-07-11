@@ -137,7 +137,7 @@ class FileShortenerWorker(BaseToolWorker):
         while True:
             # Check if a file with this name already exists in the folder
             test_files = []
-            for ext in ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.sbsar', 
+            for ext in ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.sbsar', '.spsm',
                        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp']:
                 test_file = os.path.join(self.folder_path, f"{base_name}{ext}")
                 if os.path.exists(test_file):
@@ -161,7 +161,7 @@ class FileShortenerWorker(BaseToolWorker):
 
         try:
             # File extensions
-            archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar"}
+            archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar", ".spsm"}
             preview_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
 
             # Collect all files

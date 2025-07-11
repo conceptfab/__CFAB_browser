@@ -56,7 +56,7 @@ pub struct FileExtensions {
 impl Default for FileExtensions {
     fn default() -> Self {
         Self {
-            archives: ["zip", "rar", "sbsar", "7z"]
+            archives: ["zip", "rar", "sbsar", "7z", "spsm"]
                 .iter()
                 .map(|s| s.to_string())
                 .collect(),

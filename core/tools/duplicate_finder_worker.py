@@ -76,7 +76,7 @@ class DuplicateFinderWorker(BaseToolWorker):
 
     def _find_archive_files(self) -> List[str]:
         """Finds archive files in the folder"""
-        archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar"}
+        archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar", ".spsm"}
         return self._find_files_by_extensions(archive_extensions)
 
     def _calculate_file_hashes(self, files: List[str]) -> Dict[str, str]:

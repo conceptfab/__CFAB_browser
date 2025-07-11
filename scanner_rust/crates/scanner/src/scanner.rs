@@ -403,7 +403,7 @@ impl RustAssetRepository {
         };
 
         // Zbierz wszystkie pliki archiwów w folderze
-        let archive_exts = ["zip", "rar", "7z", "sbsar"];
+        let archive_exts = ["zip", "rar", "7z", "sbsar", "spsm"];
         let mut all_archives = Vec::new();
         for entry in std::fs::read_dir(folder_path)? {
             let entry = entry?;

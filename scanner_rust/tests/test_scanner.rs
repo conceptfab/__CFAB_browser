@@ -38,6 +38,7 @@ mod tests {
         assert!(extensions.archives.contains("rar"));
         assert!(extensions.archives.contains("sbsar"));
         assert!(extensions.archives.contains("7z"));
+        assert!(extensions.archives.contains("spsm"));
         
         // Test image extensions
         assert!(extensions.images.contains("png"));
