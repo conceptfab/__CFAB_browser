@@ -445,7 +445,6 @@ def build_with_pyinstaller(debug_mode=False, version="1.0.0", upx_available=Fals
             # 📊 PODSTAWOWE IMPORTS
             "--hidden-import=logging",
             "--hidden-import=json",
-            "--hidden-import=pathlib",
             # 📤 OUTPUT DIRECTORY
             "--distpath=_dist",  # Folder z aplikacją w _dist/
             "--workpath=build",  # Pliki robocze w build/
