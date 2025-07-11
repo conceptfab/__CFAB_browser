@@ -402,29 +402,65 @@ impl RustAssetRepository {
             total_images: 0,
         };
 
-        // Find unpaired archives
-        for (name, path) in archive_by_name {
-            if !common_names.contains(name) {
-                unpaired_files.archives.push(path.file_name().unwrap_or_default().to_string_lossy().to_string());
+        // Zbierz wszystkie pliki archiwów w folderze
+        let archive_exts = ["zip", "rar", "7z", "sbsar"];
+        let mut all_archives = Vec::new();
+        for entry in std::fs::read_dir(folder_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if archive_exts.contains(&ext.to_lowercase().as_str()) {
+                        all_archives.push(path.clone());
+                    }
+                }
             }
         }
 
-        // Find unpaired images
-        for (name, path) in image_by_name {
-            if !common_names.contains(name) {
-                unpaired_files.images.push(path.file_name().unwrap_or_default().to_string_lossy().to_string());
+        // Zbierz wszystkie pliki podglądów w folderze
+        let image_exts = ["png", "jpg", "jpeg", "webp"];
+        let mut all_images = Vec::new();
+        for entry in std::fs::read_dir(folder_path)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    if image_exts.contains(&ext.to_lowercase().as_str()) {
+                        all_images.push(path.clone());
+                    }
+                }
             }
         }
 
-        // Sort lists alphabetically
+        // Dodaj do niesparowanych archiwów te, które nie mają pary
+        for path in all_archives {
+            let name = path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
+            if !common_names.contains(&name) {
+                let fname = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                println!("[UNPAIRED ARCHIVE] {}", fname);
+                unpaired_files.archives.push(fname);
+            }
+        }
+
+        // Dodaj do niesparowanych obrazków te, które nie mają pary
+        for path in all_images {
+            let name = path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
+            if !common_names.contains(&name) {
+                let fname = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                println!("[UNPAIRED IMAGE] {}", fname);
+                unpaired_files.images.push(fname);
+            }
+        }
+
+        // Sortuj alfabetycznie
         unpaired_files.archives.sort();
         unpaired_files.images.sort();
 
-        // Set counters
+        // Ustaw liczniki
         unpaired_files.total_archives = unpaired_files.archives.len();
         unpaired_files.total_images = unpaired_files.images.len();
 
-        // Save to JSON file
+        // Zapisz do pliku JSON
         let json_path = folder_path.join("unpair_files.json");
         let json_content = serde_json::to_string_pretty(&unpaired_files)?;
         std::fs::write(&json_path, json_content)?;
