@@ -1,165 +1,93 @@
-# 🔧 Raport Analizy Kodu - Problemy do Naprawienia
-
-## 📋 Spis treści
-
-1. [Pliki wymagające poprawek](#-pliki-wymagające-poprawek)
-2. [Podsumowanie statystyk](#-podsumowanie-statystyk)
-3. [Priorytet i czas naprawy](#-priorytet-i-czas-naprawy)
-
-
-
-
-
-### 3. **core/main_window.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Zbyt duża klasa** z wieloma odpowiedzialnościami
-- **Duplikowane metody helper** dla zliczania zasobów
-- **Nieużywane pola** w `default_config`
-
-#### ✅ **Planowane akcje:**
-
-1. Wydzielić `StatusBarManager` jako osobną klasę
-2. Usunąć duplikaty w metodach `_calculate_asset_counts` i podobnych
-3. Oczyścić `default_config` z nieużywanych kluczy
-
----
-
-### 4. **core/amv_controllers/handlers/file_operation_controller.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Duplikowane metody optymalizacji** (`_remove_moved_assets_optimized` i pomocnicze)
-- **Zbyt skomplikowana logika** usuwania kafelków
-- **Nieużywane `_tiles_mutex`** w niektórych miejscach
-
-#### ✅ **Planowane akcje:**
-
-1. Uprościć optymalizację usuwania kafelków do 2-3 metod
-2. Usunąć nieużywane referencje do `_tiles_mutex`
-3. Wydzielić `AssetRemovalOptimizer` jako osobną klasę
-
----
-
-
-### 6. **core/tools_tab.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Duplikowane metody obsługi workerów** (`_handle_worker_*`)
-- **Redundantne połączenia sygnałów**
-- **Nieużywane importy**
-
-#### ✅ **Planowane akcje:**
-
-1. Użyć `WorkerManager` konsekwentnie dla wszystkich workerów
-2. Usunąć nieużywane importy (`QThread`, `pyqtSignal` w niektórych miejscach)
-3. Uprościć `_start_operation_with_confirmation()` - zbyt skomplikowana
-
----
-
-### 7. **core/amv_models/file_operations_model.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Błędne przypisanie** w linii 245: `asset_file_path = new_asset_path`
-- **Duplikowane sprawdzania** ścieżek plików
-- **Nieużywana metoda** `_mark_asset_as_duplicate()`
-
-#### ✅ **Planowane akcje:**
-
-1. Naprawić błędne przypisanie w `_update_asset_file_after_rename()`
-2. Usunąć nieużywaną metodę `_mark_asset_as_duplicate()`
-3. Wydzielić wspólne sprawdzenia ścieżek do metody pomocniczej
-
----
-
-### 8. **core/amv_controllers/handlers/asset_grid_controller.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Nieużywany `_last_layout_hash`** w niektórych scenariuszach
-- **Duplikowane logiki** w `_rebuild_asset_grid_immediate()`
-- **Zbyt skomplikowana metoda** `on_assets_changed()`
-
-#### ✅ **Planowane akcje:**
-
-1. Uprościć `on_assets_changed()` - wydzielić części do metod pomocniczych
-2. Usunąć nieużywane optymalizacje layoutu jeśli nie są potrzebne
-3. Wydzielić logikę sortowania do osobnej metody
-
----
-
-### 9. **core/workers/worker_manager.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Nieużywane parametry** w niektórych metodach
-- **Duplikowana logika** resetowania stanu przycisków
-
-#### ✅ **Planowane akcje:**
-
-1. Usunąć nieużywane parametry z metod statycznych
-2. Dodać abstrakcyjną klasę `ManagedWorker` dla lepszej integracji
-
----
-
-### 10. **Pliki **init**.py**
-
-#### 🔍 **Zidentyfikowane problemy:**
-
-- **Niektóre pliki `__init__.py` są puste** gdy powinny eksportować klasy
-- **Brak konsystentnych eksportów**
-
-#### ✅ **Planowane akcje:**
-
-1. Dodać eksporty w pustych plikach `__init__.py` gdzie potrzebne
-2. Ujednolicić style eksportów (`__all__`)
-
----
-
-## 📊 Podsumowanie statystyk
-
-| Kategoria problemów             | Liczba | Status     |
-| ------------------------------- | ------ | ---------- |
-| ❌ Duplikowane funkcje/metody   | 15+    | Do naprawy |
-| ❌ Nieużywane zmienne/metody    | 8      | Do naprawy |
-| ❌ Potencjalne błędy logiczne   | 3      | Do naprawy |
-| ❌ Problemy z architekturą kodu | 5      | Do naprawy |
-
-### 🔢 **Szczegółowe statystyki:**
-
-- **Łączna liczba plików do refaktoryzacji:** 10
-- **Liczba problemów krytycznych:** 3
-- **Liczba problemów średnich:** 12
-- **Liczba problemów niskich:** 8
-
----
-
-## ⏱️ Priorytet i czas naprawy
-
-### 🎯 **Priorytet:**
-
-**Średni** - kod działa, ale wymaga refaktoryzacji
-
-### ⏰ **Szacowany czas naprawy:**
-
-**4-6 godzin**
-
-### 📋 **Plan realizacji:**
-
-1. **Faza 1 (1-2h):** Naprawa błędów krytycznych (linia 245 w file_operations_model.py)
-2. **Faza 2 (2-3h):** Refaktoryzacja duplikowanych metod
-3. **Faza 3 (1h):** Czyszczenie nieużywanego kodu
-4. **Faza 4 (30min):** Poprawa plików **init**.py
-
----
-
-## 🚀 **Następne kroki:**
-
-1. ✅ Weryfikacja problemów (ZAKOŃCZONA)
-2. 🔄 Planowanie refaktoryzacji
-3. ⏳ Implementacja poprawek
-4. 🧪 Testowanie po refaktoryzacji
-5. 📝 Dokumentacja zmian
+🐛 Raport audytu kodu
+📁 Pliki wymagające poprawek
+1. core/amv_controllers/handlers/asset_rebuild_controller.py
+python# PROBLEM: Duplikowanie klasy AssetRebuilderWorker 
+from core.workers.asset_rebuilder_worker import AssetRebuilderWorker
+# thumbnail_cache imported w utilities.clear_thumbnail_cache_after_rebuild()
+Zmiany:
+
+Usunąć nieużywany import thumbnail_cache (linia 11)
+Sprawdzić czy klasa AssetRebuilderWorker nie jest duplikowana
+
+2. core/amv_controllers/handlers/file_operation_controller.py
+pythondef _remove_moved_assets_optimized(self, success_messages: list):
+    """OPTIMIZATION: Fast removal of only moved assets without gallery rebuild"""
+    try:
+        if not self._validate_optimization_inputs(success_messages):
+            return
+        # ... bardzo długa metoda (150+ linii)
+Zmiany:
+3. Podzielić metodę _remove_moved_assets_optimized() na mniejsze funkcje
+4. Usunąć duplikowaną logikę walidacji ścieżek
+3. core/amv_models/file_operations_model.py
+pythondef _update_asset_file_after_rename(self, original_asset_path, new_asset_path):
+    # Upewnij się, że asset_file_path ma rozszerzenie .asset
+    asset_file_path = new_asset_path
+    if not asset_file_path.endswith('.asset'):
+        asset_file_path = os.path.splitext(asset_file_path)[0] + '.asset'
+Zmiany:
+5. Naprawić polskie komentarze na angielskie
+6. Ujednolicić obsługę błędów w metodach _move_single_asset_*
+4. core/amv_views/asset_tile_view.py
+pythondef reset_for_pool(self):
+    """Resets the tile to a state ready for reuse in the pool."""
+    # ... metoda nieużywana przez AssetTilePool
+Zmiany:
+7. Usunąć nieużywaną metodę reset_for_pool()
+8. Uprościć logikę w update_asset_data() - za dużo sprawdzeń
+5. core/main_window.py
+pythondef _validate_grid_controller(self, controller_data: dict) -> bool:
+def _filter_non_special_assets(self, assets) -> list:
+def _calculate_asset_counts(self, controller_data: dict) -> AssetCounts:
+# ... duplikowana logika z SelectionCounter
+Zmiany:
+9. Usunąć zduplikowane metody liczenia assetów - używać tylko SelectionCounter
+10. Usunąć nieużywane struktury danych AssetCounts, AssetCountsDetailed
+6. core/pairing_tab.py
+python# PROBLEM: Polskie komentarze i niekonsequentne nazewnictwo
+self._log_progress(i + 1, len(self.files_info["unpaired"]), f"Przetwarzanie: {filename}")
+Zmiany:
+11. Zmienić wszystkie polskie stringi na angielskie
+12. Usunąć nieużywane importy json, subprocess, Path
+7. core/tools_tab.py
+pythondef _handle_worker_progress(self, button: QPushButton, current: int, total: int, message: str):
+    WorkerManager.handle_progress(button, current, total, message)
+# Metoda tylko przekazuje wywołanie - niepotrzebna
+Zmiany:
+13. Usunąć niepotrzebne metody proxy (_handle_worker_*)
+14. Naprawić polskie stringi w UI (linia 394, 428)
+8. core/utilities.py
+pythondef clear_thumbnail_cache_after_rebuild(is_error: bool = False):
+    """Simplified version - removed duplicate logic and excessive logging."""
+    # Funkcja ma bardzo mało logiki
+Zmiany:
+15. Sprawdzić czy funkcja update_main_window_status() nie jest duplikatowana
+16. Rozważyć połączenie z innymi modułami utility
+9. core/workers/worker_manager.py
+python# PROBLEM: Brak thread safety w metodach statycznych
+@staticmethod
+def start_worker_lifecycle(worker, button, original_text, parent_instance):
+Zmiany:
+17. Dodać thread safety do metod statycznych
+18. Ujednolicić obsługę błędów we wszystkich metodach
+10. core/tools/ (wszystkie pliki worker)*
+python# PROBLEM: Duplikowana logika walidacji we wszystkich workerach
+def _validate_working_directory(self) -> bool:
+    # Ta sama logika w 6 plikach
+Zmiany:
+19. Przenieść wspólną logikę walidacji do BaseToolWorker
+20. Usunąć duplikowaną logikę ładowania modułów Rust
+🎯 Priorytety napraw
+Wysokie (błędy krytyczne):
+
+Punkty 1, 9, 17, 19
+
+Średnie (optymalizacja):
+
+Punkty 3, 7, 8, 13
+
+Niskie (czyszczenie kodu):
+
+Punkty 11, 14, 15, 18, 20
+
+Szacowany czas: ~4-6 godzin pracy na wszystkie poprawki.

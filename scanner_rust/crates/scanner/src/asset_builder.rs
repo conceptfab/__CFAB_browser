@@ -6,10 +6,11 @@ use std::fs;
 use anyhow::Result;
 use std::time::SystemTime;
 use log::{debug, warn};
+use pyo3::types::PyDict;
+use pyo3::types::PyDictMethods;
 
 pub struct AssetBuilder {
     file_extensions: FileExtensions,
-    #[allow(dead_code)]
     #[allow(dead_code)]
     created_at: SystemTime,
 }
@@ -43,7 +44,7 @@ impl AssetBuilder {
         self.validate_asset_inputs(name, archive_path, image_path, folder_path)?;
         
         let size_mb = file_utils::get_file_size_mb(archive_path)?;
-        let textures_in_archive = file_utils::check_texture_folders_presence(folder_path);
+        let textures_in_archive = !file_utils::has_texture_folders(folder_path);
 
         // Get only file names, not full paths
         let archive_name = archive_path
@@ -176,5 +177,21 @@ impl AssetBuilder {
         }
 
         Ok(())
+    }
+
+    /// Helper: konwertuje Asset na PyDict
+    pub fn asset_to_pydict<'py>(&self, py: pyo3::Python<'py>, asset: &crate::types::Asset) -> pyo3::PyResult<pyo3::PyObject> {
+        let py_dict = PyDict::new_bound(py);
+        py_dict.set_item("type", &asset.asset_type)?;
+        py_dict.set_item("name", &asset.name)?;
+        py_dict.set_item("archive", &asset.archive)?;
+        py_dict.set_item("preview", &asset.preview)?;
+        py_dict.set_item("size_mb", asset.size_mb)?;
+        py_dict.set_item("thumbnail", &asset.thumbnail)?;
+        py_dict.set_item("stars", &asset.stars)?;
+        py_dict.set_item("color", &asset.color)?;
+        py_dict.set_item("textures_in_the_archive", asset.textures_in_archive)?;
+        py_dict.set_item("meta", asset.meta.to_string())?;
+        Ok(py_dict.into())
     }
 } 

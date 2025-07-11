@@ -308,3 +308,29 @@ fn image_tools(m: &Bound<'_, PyModule>) -> PyResult<()> {
     
     Ok(())
 } 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_build_info() {
+        let info = build_info::get_build_info();
+        assert!(info.contains_key("module_number"));
+        assert!(info.contains_key("build_timestamp"));
+        assert!(info.contains_key("cargo_target_triple"));
+        assert!(info.contains_key("rust_version"));
+    }
+
+    #[test]
+    fn test_get_build_number() {
+        let build_number = build_info::get_build_number();
+        assert!(!build_number.is_empty());
+    }
+
+    #[test]
+    fn test_get_git_commit() {
+        let git_commit = build_info::get_git_commit();
+        assert!(!git_commit.is_empty());
+    }
+} 
