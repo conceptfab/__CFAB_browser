@@ -99,7 +99,7 @@ def main():
         splash.finish(window)
 
         # Aktualizuj status po uruchomieniu
-        window.update_status("Aplikacja gotowa")
+        window.update_status("Application ready")
 
         logger.info("CFAB Browser window displayed successfully")
 
