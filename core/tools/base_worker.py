@@ -48,7 +48,6 @@ class BaseWorker(QThread):
         self.quit()
         if not self.wait(3000):
             self.terminate()
-            self.wait(2000)
     
     # ========================================
     # CONSOLIDATED PATH VALIDATION METHODS
@@ -198,4 +197,72 @@ class BaseToolWorker(BaseWorker):
             return operation_func(*args, **kwargs)
         except Exception as e:
             logger.error(f"Error during file operation: {e}")
+            return False 
+
+
+class BaseNameWorker(BaseToolWorker):
+    """Bazowa klasa dla workerów zmieniających nazwy plików (randomizacja, skracanie)"""
+
+    pairs_found = pyqtSignal(list)  # list of pairs to display
+    user_confirmation_needed = pyqtSignal(list)  # waits for user confirmation
+
+    def __init__(self, folder_path: str, max_name_length: int):
+        super().__init__(folder_path)
+        self.max_name_length = max_name_length
+        self.user_confirmed = False
+        self.files_info = None
+
+    def confirm_operation(self):
+        """Metoda wywoływana po potwierdzeniu przez użytkownika"""
+        self.user_confirmed = True
+
+    def _analyze_files(self) -> dict:
+        """Analizuje pliki w folderze i znajduje pary"""
+        files_info = {"all_files": [], "pairs": [], "unpaired": []}
+        try:
+            archive_extensions = {".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar", ".spsm"}
+            preview_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
+            archive_files = []
+            preview_files = []
+            for item in os.listdir(self.folder_path):
+                item_path = os.path.join(self.folder_path, item)
+                if os.path.isfile(item_path):
+                    file_ext = os.path.splitext(item)[1].lower()
+                    name_without_ext = os.path.splitext(item)[0]
+                    if file_ext in archive_extensions:
+                        archive_files.append((name_without_ext, item_path))
+                    elif file_ext in preview_extensions:
+                        preview_files.append((name_without_ext, item_path))
+            archive_names = {name: path for name, path in archive_files}
+            preview_names = {name: path for name, path in preview_files}
+            common_names = set(archive_names.keys()) & set(preview_names.keys())
+            for name in common_names:
+                files_info["pairs"].append((archive_names[name], preview_names[name]))
+            unpaired_archive = set(archive_names.keys()) - common_names
+            unpaired_preview = set(preview_names.keys()) - common_names
+            for name in unpaired_archive:
+                files_info["unpaired"].append(archive_names[name])
+            for name in unpaired_preview:
+                files_info["unpaired"].append(preview_names[name])
+            files_info["all_files"] = files_info["pairs"] + files_info["unpaired"]
+            logger.info(f"Found {len(files_info['pairs'])} pairs and {len(files_info['unpaired'])} unpaired files")
+            return files_info
+        except Exception as e:
+            logger.error(f"Error analyzing files: {e}")
+            return files_info
+
+    def _rename_file(self, file_path: str, new_name: str) -> bool:
+        """Zmienia nazwę pliku z obsługą błędów"""
+        try:
+            if not self._validate_single_file_path(file_path):
+                return False
+            directory = os.path.dirname(file_path)
+            file_ext = os.path.splitext(os.path.basename(file_path))[1]
+            new_path = os.path.join(directory, new_name + file_ext)
+            if os.path.exists(new_path):
+                logger.error(f"Target file already exists: {new_path}")
+                return False
+            return self._safe_file_operation(os.rename, file_path, new_path)
+        except Exception as e:
+            logger.error(f"Error renaming file {file_path}: {e}")
             return False 

@@ -172,34 +172,9 @@ class DuplicateFinderWorker(BaseToolWorker):
                 # Move archive file
                 if self._safe_file_operation(shutil.move, file_path, destination):
                     moved_count += 1
-                #    # Find and move related files (asset and cache)
-                #    self._move_related_files(file_path, duplicates_folder)
                 
             except Exception as e:
                 logger.error(f"Error moving {file_path}: {e}")
                 continue
         
-        return moved_count
-
-    def _move_related_files(self, original_file_path: str, duplicates_folder: str):
-        """Moves related files (asset and cache) to the duplicates folder"""
-        try:
-            base_name = os.path.splitext(os.path.basename(original_file_path))[0]
-            folder_path = os.path.dirname(original_file_path)
-            
-            # Search for related files in the folder
-            for item in os.listdir(folder_path):
-                item_path = os.path.join(folder_path, item)
-                if os.path.isfile(item_path):
-                    item_base_name = os.path.splitext(item)[0]
-                    
-                    # Check if it's a related file (same base name)
-                    if item_base_name == base_name and item_path != original_file_path:
-                        try:
-                            destination = os.path.join(duplicates_folder, item)
-                            if self._safe_file_operation(shutil.move, item_path, destination):
-                                logger.info(f"Moved related file: {item}")
-                        except Exception as e:
-                            logger.error(f"Error moving related file {item}: {e}")
-        except Exception as e:
-            logger.error(f"Error moving related files: {e}") 
+        return moved_count 
