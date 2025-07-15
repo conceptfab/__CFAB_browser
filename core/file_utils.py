@@ -13,23 +13,7 @@ from PyQt6.QtWidgets import QMessageBox
 logger = logging.getLogger(__name__)
 
 
-def _is_command_available(command: str) -> bool:
-    """
-    Checks if a command is available in the system.
 
-    Args:
-        command (str): Name of the command to check
-
-    Returns:
-        bool: True if the command is available, False otherwise
-    """
-    try:
-        subprocess.run(
-            [command, "--version"], capture_output=True, timeout=5, check=False
-        )
-        return True
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return False
 
 
 def _validate_path_input(path: str) -> tuple[bool, str]:
@@ -68,10 +52,16 @@ def _open_path_windows(normalized_path: str) -> bool:
         os.startfile(normalized_path)
         return True
     except FileNotFoundError as e:
-        logger.error(f"Windows Explorer or path not found: {normalized_path} - {e}")
+        error_msg = f"Windows Explorer or path not found: {normalized_path} - {e}"
+        logger.error(error_msg)
         return False
     except OSError as e:
-        logger.error(f"OS error opening path {normalized_path}: {e}")
+        error_msg = f"OS error opening path {normalized_path}: {e}"
+        logger.error(error_msg)
+        return False
+    except Exception as e:
+        error_msg = f"Unexpected error opening path {normalized_path}: {e}"
+        logger.error(error_msg)
         return False
 
 
@@ -130,13 +120,20 @@ def _open_file_windows(normalized_path: str) -> bool:
         bool: True if successful, False otherwise
     """
     try:
+        logger.debug(f"_open_file_windows - launching os.startfile with path: {normalized_path}")
         os.startfile(normalized_path)
         return True
     except FileNotFoundError as e:
-        logger.error(f"Windows application or file not found: {normalized_path} - {e}")
+        error_msg = f"Windows application or file not found: {normalized_path} - {e}"
+        logger.error(error_msg)
         return False
     except OSError as e:
-        logger.error(f"OS error opening file {normalized_path}: {e}")
+        error_msg = f"OS error opening file {normalized_path}: {e}"
+        logger.error(error_msg)
+        return False
+    except Exception as e:
+        error_msg = f"Unexpected error opening file {normalized_path}: {e}"
+        logger.error(error_msg)
         return False
 
 

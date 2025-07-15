@@ -99,33 +99,65 @@ class ThreadManager:
         Returns:
             bool: True if all threads stopped gracefully, False if some were terminated
         """
+        success = True
+        stopped_threads = []
+        terminated_threads = []
+        failed_threads = []
+        
         with self._lock:
-            thread_count = len(self.active_threads)
-            pool_count = len(self.thread_pools)
-        
-        logger.info(f"Stopping {thread_count} threads and {pool_count} thread pools...")
-        
-        all_stopped_gracefully = True
-        
-        # Stop thread pools first
-        all_stopped_gracefully &= self._stop_all_thread_pools(timeout_ms)
-        
-        # Stop individual threads
-        all_stopped_gracefully &= self._stop_all_individual_threads(timeout_ms)
-        
-        # CLEANUP VALIDATION: Verify threads actually stopped
-        remaining_threads = self._validate_and_cleanup_registries()
-        
-        if remaining_threads > 0:
-            logger.error(f"Cleanup validation failed: {remaining_threads} threads still running after stop")
-            all_stopped_gracefully = False
-        
-        if all_stopped_gracefully:
-            logger.info("All threads stopped gracefully")
-        else:
-            logger.warning("Some threads required forced termination or failed to stop")
+            # Clean up finished threads
+            self.active_threads = [t for t in self.active_threads if t.isRunning()]
             
-        return all_stopped_gracefully
+            for thread in self.active_threads:
+                try:
+                    if not thread.isFinished():
+                        thread_name = thread.__class__.__name__
+                        thread_id = id(thread)
+                        
+                        # Try graceful stop
+                        thread.quit()
+                        if thread.wait(timeout_ms):
+                            logger.info(f"Thread {thread_name} ({thread_id}) stopped gracefully")
+                            stopped_threads.append((thread_name, thread_id))
+                        else:
+                            # Try terminate if graceful stop failed
+                            logger.warning(f"Thread {thread_name} ({thread_id}) did not stop gracefully")
+                            thread.terminate()
+                            if thread.wait(2000):
+                                logger.info(f"Thread {thread_name} ({thread_id}) terminated successfully")
+                                terminated_threads.append((thread_name, thread_id))
+                            else:
+                                logger.error(f"Failed to terminate thread {thread_name} ({thread_id})")
+                                failed_threads.append((thread_name, thread_id))
+                                success = False
+                except Exception as e:
+                    error_msg = f"Error stopping thread {thread.__class__.__name__}: {e}"
+                    logger.error(error_msg)
+                    failed_threads.append((thread.__class__.__name__, id(thread)))
+                    success = False
+            
+            # Clean up thread pools
+            for pool in self.thread_pools:
+                try:
+                    if pool.activeThreadCount() > 0:
+                        logger.info(f"Clearing thread pool with {pool.activeThreadCount()} active threads")
+                    pool.clear()
+                except Exception as e:
+                    error_msg = f"Error clearing thread pool: {e}"
+                    logger.error(error_msg)
+                    success = False
+            
+            # Log summary
+            if stopped_threads:
+                logger.info(f"Successfully stopped {len(stopped_threads)} threads gracefully")
+            if terminated_threads:
+                logger.warning(f"Had to terminate {len(terminated_threads)} threads")
+            if failed_threads:
+                logger.error(f"Failed to stop {len(failed_threads)} threads")
+                for thread in failed_threads:
+                    logger.error(f"Failed thread: {thread[0]} ({thread[1]})")
+            
+            return success
     
     def _stop_all_thread_pools(self, timeout_ms: int) -> bool:
         """Stop all thread pools with error handling"""
