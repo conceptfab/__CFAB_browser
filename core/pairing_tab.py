@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal, QObject
 from PyQt6.QtGui import QAction, QFont
@@ -25,7 +24,6 @@ from core.amv_models.pairing_model import PairingModel
 from core.amv_views.preview_gallery_view import PreviewGalleryView
 from core.preview_window import PreviewWindow
 from core.workers.asset_rebuilder_worker import AssetRebuilderWorker
-# thumbnail_cache imported w utilities.clear_thumbnail_cache_after_rebuild()
 
 logger = logging.getLogger(__name__)
 

@@ -407,7 +407,14 @@ class ToolsTab(QWidget):
             logger.error(f"Error handling completion of operation '{operation_name}': {e}")
 
     def _reset_button_state(self, button: QPushButton, original_text: str):
-        WorkerManager.reset_button_state(button, original_text, self)
+        """Reset button state after operation completion
+        
+        Args:
+            button: QPushButton instance
+            original_text: Original button text to restore
+        """
+        button.setText(original_text)
+        button.setEnabled(True)
 
     def closeEvent(self, event):
         """Stops all active threads before destruction"""
@@ -481,7 +488,11 @@ class ToolsTab(QWidget):
         )
 
     def _on_archive_double_clicked(self, item: QListWidgetItem):
-        """Handles double-click on an archive file"""
+        """Handle double-click on an archive file
+        
+        Args:
+            item: QListWidgetItem containing the archive file
+        """
         file_name = item.data(Qt.ItemDataRole.UserRole)
         if not file_name or not self.current_working_directory:
             return

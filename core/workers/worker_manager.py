@@ -1,15 +1,17 @@
 """
-WorkerManager - Common class for managing workers
+WorkerManager - Common class for managing workers with thread safety
 """
 
 import logging
 from typing import Callable, Optional
+from threading import Lock
+from PyQt6.QtCore import QThread, QMetaObject, Qt
 
 logger = logging.getLogger(__name__)
 
 
 class ManagedWorker:
-    """Abstrakcyjna klasa bazowa dla workerów"""
+    """Abstract base class for workers"""
     def start(self):
         raise NotImplementedError
     def stop(self):
@@ -19,25 +21,39 @@ class ManagedWorker:
 
 
 class WorkerManager:
-    """Common class for managing workers"""
+    """Thread-safe worker management class"""
+    
+    _lock = Lock()  # Class-level lock for thread safety
+    
+    @classmethod
+    def handle_progress(cls, button, current: int, total: int, message: str):
+        """Thread-safe progress handling
+        
+        Args:
+            button: QButton instance
+            current: Current progress value
+            total: Total progress value
+            message: Progress message
+        
+        Raises:
+            RuntimeError: If called from non-GUI thread without proper handling
+        """
+        with cls._lock:
+            if QThread.currentThread() != button.thread():
+                QMetaObject.invokeMethod(
+                    button,
+                    lambda: button.setText(f"{button.text().split('...')[0]}... {cls._get_progress_text(current, total)}"),
+                    Qt.ConnectionType.QueuedConnection
+                )
+                return
+            
+            button.setText(f"{button.text().split('...')[0]}... {cls._get_progress_text(current, total)}")
+            logger.debug(f"Worker progress: {cls._get_progress_text(current, total)} - {message}")
 
     @staticmethod
-    def handle_progress(button, current, total, message):
-        """Common logic for progress handling
-        UWAGA: Ta metoda MUSI być wywoływana w głównym wątku GUI Qt!
-        Jeśli nie masz pewności, użyj QMetaObject.invokeMethod lub sygnałów Qt.
-        """
-        from PyQt6.QtCore import QThread, QMetaObject, Qt
-        if QThread.currentThread() != button.thread():
-            QMetaObject.invokeMethod(
-                button,
-                lambda: button.setText(f"{button.text().split('...')[0]}... {int((current / total) * 100) if total > 0 else 0}%"),
-                Qt.ConnectionType.QueuedConnection
-            )
-            return
-        progress = int((current / total) * 100) if total > 0 else 0
-        button.setText(f"{button.text().split('...')[0]}... {progress}%")
-        logger.debug(f"Worker progress: {progress}% - {message}")
+    def _get_progress_text(current: int, total: int) -> str:
+        """Helper method to calculate progress percentage"""
+        return f"{int((current / total) * 100) if total > 0 else 0}%"
 
     @staticmethod
     def handle_finished(button, message, original_text, parent_instance):
