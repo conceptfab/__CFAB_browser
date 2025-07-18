@@ -183,6 +183,7 @@ class PairingTab(QWidget):
         self._update_create_asset_button_state()
 
     def load_data(self):
+        self.model.load_unpair_files()  # Wymuś odczyt najnowszych danych z pliku
         self.archive_list_widget.clear()
         # Clear selection state
         self.selected_archive = None
