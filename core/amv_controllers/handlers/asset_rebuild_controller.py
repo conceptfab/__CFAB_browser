@@ -95,6 +95,9 @@ class AssetRebuildController(QObject):
             # Update button states if there is no working folder
             self.controller.control_panel_controller.update_button_states()
 
+        # Odśwież zakładki po przebudowie
+        self._refresh_tabs_after_rebuild(current_folder)
+
         # Clean up the worker
         self._cleanup_worker()
 
@@ -114,11 +117,48 @@ class AssetRebuildController(QObject):
             f"Asset rebuild error: {error_message}"
         )
 
+        # Odśwież zakładki po błędzie przebudowy
+        current_folder = self.model.asset_grid_model.get_current_folder()
+        self._refresh_tabs_after_rebuild(current_folder)
+
         # Clean up the worker
         self._cleanup_worker()
 
         # Update button states after rebuild error
         self.controller.control_panel_controller.update_button_states()
+
+    def _refresh_tabs_after_rebuild(self, folder_path):
+        """Odświeża zakładki Asset Browser, PairingTab i ToolsTab po przebudowie asetów"""
+        main_window = getattr(self.controller, 'main_window', None)
+        if main_window:
+            # Asset Browser (AMV Tab)
+            amv_tab = getattr(main_window, 'amv_tab', None)
+            if amv_tab and hasattr(amv_tab, 'get_controller'):
+                try:
+                    amv_controller = amv_tab.get_controller()
+                    if amv_controller and hasattr(amv_controller.model, 'asset_grid_model'):
+                        if folder_path:
+                            amv_controller.model.asset_grid_model.scan_folder(folder_path)
+                            logger.info("Asset Browser refreshed after asset rebuild.")
+                except Exception as e:
+                    logger.error(f"Error refreshing Asset Browser: {e}")
+            # PairingTab
+            pairing_tab = getattr(main_window, 'pairing_tab', None)
+            if pairing_tab and hasattr(pairing_tab, 'load_data'):
+                try:
+                    pairing_tab.load_data()
+                    logger.info("PairingTab refreshed after asset rebuild.")
+                except Exception as e:
+                    logger.error(f"Error refreshing PairingTab: {e}")
+            # ToolsTab
+            tools_tab = getattr(main_window, 'tools_tab', None)
+            if tools_tab and hasattr(tools_tab, 'set_working_directory'):
+                try:
+                    if folder_path:
+                        tools_tab.set_working_directory(folder_path)
+                        logger.info("ToolsTab refreshed after asset rebuild.")
+                except Exception as e:
+                    logger.error(f"Error refreshing ToolsTab: {e}")
 
     def _cleanup_worker(self):
         """Safely deletes the worker"""

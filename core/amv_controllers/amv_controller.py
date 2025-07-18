@@ -33,7 +33,7 @@ class AmvController(QObject):
         super().__init__()
         self.model: AmvModel = model
         self.view = view
-        self.main_window = main_window
+        self.main_window = main_window  # <-- DODANE: referencja do głównego okna
 
 
 
