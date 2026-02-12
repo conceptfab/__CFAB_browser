@@ -35,6 +35,7 @@ def _is_command_available(command: str) -> bool:
 def _validate_path_input(path: str) -> tuple[bool, str]:
     """
     Validates and normalizes input path.
+    Checks for invalid characters on Windows.
     
     Args:
         path (str): Input path to validate
@@ -45,8 +46,23 @@ def _validate_path_input(path: str) -> tuple[bool, str]:
     if not path or not isinstance(path, str):
         return False, "Invalid path: empty or not a string"
     
-    normalized_path = os.path.normpath(path)
-    
+    try:
+        normalized_path = os.path.normpath(path)
+    except Exception as e:
+        return False, f"Invalid path format: {e}"
+        
+    # Windows specific validation
+    if sys.platform == "win32":
+        # Check for invalid characters that are never allowed in streams/filenames
+        # < > " | ? * are invalid. : is allowed only for drive letter
+        invalid_chars = '<>"|?*'
+        
+        # Split drive to avoid flagging C:\
+        drive, tail = os.path.splitdrive(normalized_path)
+        
+        if any(char in tail for char in invalid_chars):
+            return False, f"Path contains invalid characters ({invalid_chars}): {path}"
+
     if not os.path.exists(normalized_path):
         return False, f"Path does not exist: {normalized_path}"
     

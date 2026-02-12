@@ -2,9 +2,9 @@ import logging
 import os
 import subprocess
 import sys
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QThread
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 
 from core.workers.asset_rebuilder_worker import AssetRebuilderWorker
 from core.workers.worker_manager import WorkerManager
+from core.workers.resolution_loader_worker import ResolutionLoaderWorker
         # thumbnail_cache imported in utilities.clear_thumbnail_cache_after_rebuild()
 from core.tools import (
     BaseWorker,
@@ -62,6 +63,7 @@ class ToolsTab(QWidget):
         self.file_renamer = None
         self.remove_worker = None
         self.duplicate_finder = None
+        self.resolution_loader = None  # New worker for async resolution loading
 
         # Initialize UI
         self._setup_ui()
@@ -222,7 +224,7 @@ class ToolsTab(QWidget):
         logger.info(f"Working folder set: {directory_path}")
 
     def scan_working_directory(self, directory_path: str):
-        """Scans the working folder for archive and preview files"""
+        """Scans the working folder for archive and preview files (optimized with scandir)"""
         try:
             if not os.path.exists(directory_path):
                 logger.error(f"Folder does not exist: {directory_path}")
@@ -230,37 +232,30 @@ class ToolsTab(QWidget):
 
             # File extensions
             archive_extensions = {
-                ".zip",
-                ".rar",
-                ".7z",
-                ".tar",
-                ".gz",
-                ".bz2",
-                ".sbsar",
-                ".spsm",
+                ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".sbsar", ".spsm"
             }
             preview_extensions = {
-                ".jpg",
-                ".jpeg",
-                ".png",
-                ".gif",
-                ".bmp",
-                ".tiff",
-                ".webp",
+                ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"
             }
 
-            # Scan files
+            # Scan files using os.scandir for better performance
             archive_files = []
             preview_files = []
 
-            for item in os.listdir(directory_path):
-                item_path = os.path.join(directory_path, item)
-                if os.path.isfile(item_path):
-                    file_ext = os.path.splitext(item)[1].lower()
-                    if file_ext in archive_extensions:
-                        archive_files.append(item)
-                    elif file_ext in preview_extensions:
-                        preview_files.append(item)
+            try:
+                with os.scandir(directory_path) as entries:
+                    for entry in entries:
+                        if entry.is_file():
+                            name = entry.name
+                            ext = os.path.splitext(name)[1].lower()
+                            
+                            if ext in archive_extensions:
+                                archive_files.append(name)
+                            elif ext in preview_extensions:
+                                preview_files.append(name)
+            except OSError as e:
+                logger.error(f"Error scanning directory {directory_path}: {e}")
+                return
 
             # Sort files alphabetically
             archive_files.sort(key=str.lower)
@@ -288,19 +283,57 @@ class ToolsTab(QWidget):
             self.archive_list.addItem(item)
 
     def _update_preview_list(self, preview_files: list):
-        """Updates the list of preview files"""
+        """Updates the list of preview files and starts async resolution loading"""
         self.preview_list.clear()
+        
+        # Stop any existing loader
+        if self.resolution_loader:
+            if self.resolution_loader.isRunning():
+                self.resolution_loader.terminate()
+                self.resolution_loader.wait()
+            self.resolution_loader = None
+
+        # Prepare list for worker
+        files_to_process = []
+
         for file_name in preview_files:
-            # Get image resolution
-            resolution = self._get_image_resolution(file_name)
-            display_text = f"{file_name} - res: {resolution}"
+            # Set initial text with placeholder
+            display_text = f"{file_name} - res: Loading..."
 
             item = QListWidgetItem(display_text)
             item.setData(Qt.ItemDataRole.UserRole, file_name)
             self.preview_list.addItem(item)
+            
+            # Add to processing list
+            if self.current_working_directory:
+                full_path = os.path.join(self.current_working_directory, file_name)
+                files_to_process.append((file_name, full_path))
+        
+        # Start async worker if there are files
+        if files_to_process:
+            self._start_resolution_loader(files_to_process)
+
+    def _start_resolution_loader(self, files_to_process: List[Tuple[str, str]]):
+        """Starts the resolution loader worker"""
+        self.resolution_loader = ResolutionLoaderWorker(files_to_process)
+        self.resolution_loader.resolution_loaded.connect(self._on_resolution_loaded)
+        self.resolution_loader.start()
+        
+    def _on_resolution_loaded(self, file_name: str, resolution: str):
+        """Updates resolution for a specific file item"""
+        # Find item by text (file_name is at the beginning)
+        # Iterate over items to find the correct one (optimization possible with dict)
+        for i in range(self.preview_list.count()):
+            item = self.preview_list.item(i)
+            item_file_name = item.data(Qt.ItemDataRole.UserRole)
+            
+            if item_file_name == file_name:
+                display_text = f"{file_name} - res: {resolution}"
+                item.setText(display_text)
+                break
 
     def _get_image_resolution(self, file_name: str) -> str:
-        """Gets image resolution in 'width x height' format"""
+        """Deprecated: Synchronous image resolution reading (kept for fallback)"""
         if not self.current_working_directory:
             return "no data"
 
@@ -431,6 +464,8 @@ class ToolsTab(QWidget):
                 workers_to_stop.append(self.remove_worker)
             if hasattr(self, "duplicate_finder") and self.duplicate_finder:
                 workers_to_stop.append(self.duplicate_finder)
+            if hasattr(self, "resolution_loader") and self.resolution_loader:
+                workers_to_stop.append(self.resolution_loader)
 
             # Stop all threads
             for worker in workers_to_stop:
