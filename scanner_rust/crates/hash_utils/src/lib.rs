@@ -9,7 +9,7 @@ use build_info::{get_build_info, get_build_number, get_build_datetime, get_git_c
 /// Calculates the SHA-256 hash of a file.
 #[pyfunction]
 fn calculate_sha256(py: Python, file_path: String) -> PyResult<String> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let file = File::open(&file_path)
             .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to open file {}: {}", file_path, e)))?;
         let mut reader = BufReader::new(file);

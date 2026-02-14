@@ -180,8 +180,8 @@ impl AssetBuilder {
     }
 
     /// Helper: konwertuje Asset na PyDict
-    pub fn asset_to_pydict<'py>(&self, py: pyo3::Python<'py>, asset: &crate::types::Asset) -> pyo3::PyResult<pyo3::PyObject> {
-        let py_dict = PyDict::new_bound(py);
+    pub fn asset_to_pydict<'py>(&self, py: pyo3::Python<'py>, asset: &crate::types::Asset) -> pyo3::PyResult<pyo3::Py<pyo3::PyAny>> {
+        let py_dict = PyDict::new(py);
         py_dict.set_item("type", &asset.asset_type)?;
         py_dict.set_item("name", &asset.name)?;
         py_dict.set_item("archive", &asset.archive)?;

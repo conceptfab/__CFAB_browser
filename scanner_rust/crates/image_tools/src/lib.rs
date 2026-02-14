@@ -9,7 +9,7 @@ use build_info::{get_build_info, get_build_number, get_build_datetime, get_git_c
 /// Resizes an image based on specific rules.
 #[pyfunction]
 fn resize_image(py: Python, file_path: String) -> PyResult<bool> {
-    py.allow_threads(|| {
+    py.detach(|| {
         debug!("Resizing image: {}", file_path);
 
         let img = image::open(&file_path)
@@ -52,7 +52,7 @@ fn resize_image(py: Python, file_path: String) -> PyResult<bool> {
 #[pyfunction]
 #[pyo3(signature = (input_path, output_path, quality=None))]
 fn convert_to_webp(py: Python, input_path: String, output_path: String, quality: Option<u8>) -> PyResult<bool> {
-    py.allow_threads(|| {
+    py.detach(|| {
         debug!("Converting image to WebP: {} -> {}", input_path, output_path);
 
         let img = image::open(&input_path)
@@ -154,7 +154,7 @@ fn calculate_new_size(width: u32, height: u32) -> (u32, u32) {
 #[pyfunction]
 #[pyo3(signature = (image_path, size=None, cache_dir=None))]
 fn generate_thumbnail(py: Python, image_path: String, size: Option<u32>, cache_dir: Option<String>) -> PyResult<(String, u32)> {
-    py.allow_threads(|| {
+    py.detach(|| {
         let size = size.unwrap_or(256);
         let cache_dir_name = cache_dir.unwrap_or(".cache".to_string());
 

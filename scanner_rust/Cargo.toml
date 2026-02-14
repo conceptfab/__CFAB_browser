@@ -7,7 +7,7 @@ members = [
 ]
 
 [workspace.dependencies]
-pyo3 = { version = "0.22", features = ["extension-module"] }
+pyo3 = { version = "0.27", features = ["extension-module"] }
 image = { version = "0.25", features = ["webp", "png", "jpeg"] }
 sha2 = "0.10"
 serde = { version = "1.0", features = ["derive"] }
@@ -25,9 +25,9 @@ env_logger = "0.10"
 version = "0.1.0"
 edition = "2021"
 
-[workspace.profile.release]
+[profile.release]
 lto = true
 codegen-units = 1
 panic = "abort"
 opt-level = "z"
-strip = true 
+strip = true

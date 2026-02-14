@@ -196,3 +196,4 @@ Plik spec: `CFAB_Browser.spec`.
 - **JSON:** orjson
 - **Skanowanie:** moduł Rust (scanner_rust, hash_utils)
 - **Build:** Maturin (Rust), PyInstaller (exe)
+- **Rust:** pyo3 0.27, image 0.25, edition 2021

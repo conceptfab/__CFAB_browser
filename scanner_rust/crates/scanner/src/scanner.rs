@@ -8,6 +8,7 @@ use thiserror::Error;
 use log::error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 enum ScannerError {
     #[error("Folder nie istnieje: {0}")]
     #[allow(dead_code)]
@@ -107,8 +108,8 @@ impl RustAssetRepository {
         &self,
         py: Python,
         folder_path: String,
-        progress_callback: Option<PyObject>,
-    ) -> PyResult<Vec<PyObject>> {
+        progress_callback: Option<Py<PyAny>>,
+    ) -> PyResult<Vec<Py<PyAny>>> {
         let folder_path = Path::new(&folder_path);
 
         // Path validation
@@ -229,7 +230,7 @@ impl RustAssetRepository {
             .unwrap_or_else(|_| Vec::new());
 
         for special_folder in special_folders {
-            let py_dict = PyDict::new_bound(py);
+            let py_dict = PyDict::new(py);
             py_dict.set_item("type", &special_folder.folder_type)?;
             py_dict.set_item("name", &special_folder.name)?;
             py_dict.set_item("folder_path", &special_folder.folder_path)?;
@@ -257,7 +258,7 @@ impl RustAssetRepository {
     }
 
     /// Loads existing assets from folder
-    fn load_existing_assets(&self, py: Python, folder_path: String) -> PyResult<Vec<PyObject>> {
+    fn load_existing_assets(&self, py: Python, folder_path: String) -> PyResult<Vec<Py<PyAny>>> {
         let folder_path = Path::new(&folder_path);
 
         if !folder_path.exists() || !folder_path.is_dir() {
@@ -291,7 +292,7 @@ impl RustAssetRepository {
 
         let mut result = Vec::new();
         for special_folder in special_folders {
-            let py_dict = PyDict::new_bound(py);
+            let py_dict = PyDict::new(py);
             py_dict.set_item("type", &special_folder.folder_type)?;
             py_dict.set_item("name", &special_folder.name)?;
             py_dict.set_item("folder_path", &special_folder.folder_path)?;
@@ -303,14 +304,14 @@ impl RustAssetRepository {
     }
 
     /// Scans folder for archive and image files
-    fn scan_folder_for_files(&self, py: Python, folder_path: String) -> PyResult<(PyObject, PyObject)> {
+    fn scan_folder_for_files(&self, py: Python, folder_path: String) -> PyResult<(Py<PyAny>, Py<PyAny>)> {
         let folder_path = Path::new(&folder_path);
         let (archive_by_name, image_by_name) = self.scan_and_group_files(folder_path)
             .map_err(|e| py_runtime_error!("Scan error: {}", e))?;
 
         // Convert to Python dict
-        let py_archives = PyDict::new_bound(py);
-        let py_images = PyDict::new_bound(py);
+        let py_archives = PyDict::new(py);
+        let py_images = PyDict::new(py);
 
         for (name, path) in archive_by_name {
             py_archives.set_item(name, path.to_string_lossy().to_string())?;
@@ -331,7 +332,7 @@ impl RustAssetRepository {
         archive_path: String,
         preview_path: String,
         work_folder_path: String,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let archive_path = Path::new(&archive_path);
         let preview_path = Path::new(&preview_path);
         let work_folder_path = Path::new(&work_folder_path);
@@ -380,8 +381,8 @@ impl RustAssetRepository {
     fn create_unpaired_files_json(
         &self,
         folder_path: &Path,
-        archive_by_name: &HashMap<String, std::path::PathBuf>,
-        image_by_name: &HashMap<String, std::path::PathBuf>,
+        _archive_by_name: &HashMap<String, std::path::PathBuf>,
+        _image_by_name: &HashMap<String, std::path::PathBuf>,
         common_names: &HashSet<String>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // Sprawdź czy folder istnieje

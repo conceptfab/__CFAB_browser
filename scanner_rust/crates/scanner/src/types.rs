@@ -70,6 +70,7 @@ impl Default for FileExtensions {
 
 /// Scanner errors
 #[derive(thiserror::Error, Debug)]
+#[allow(dead_code)]
 pub enum ScannerError {
     #[error("I/O Error: {0}")]
     IoError(#[from] std::io::Error),
@@ -79,6 +80,7 @@ pub enum ScannerError {
 
 /// Scanner configuration
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ScannerConfig {
     // Fields reserved for future use
     _thumbnail_size: u32,
