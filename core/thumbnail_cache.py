@@ -61,13 +61,13 @@ class ThumbnailCache:
                 # Move element to end to mark as recently used (LRU)
                 self.cache.move_to_end(path)
                 logger.debug(f"Cache HIT for: {path}")
-                return self.cache[path]
+                return self.cache[path][0]  # (pixmap, size) tuple
             logger.debug(f"Cache MISS for: {path}")
             return None
 
     def put(self, path: str, pixmap: QPixmap):
         """
-        Adds QPixmap to cache.
+        Adds QPixmap to cache. Stores (pixmap, size) to avoid costly toImage() on evict.
 
         Args:
             path (str): Key (thumbnail path).
@@ -78,7 +78,7 @@ class ThumbnailCache:
                 return  # Already in cache
 
             pixmap_size = pixmap.toImage().sizeInBytes()
-            
+
             # Check if single item is too large
             if pixmap_size > self.max_single_item_size:
                 logger.warning(f"Pixmap too large for cache: {pixmap_size / (1024*1024):.1f} MB > {self.max_single_item_size / (1024*1024):.1f} MB")
@@ -87,8 +87,8 @@ class ThumbnailCache:
             # Ensure there is enough space
             self._ensure_cache_space(pixmap_size)
 
-            # Add new item
-            self.cache[path] = pixmap
+            # Add new item - store (pixmap, size) to avoid toImage() in _evict_oldest
+            self.cache[path] = (pixmap, pixmap_size)
             self.current_size_bytes += pixmap_size
             logger.debug(
                 f"Added to cache: {path} ({pixmap_size / 1024:.1f} KB)."
@@ -110,9 +110,8 @@ class ThumbnailCache:
         if not self.cache:
             return
 
-        oldest_path, oldest_pixmap = self.cache.popitem(last=False)
-        pixmap_size = oldest_pixmap.toImage().sizeInBytes()
-        self.current_size_bytes -= pixmap_size
+        oldest_path, (oldest_pixmap, pixmap_size) = self.cache.popitem(last=False)
+        self.current_size_bytes = max(0, self.current_size_bytes - pixmap_size)
         logger.debug(
             f"Removed from cache (LRU): {oldest_path}."
             f" Current cache size: {self.current_size_bytes / (1024*1024):.1f} MB"

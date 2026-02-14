@@ -1,6 +1,5 @@
 import logging
 import os
-import sys
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal, QObject
 from PyQt6.QtGui import QAction, QFont
@@ -23,6 +22,7 @@ from PyQt6.QtWidgets import (
 
 from core.amv_models.pairing_model import PairingModel
 from core.amv_views.preview_gallery_view import PreviewGalleryView
+from core.file_utils import open_file_in_default_app
 from core.preview_window import PreviewWindow
 from core.workers.asset_rebuilder_worker import AssetRebuilderWorker
 # thumbnail_cache imported w utilities.clear_thumbnail_cache_after_rebuild()
@@ -101,7 +101,7 @@ class PairingTab(QWidget):
 
     def on_working_directory_changed(self, path: str):
         """Slot to be connected to the controller's signal."""
-        print(f"PairingTab: Received new working directory: {path}")
+        logger.debug(f"PairingTab: Received new working directory: {path}")
         self.model.set_work_folder(path)
         self.load_data()
         self._update_button_states()
@@ -253,30 +253,17 @@ class PairingTab(QWidget):
             self.model.work_folder if hasattr(self.model, "work_folder") else ""
         )
         if not work_folder:
-            print("Error: Could not determine work folder to open archive.")
+            logger.error("Could not determine work folder to open archive.")
             return
 
         full_path = os.path.join(work_folder, file_name)
-        print(f"Opening archive: {full_path}")
-        
-        # Path validation
+        logger.debug(f"Opening archive: {full_path}")
+
         if not os.path.exists(full_path):
             logger.error(f"File does not exist: {full_path}")
             return
-            
-        try:
-            if sys.platform == "win32":
-                os.startfile(full_path)
-            elif sys.platform == "darwin":  # macOS
-                subprocess.run(["open", full_path], check=True, timeout=10)
-            else:  # linux
-                subprocess.run(["xdg-open", full_path], check=True, timeout=10)
-        except subprocess.TimeoutExpired:
-            logger.error(f"Timeout while opening file: {full_path}")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Process error while opening file {full_path}: {e}")
-        except Exception as e:
-            logger.error(f"Error while opening file {full_path}: {e}")
+
+        open_file_in_default_app(full_path, self)
         self.selected_preview = file_name if file_name else None
         self._update_button_states()
 
@@ -285,7 +272,7 @@ class PairingTab(QWidget):
         self._update_button_states()
 
     def _on_preview_clicked(self, file_path: str):
-        print(f"Opening preview: {file_path}")
+        logger.debug(f"Opening preview: {file_path}")
         # Zabezpieczenie przed wieloma oknami
         if hasattr(self, "preview_window") and self.preview_window:
             self.preview_window.close()
@@ -301,13 +288,13 @@ class PairingTab(QWidget):
             item_widget = self.archive_list_widget.itemWidget(item)
             if item_widget and item_widget.file_name == archive_name:
                 self.archive_list_widget.takeItem(i)
-                print(f"Removed archive from UI: {archive_name}")
+                logger.debug(f"Removed archive from UI: {archive_name}")
                 break
 
         # Remove preview from preview gallery
         preview_name = os.path.basename(preview_full_path)
         self.preview_gallery_view.remove_preview_by_path(preview_full_path)
-        print(f"Removed preview from UI: {preview_name}")
+        logger.debug(f"Removed preview from UI: {preview_name}")
 
     def _update_button_states(self):
         """Updates the state of all buttons based on the working folder"""
@@ -333,7 +320,7 @@ class PairingTab(QWidget):
                 self.model.work_folder if hasattr(self.model, "work_folder") else ""
             )
             if not work_folder:
-                print("Error: Could not determine work folder to create asset.")
+                logger.error("Could not determine work folder to create asset.")
                 return
 
             archive_full_path = os.path.join(work_folder, self.selected_archive)
@@ -342,17 +329,17 @@ class PairingTab(QWidget):
 
             # Double-check that paths exist before proceeding
             if not os.path.exists(archive_full_path):
-                print(f"FATAL ERROR: Archive path does not exist: {archive_full_path}")
+                logger.error(f"Archive path does not exist: {archive_full_path}")
                 return
             if not os.path.exists(preview_full_path):
-                print(f"FATAL ERROR: Preview path does not exist: {preview_full_path}")
+                logger.error(f"Preview path does not exist: {preview_full_path}")
                 return
 
             success = self.model.create_asset_from_pair(
                 archive_full_path, preview_full_path
             )
             if success:
-                print("Asset created successfully. Removing items from lists...")
+                logger.info("Asset created successfully. Removing items from lists.")
                 self._remove_paired_items_from_ui(
                     self.selected_archive, preview_full_path
                 )
@@ -363,7 +350,7 @@ class PairingTab(QWidget):
                 # Notify about pairing change
                 self._notify_pairing_changed()
             else:
-                print("Failed to create asset.")
+                logger.warning("Failed to create asset.")
 
     def _on_delete_unpaired_images_clicked(self):
         reply = QMessageBox.question(

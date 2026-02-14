@@ -235,8 +235,12 @@ class ThreadManager:
         This should only be used as a last resort when graceful shutdown fails.
         """
         logger.warning("Emergency stop - terminating all threads immediately")
-        
-        for thread in self.active_threads:
+
+        with self._lock:
+            threads_copy = list(self.active_threads)
+            pools_copy = list(self.thread_pools)
+
+        for thread in threads_copy:
             if thread and thread.isRunning():
                 try:
                     thread.terminate()
@@ -244,15 +248,16 @@ class ThreadManager:
                 except Exception as e:
                     logger.error(f"Error in emergency stop for {thread.__class__.__name__}: {e}")
         
-        for pool in self.thread_pools:
+        for pool in pools_copy:
             try:
                 pool.clear()
                 pool.waitForDone(1000)
             except Exception as e:
                 logger.error(f"Error in emergency stop for thread pool: {e}")
-        
-        self.active_threads.clear()
-        self.thread_pools.clear()
+
+        with self._lock:
+            self.active_threads.clear()
+            self.thread_pools.clear()
         logger.warning("Emergency stop completed")
     
     def get_status_report(self) -> str:

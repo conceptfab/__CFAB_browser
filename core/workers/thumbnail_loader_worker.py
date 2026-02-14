@@ -6,14 +6,15 @@ import logging
 import os
 
 from PyQt6.QtCore import QObject, QRunnable, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QImage
 
 logger = logging.getLogger(__name__)
 
 
 class ThumbnailLoaderSignals(QObject):
-    """Signals for thumbnail loading worker."""
-    finished = pyqtSignal(str, QPixmap)  # path, pixmap
+    """Signals for thumbnail loading worker.
+    Emits QImage (thread-safe) - convert to QPixmap in GUI thread slot."""
+    finished = pyqtSignal(str, QImage)  # path, image
     error = pyqtSignal(str, str)  # path, error_message
 
 
@@ -29,17 +30,17 @@ class ThumbnailLoaderWorker(QRunnable):
         self.signals = ThumbnailLoaderSignals()
 
     def run(self):
-        """Loads thumbnail from disk."""
+        """Loads thumbnail from disk. Uses QImage (thread-safe) instead of QPixmap."""
         try:
             if not os.path.exists(self.path):
                 raise FileNotFoundError(f"Thumbnail file does not exist: {self.path}")
 
-            pixmap = QPixmap(self.path)
+            image = QImage(self.path)
 
-            if pixmap.isNull():
-                raise IOError(f"Cannot load QPixmap from file: {self.path}")
+            if image.isNull():
+                raise IOError(f"Cannot load QImage from file: {self.path}")
 
-            self.signals.finished.emit(self.path, pixmap)
+            self.signals.finished.emit(self.path, image)
             logger.debug(f"Successfully loaded thumbnail: {self.path}")
 
         except Exception as e:

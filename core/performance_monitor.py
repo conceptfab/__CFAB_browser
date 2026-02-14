@@ -8,6 +8,7 @@ and logging performance metrics in a structured way.
 import json
 import logging
 import time
+from collections import deque
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -95,7 +96,7 @@ class PerformanceMonitor:
         """
         self.log_file = log_file
         self.enable_console_logging = enable_console_logging
-        self.metrics_history: list[PerformanceMetrics] = []
+        self.metrics_history: deque = deque(maxlen=1000)
         self._setup_logging()
 
     def _setup_logging(self):
@@ -134,12 +135,8 @@ class PerformanceMonitor:
                     f"(memory: {memory_str}) - {metrics.error_message}"
                 )
 
-        # Add to history
+        # Add to history (deque auto-evicts oldest when maxlen exceeded)
         self.metrics_history.append(metrics)
-
-        # Limit history to the last 1000 entries
-        if len(self.metrics_history) > 1000:
-            self.metrics_history = self.metrics_history[-1000:]
 
     def _get_memory_usage(self) -> Optional[float]:
         """Gets current memory usage in MB"""

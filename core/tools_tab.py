@@ -1,6 +1,5 @@
 import logging
 import os
-import subprocess
 import sys
 from typing import Dict, List, Tuple
 
@@ -23,6 +22,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from core.file_utils import open_file_in_default_app
 from core.workers.asset_rebuilder_worker import AssetRebuilderWorker
 from core.workers.worker_manager import WorkerManager
 from core.workers.resolution_loader_worker import ResolutionLoaderWorker
@@ -523,30 +523,8 @@ class ToolsTab(QWidget):
 
         full_path = os.path.join(self.current_working_directory, file_name)
         if os.path.exists(full_path):
-            try:
-                # Open archive in default application
-                if sys.platform == "win32":
-                    os.startfile(full_path)
-                elif sys.platform == "darwin":  # macOS
-                    subprocess.run(["open", full_path], check=True, timeout=10)
-                else:  # Linux
-                    subprocess.run(["xdg-open", full_path], check=True, timeout=10)
-                logger.info(f"Opened archive: {full_path}")
-            except subprocess.TimeoutExpired:
-                logger.error(f"Timeout while opening archive: {full_path}")
-                QMessageBox.warning(
-                    self, "Error", f"Timeout while opening archive"
-                )
-            except subprocess.CalledProcessError as e:
-                logger.error(
-                    f"Process error while opening archive {full_path}: {e}"
-                )
-                QMessageBox.warning(
-                    self, "Error", f"Process error while opening archive"
-                )
-            except Exception as e:
-                logger.error(f"Error opening archive {full_path}: {e}")
-                QMessageBox.warning(self, "Error", f"Cannot open archive: {e}")
+            open_file_in_default_app(full_path, self)
+            logger.info(f"Opened archive: {full_path}")
         else:
             logger.warning(f"File does not exist: {full_path}")
             QMessageBox.warning(self, "Error", f"File does not exist: {file_name}")
@@ -757,26 +735,15 @@ class ToolsTab(QWidget):
 
     def _on_find_duplicates_clicked(self):
         """Handles find duplicates button click"""
-        if not self._validate_working_directory():
-            return
-
-        reply = QMessageBox.question(
-            self,
-            "Confirm Find Duplicates",
-            f"Are you sure you want to find duplicates in folder:\n{self.current_working_directory}?\n\n"
+        description = (
             "Function will compare archive files based on SHA-256 and move newer duplicates "
-            "along with related files to '__duplicates__' folder.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+            "along with related files to '__duplicates__' folder."
         )
-
-        if reply == QMessageBox.StandardButton.Yes:
-            # Użyj uniwersalnej metody z WorkerManager
-            self._start_operation_with_confirmation(
-                "find duplicates",
-                "Find duplicate archives and move them to __duplicates__",
-                lambda: DuplicateFinderWorker(self.current_working_directory),
-            )
+        self._start_operation_with_confirmation(
+            "find duplicates",
+            description,
+            lambda: DuplicateFinderWorker(self.current_working_directory),
+        )
 
     def _show_pairs_dialog(self, pairs):
         """Displays a window with a list of pairs to be renamed"""
@@ -893,8 +860,6 @@ class ToolsTab(QWidget):
 
 
 if __name__ == "__main__":
-    import sys
-
     from PyQt6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)

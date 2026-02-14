@@ -28,9 +28,6 @@ def clear_thumbnail_cache_after_rebuild(is_error: bool = False):
         logger.error(f"Error clearing thumbnail cache: {e}")
 
 
-
-
-
 def update_main_window_status(widget):
     """
     Updates the status bar in the main window.

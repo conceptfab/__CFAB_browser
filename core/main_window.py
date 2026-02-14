@@ -198,55 +198,6 @@ class MainWindow(QMainWindow):
             # Tabs are critical - if they don't load, application is meaningless
             raise RuntimeError(f"Failed to initialize application tabs: {e}")
 
-    def _createStatusBar(self):
-        """
-        Creates application status bar
-        """
-        try:
-            self.status_bar = QStatusBar(self)
-            self.setStatusBar(self.status_bar)
-
-            # Container with three columns
-            status_container = QWidget()
-            status_layout = QHBoxLayout()
-            status_layout.setContentsMargins(0, 0, 0, 0)
-            status_layout.setSpacing(0)
-
-            # Left column: messages
-            self.status_message_label = QLabel("")
-            self.status_message_label.setMinimumWidth(200)
-            self.status_message_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-            status_layout.addWidget(self.status_message_label, 2)
-
-            # Center: centered progress bar
-            center_widget = QWidget()
-            center_layout = QHBoxLayout()
-            center_layout.setContentsMargins(0, 0, 0, 0)
-            center_layout.setSpacing(0)
-            center_layout.addStretch(1)
-            self.status_progress_bar = QProgressBar()
-            self.status_progress_bar.setFixedHeight(12)
-            self.status_progress_bar.setMinimumWidth(300)
-            self.status_progress_bar.setMaximumWidth(360)
-            self.status_progress_bar.setValue(0)
-            self.status_progress_bar.setVisible(True)
-            center_layout.addWidget(self.status_progress_bar)
-            center_layout.addStretch(1)
-            center_widget.setLayout(center_layout)
-            status_layout.addWidget(center_widget, 1)
-
-            # Right column: number of selected tiles
-            self.selected_label = QLabel("Selected: 0")
-            self.selected_label.setMinimumWidth(100)
-            self.selected_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-            status_layout.addWidget(self.selected_label, 2)
-
-            status_container.setLayout(status_layout)
-            self.status_bar.addWidget(status_container, 1)
-            self.logger.debug("Status bar created successfully")
-        except Exception as e:
-            self.logger.error(f"Error creating status bar: {e}")
-
     def update_status(self, message, timeout=5000):
         if self.status_bar_manager:
             self.status_bar_manager.update_status(message, timeout)

@@ -1,5 +1,7 @@
 # CFAB Browser - System Zarządzania Zasobami Cyfrowymi
 
+> **Dla deweloperów:** [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) – szybki start, struktura projektu, budowanie.
+
 ## 📋 Opis Aplikacji
 
 **CFAB Browser** to zaawansowany system zarządzania zasobami cyfrowymi zaprojektowany specjalnie do organizowania i przeglądania sparowanych kolekcji plików. Aplikacja koncentruje się na efektywnym zarządzaniu zasobami składającymi się z plików archiwów (ZIP, RAR, SBSAR) sparowanych z obrazami podglądu (PNG, JPG, WEBP).

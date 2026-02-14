@@ -23,20 +23,12 @@ class WorkerManager:
 
     @staticmethod
     def handle_progress(button, current, total, message):
-        """Common logic for progress handling
-        UWAGA: Ta metoda MUSI być wywoływana w głównym wątku GUI Qt!
-        Jeśli nie masz pewności, użyj QMetaObject.invokeMethod lub sygnałów Qt.
-        """
-        from PyQt6.QtCore import QThread, QMetaObject, Qt
-        if QThread.currentThread() != button.thread():
-            QMetaObject.invokeMethod(
-                button,
-                lambda: button.setText(f"{button.text().split('...')[0]}... {int((current / total) * 100) if total > 0 else 0}%"),
-                Qt.ConnectionType.QueuedConnection
-            )
-            return
+        """Common logic for progress handling.
+        Caller must connect progress_updated with Qt.ConnectionType.QueuedConnection
+        so this runs in GUI thread when emitted from worker."""
         progress = int((current / total) * 100) if total > 0 else 0
-        button.setText(f"{button.text().split('...')[0]}... {progress}%")
+        prefix = button.text().split("...")[0]
+        button.setText(f"{prefix}... {progress}%")
         logger.debug(f"Worker progress: {progress}% - {message}")
 
     @staticmethod
@@ -88,9 +80,11 @@ class WorkerManager:
             button.setEnabled(False)
             button.setText(f"{original_text}...")
 
-            # Connect signals
+            # Connect signals - QueuedConnection ensures handle_progress runs in GUI thread
+            from PyQt6.QtCore import Qt
             worker.progress_updated.connect(
-                lambda c, t, m: WorkerManager.handle_progress(button, c, t, m)
+                lambda c, t, m: WorkerManager.handle_progress(button, c, t, m),
+                Qt.ConnectionType.QueuedConnection
             )
             worker.finished.connect(
                 lambda m: WorkerManager.handle_finished(button, m, original_text, parent_instance)

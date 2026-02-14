@@ -7,7 +7,7 @@ import logging
 import os
 
 from PyQt6.QtCore import QMimeData, Qt, QThreadPool, pyqtSignal
-from PyQt6.QtGui import QColor, QDrag, QPixmap
+from PyQt6.QtGui import QColor, QDrag, QImage, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -330,8 +330,10 @@ class AssetTileView(QFrame):
         worker.signals.error.connect(self._on_thumbnail_error)
         self.thread_pool.start(worker)
 
-    def _on_thumbnail_loaded(self, path: str, pixmap: QPixmap):
+    def _on_thumbnail_loaded(self, path: str, image: QImage):
+        """Slot - converts QImage to QPixmap in GUI thread (QPixmap is not thread-safe)."""
         if self.model and path == self.model.get_thumbnail_path():
+            pixmap = QPixmap.fromImage(image)
             thumbnail_cache.put(path, pixmap)
             self._set_thumbnail_pixmap(pixmap)
             self.is_loading_thumbnail = False
@@ -572,12 +574,9 @@ class AssetTileView(QFrame):
             )
 
     def update_thumbnail_size(self, new_size: int):
-        """Updates thumbnail size and recalculates layout."""
+        """Updates thumbnail size and recalculates layout. Uses same logic as _calculate_tile_dimensions."""
         self.thumbnail_size = new_size
-        # Recalculate tile width
-        tile_width = new_size + (2 * self.MARGINS_SIZE)
-        tile_height = new_size + 70
-        self.setFixedSize(tile_width, tile_height)
+        self._calculate_tile_dimensions()
         self.update_ui()  # Reload UI to apply new size
 
     def _update_stars_visibility(self):
@@ -632,22 +631,7 @@ class AssetTileView(QFrame):
         else:
             self.selection_model.remove_selection(self.asset_id)
         self.checkbox_state_changed.emit(is_checked)
-        # ADDED: Force status bar update
-        try:
-            main_window = None
-            widget = self
-            while widget and widget.parent():
-                widget = widget.parent()
-                if hasattr(widget, "update_selection_status"):
-                    main_window = widget
-                    break
-            if main_window:
-                main_window.update_selection_status()
-                logger.debug(
-                    f"Updated status bar after checkbox change for {self.asset_id}"
-                )
-        except Exception as e:
-            logger.debug(f"Cannot update status bar: {e}")
+        # Status bar update handled by SelectionModel.selection_changed -> MainWindow._on_selection_changed
 
     def get_star_rating(self) -> int:
         """Gets the star rating."""

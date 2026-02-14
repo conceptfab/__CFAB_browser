@@ -317,6 +317,7 @@ class FolderClickRules:
 
     # Cache TTL (Time To Live) in seconds
     CACHE_TTL = 300  # 5 minutes
+    MAX_CACHE_SIZE = 500  # Limit cache growth to prevent memory leak
 
     # Cache for folder analysis results
     _folder_analysis_cache: Dict[str, Dict] = {}
@@ -339,8 +340,9 @@ class FolderClickRules:
         if not isinstance(folder_path, str):
             return "Folder path must be a string"
 
-        # Check if path doesn't contain path traversal sequences
-        if ".." in folder_path or "\\.." in folder_path or "/.." in folder_path:
+        # Check path traversal - ".." as path segment, not in filename (e.g. file..name)
+        path_parts = folder_path.replace("\\", "/").split("/")
+        if ".." in path_parts:
             return "Folder path contains forbidden path traversal sequences"
 
         # Check if path is not too long
@@ -403,6 +405,19 @@ class FolderClickRules:
             folder_path (str): Path to the folder
             analysis (Dict): Analysis result to cache
         """
+        # Evict oldest entries when cache exceeds limit
+        while (
+            len(FolderClickRules._folder_analysis_cache) >= FolderClickRules.MAX_CACHE_SIZE
+            and FolderClickRules._folder_analysis_cache
+        ):
+            oldest_key = min(
+                FolderClickRules._cache_timestamps,
+                key=FolderClickRules._cache_timestamps.get,
+            )
+            del FolderClickRules._folder_analysis_cache[oldest_key]
+            del FolderClickRules._cache_timestamps[oldest_key]
+            logger.debug(f"Cache evicted oldest: {oldest_key}")
+
         FolderClickRules._folder_analysis_cache[folder_path] = analysis
         FolderClickRules._cache_timestamps[folder_path] = time.time()
         logger.debug(f"Cached folder analysis: {folder_path}")
@@ -410,7 +425,7 @@ class FolderClickRules:
     @staticmethod
     def _categorize_file(item: str) -> Optional[str]:
         """
-        Categorizes a file based on its extension
+        Categorizes a file based on its extension. Uses splitext + set lookup O(1).
 
         Args:
             item (str): File name
@@ -421,21 +436,13 @@ class FolderClickRules:
         if item.startswith("."):
             return None
 
-        item_lower = item.lower()
-
-        # Check extensions using sets for O(1) lookup
-        for ext in FolderClickRules.ASSET_EXTENSIONS:
-            if item_lower.endswith(ext):
-                return "asset"
-
-        for ext in FolderClickRules.ARCHIVE_EXTENSIONS:
-            if item_lower.endswith(ext):
-                return "archive"
-
-        for ext in FolderClickRules.PREVIEW_EXTENSIONS:
-            if item_lower.endswith(ext):
-                return "preview"
-
+        _, ext = os.path.splitext(item.lower())
+        if ext in FolderClickRules.ASSET_EXTENSIONS:
+            return "asset"
+        if ext in FolderClickRules.ARCHIVE_EXTENSIONS:
+            return "archive"
+        if ext in FolderClickRules.PREVIEW_EXTENSIONS:
+            return "preview"
         return None
 
     @staticmethod

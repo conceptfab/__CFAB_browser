@@ -231,17 +231,21 @@ class AssetGridController(QObject):
         # Clear placeholder and show gallery
         self.view.update_gallery_placeholder("")
         
-        # Full rebuild only when necessary
+        # Full rebuild only when necessary - disable updates to avoid O(n²) with takeAt(0)
         logger.debug("Layout changed - performing full rebuild")
-        while self.view.gallery_layout.count():
-            item = self.view.gallery_layout.takeAt(0)
-            if item.widget():
-                item.widget().hide()
-        for i, tile in enumerate(sorted_tiles):
-            row, col = divmod(i, cols)
-            self.view.gallery_layout.addWidget(tile, row, col)
-            tile.show()
-        
+        self.view.gallery_content_widget.setUpdatesEnabled(False)
+        try:
+            while self.view.gallery_layout.count():
+                item = self.view.gallery_layout.takeAt(0)
+                if item.widget():
+                    item.widget().hide()
+            for i, tile in enumerate(sorted_tiles):
+                row, col = divmod(i, cols)
+                self.view.gallery_layout.addWidget(tile, row, col)
+                tile.show()
+        finally:
+            self.view.gallery_content_widget.setUpdatesEnabled(True)
+
         # Ensure gallery is shown after rebuild
         self.view.stacked_layout.setCurrentIndex(0)
 
