@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/micz/.claude/projects/f-----APPS---CFAB-browser/memory//**)",
+      "Read(//c/Users/micz/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/requesting-code-review/**)",
+      "Read(//f/f/___APPS/**)"
+    ]
+  }
+}
