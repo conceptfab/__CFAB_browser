@@ -150,8 +150,13 @@ class AssetGridModel(QObject):
         self, available_width: int, thumbnail_size: int
     ) -> int:
         """Calculates the optimal number of columns for FIXED tile sizes."""
-        # CHANGE: FIXED tile width = thumbnail + margins
-        tile_width = thumbnail_size + 16  # FIXED tile width!
+        # Tile outer width is clamped by the filename row (icon+name+size = 256 px)
+        # in AssetTileView._calculate_tile_dimensions. Using thumbnail_size alone
+        # here under-estimates tile width and lets the grid expand past the
+        # viewport, which then feeds back via gallery_container_widget.width()
+        # into the next recalc and snowballs columns into a single row.
+        MIN_TILE_WIDTH = 256
+        tile_width = max(thumbnail_size, MIN_TILE_WIDTH)
 
         # Layout margins
         layout_margins = 16

@@ -311,7 +311,10 @@ class AssetGridController(QObject):
     def on_thumbnail_size_changed(self, size: int):
         """Handles thumbnail size change."""
         logger.debug(f"Controller: Thumbnail size changed to {size}")
-        gallery_width = self.view.gallery_container_widget.width()
+        # Use viewport width, not the container: if gallery_content_widget ever
+        # exceeds the viewport, gallery_container_widget.width() reports the
+        # expanded width and feeds a runaway increase in column count.
+        gallery_width = self.view.scroll_area.viewport().width()
         # Just request a column recalculation with the new size.
         # Tile updates will happen in on_recalculate_columns_requested.
         self.model.asset_grid_model.request_recalculate_columns(gallery_width, size)
