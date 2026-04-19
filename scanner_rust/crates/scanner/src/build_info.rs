@@ -65,5 +65,5 @@ pub fn get_log_prefix() -> String {
 /// Formats message with build prefix
 #[pyfunction]
 pub fn format_log_message(message: &str) -> String {
-    format!("🦀 {} [build: {}, module: {}]", message, env!("VERGEN_BUILD_TIMESTAMP"), 1)
+    format!("[RUST] {} [build: {}, module: {}]", message, env!("VERGEN_BUILD_TIMESTAMP"), 1)
 } 

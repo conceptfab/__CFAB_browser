@@ -53,7 +53,6 @@ core/
 ├── utilities.py             # Funkcje pomocnicze (update_main_window_status)
 ├── performance_monitor.py   # Monitor wydajności, mierzenie operacji, logi
 ├── thread_manager.py        # ThreadManager – zarządzanie wątkami
-├── selection_counter.py     # SelectionCounter – liczenie zaznaczonych/filtrowanych zasobów
 │
 ├── amv_models/              # Modele MVC – dane i logika
 ├── amv_views/               # Widoki MVC – komponenty UI

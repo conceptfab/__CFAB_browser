@@ -61,12 +61,11 @@ class AssetGridController(QObject):
             self.view.stacked_layout.setCurrentIndex(1)  # Show placeholder
             return
         self.set_original_assets(assets)
-        # Check if force rebuild was requested
+        # Preserve any pending force-rebuild flag across the throttle window.
+        # The flag is consumed inside _rebuild_asset_grid_immediate — clearing
+        # it here would lose the request before the delayed rebuild fires.
         force_rebuild = getattr(self, '_force_rebuild_requested', False)
         self.rebuild_asset_grid(assets, force_rebuild)
-        # Reset force rebuild flag
-        if hasattr(self, '_force_rebuild_requested'):
-            self._force_rebuild_requested = False
         # After rebuilding the grid, if a filter is active, apply it
         current_star_filter = (
             self.active_star_filter
@@ -358,13 +357,13 @@ class AssetGridController(QObject):
                 item = self.view.gallery_layout.takeAt(0)
                 if item.widget():
                     item.widget().hide()
-            
-            # Return tiles to pool
+
+            # Return every active tile to the pool. The previous
+            # `isVisible()` gate was a no-op because hide() above already
+            # made every widget invisible, so tiles leaked on each clear.
             for tile_view in self.asset_tiles:
-                # Check if the tile is not already in the pool
-                if hasattr(tile_view, 'isVisible') and tile_view.isVisible():
-                    self.tile_pool.release(tile_view)
-                
+                self.tile_pool.release(tile_view)
+
             self.asset_tiles.clear()
             logger.debug("OPTIMIZATION: All tiles returned to the pool and layout cleared")
             

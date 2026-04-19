@@ -95,14 +95,10 @@ class AssetRepository:
             return None
 
     def create_thumbnail_for_asset(self, asset_file_path, preview_path):
-        """
-        Creates thumbnail for an asset using Rust backend.
-        """
-        try:
-            # This would need to be implemented in Rust backend
-            # For now, return True as placeholder
-            logger.info(f"Creating thumbnail for asset: {asset_file_path}")
-            return True
-        except Exception as e:
-            logger.error(f"Error creating thumbnail: {e}")
-            return False
+        """Placeholder. The Rust `create_single_asset` path already writes a
+        thumbnail alongside the preview — callers don't need a second pass.
+        Raises to prevent silent success masking a no-op."""
+        raise NotImplementedError(
+            "create_thumbnail_for_asset is not implemented; thumbnails are "
+            "generated inside create_single_asset. Remove the extra call."
+        )

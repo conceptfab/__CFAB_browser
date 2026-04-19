@@ -269,19 +269,11 @@ class PairingModel:
             )
             if asset_data:
                 logger.info(f"Created asset for {archive_name_without_ext}")
-                # 3. Create thumbnail
-                thumbnail_success = asset_repository.create_thumbnail_for_asset(
-                    os.path.join(work_folder_path, f"{archive_name_without_ext}.asset"),
-                    new_preview_full_path,
-                )
-                if thumbnail_success:
-                    logger.info(f"Created thumbnail for {archive_name_without_ext}")
-                else:
-                    logger.warning(
-                        f"Failed to create thumbnail for {archive_name_without_ext}"
-                    )
+                # Thumbnail is generated inside _create_single_asset by the
+                # Rust backend (AssetBuilder::create_single_asset → thumbnail::
+                # generate_thumbnail). No second pass needed.
 
-                # 4. Update unpair_files.json
+                # Update unpair_files.json
                 self.remove_paired_files(
                     os.path.basename(archive_full_path),
                     os.path.basename(preview_full_path),

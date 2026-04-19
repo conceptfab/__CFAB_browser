@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::fs;
 use anyhow::Result;
-use rayon::prelude::*;
 
 /// Checks if file has valid extension (case-insensitive)
 pub fn has_valid_extension(file_path: &Path, extensions: &HashSet<String>) -> bool {
@@ -15,50 +14,10 @@ pub fn has_valid_extension(file_path: &Path, extensions: &HashSet<String>) -> bo
     false
 }
 
-/// Gets files with specified extensions with parallel processing for large folders
-pub fn get_files_by_extensions(
-    folder_path: &Path,
-    extensions: &HashSet<String>
-) -> Result<Vec<PathBuf>> {
-    let entries: Result<Vec<_>, _> = std::fs::read_dir(folder_path)?
-        .collect();
-    
-    let entries = entries?;
-    
-    // Use parallel processing for large folders
-    let files: Vec<PathBuf> = if entries.len() > 1000 {
-        entries.into_par_iter()
-            .filter_map(|entry| {
-                let path = entry.path();
-                if path.is_file() && has_valid_extension(&path, extensions) {
-                    Some(path)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    } else {
-        entries.into_iter()
-            .filter_map(|entry| {
-                let path = entry.path();
-                if path.is_file() && has_valid_extension(&path, extensions) {
-                    Some(path)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    };
-
-    Ok(files)
-}
-
-/// Gets file size in MB
+/// Gets file size in MB (full precision; callers format for display).
 pub fn get_file_size_mb(file_path: &Path) -> Result<f64> {
     let metadata = fs::metadata(file_path)?;
-    let size_bytes = metadata.len() as f64;
-    let size_mb = size_bytes / (1024.0 * 1024.0);
-    Ok((size_mb * 100.0).round() / 100.0) // Round to 2 decimal places
+    Ok(metadata.len() as f64 / (1024.0 * 1024.0))
 }
 
 /// Groups files by names (case-insensitive)

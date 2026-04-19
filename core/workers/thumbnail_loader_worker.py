@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 
 class ThumbnailLoaderSignals(QObject):
     """Signals for thumbnail loading worker.
-    Emits QImage (thread-safe) - convert to QPixmap in GUI thread slot."""
-    finished = pyqtSignal(str, QImage)  # path, image
-    error = pyqtSignal(str, str)  # path, error_message
+    Emits QImage (thread-safe) - convert to QPixmap in GUI thread slot.
+    request_id lets the requester drop stale results after tile reuse."""
+    finished = pyqtSignal(int, str, QImage)  # request_id, path, image
+    error = pyqtSignal(int, str, str)  # request_id, path, error_message
 
 
 class ThumbnailLoaderWorker(QRunnable):
@@ -24,9 +25,10 @@ class ThumbnailLoaderWorker(QRunnable):
     Uses QThreadPool for better thread management.
     """
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, request_id: int = 0):
         super().__init__()
         self.path = path
+        self.request_id = request_id
         self.signals = ThumbnailLoaderSignals()
 
     def run(self):
@@ -40,10 +42,10 @@ class ThumbnailLoaderWorker(QRunnable):
             if image.isNull():
                 raise IOError(f"Cannot load QImage from file: {self.path}")
 
-            self.signals.finished.emit(self.path, image)
+            self.signals.finished.emit(self.request_id, self.path, image)
             logger.debug(f"Successfully loaded thumbnail: {self.path}")
 
         except Exception as e:
             error_msg = f"Error loading thumbnail {self.path}: {e}"
             logger.error(error_msg)
-            self.signals.error.emit(self.path, error_msg)
+            self.signals.error.emit(self.request_id, self.path, error_msg)

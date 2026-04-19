@@ -4,31 +4,18 @@ use crate::thumbnail;
 use std::path::Path;
 use std::fs;
 use anyhow::Result;
-use std::time::SystemTime;
 use log::{debug, warn};
 use pyo3::types::PyDict;
 use pyo3::types::PyDictMethods;
 
 pub struct AssetBuilder {
     file_extensions: FileExtensions,
-    #[allow(dead_code)]
-    created_at: SystemTime,
 }
 
 impl AssetBuilder {
     pub fn new() -> Self {
         Self {
             file_extensions: FileExtensions::default(),
-            created_at: SystemTime::now(),
-        }
-    }
-
-    /// Tworzy nową instancję z własnymi rozszerzeniami plików
-    #[allow(dead_code)]
-    pub fn with_extensions(file_extensions: FileExtensions) -> Self {
-        Self {
-            file_extensions,
-            created_at: SystemTime::now(),
         }
     }
 
@@ -103,23 +90,6 @@ impl AssetBuilder {
         Ok(asset)
     }
 
-    /// Tworzy pusty szablon Asset z domyślnymi wartościami
-    #[allow(dead_code)]
-    pub fn create_empty_asset(&self, name: &str) -> Asset {
-        Asset {
-            asset_type: "asset".to_string(),
-            name: name.to_string(),
-            archive: String::new(),
-            preview: String::new(),
-            size_mb: 0.0,
-            thumbnail: format!("{}.thumb", name),
-            stars: None,
-            color: None,
-            textures_in_archive: false,
-            meta: serde_json::Value::Object(serde_json::Map::new()),
-        }
-    }
-
     /// Validates input data with improved error handling
     pub fn validate_asset_inputs(
         &self,
@@ -138,24 +108,17 @@ impl AssetBuilder {
             return Err(anyhow::anyhow!("Asset name contains invalid characters: {}", name));
         }
 
-        // Sprawdź pliki i foldery równolegle
-        let ((archive_exists, image_exists), folder_valid) = rayon::join(
-            || rayon::join(
-                || archive_path.exists(),
-                || image_path.exists()
-            ),
-            || folder_path.exists() && folder_path.is_dir()
-        );
-
-        if !archive_exists {
+        // Three Path::exists() calls are microseconds each — cheaper than
+        // the rayon task spawn that used to wrap them.
+        if !archive_path.exists() {
             return Err(anyhow::anyhow!("Archive file does not exist: {:?}", archive_path));
         }
 
-        if !image_exists {
+        if !image_path.exists() {
             return Err(anyhow::anyhow!("Image file does not exist: {:?}", image_path));
         }
 
-        if !folder_valid {
+        if !folder_path.exists() || !folder_path.is_dir() {
             return Err(anyhow::anyhow!("Folder does not exist: {:?}", folder_path));
         }
 

@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from typing import Any, List, Optional
 
 from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
@@ -124,18 +125,42 @@ class AssetGridModel(QObject):
             logger.error(error_msg)
             self.scan_error.emit(error_msg)
 
+    _RECALC_DEBOUNCE_MS = 100
+    _RECALC_MAX_WAIT_MS = 300
+
     def request_recalculate_columns(self, available_width: int, thumbnail_size: int):
-        """Requests column recalculation with debouncing."""
+        """Debounced recalculation with a hard max-wait ceiling.
+
+        Pure debounce restarts on every call, so a continuous resize drag
+        blocks recalculation until the user stops moving. The max-wait
+        bound guarantees the grid reflows at least every
+        `_RECALC_MAX_WAIT_MS` ms even under sustained input.
+        """
         logger.debug(
             f"AssetGridModel: Request recalculate columns - "
             f"width: {available_width}, thumb_size: {thumbnail_size}"
         )
         self._last_available_width = available_width
         self._last_thumbnail_size = thumbnail_size
-        self._recalc_timer.start(100)  # 100ms delay
+
+        now = time.monotonic()
+        pending_since = getattr(self, "_recalc_pending_since", None)
+        if pending_since is None:
+            self._recalc_pending_since = now
+            self._recalc_timer.start(self._RECALC_DEBOUNCE_MS)
+            return
+
+        elapsed_ms = (now - pending_since) * 1000.0
+        if elapsed_ms >= self._RECALC_MAX_WAIT_MS:
+            self._recalc_timer.stop()
+            self._perform_recalculate_columns()
+        else:
+            remaining = self._RECALC_MAX_WAIT_MS - elapsed_ms
+            self._recalc_timer.start(min(self._RECALC_DEBOUNCE_MS, int(remaining)))
 
     def _perform_recalculate_columns(self):
         """Performs column recalculation and emits the signal."""
+        self._recalc_pending_since = None
         calculated_columns = self._calculate_columns_cached(
             self._last_available_width, self._last_thumbnail_size
         )

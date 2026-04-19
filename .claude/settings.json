@@ -9,7 +9,19 @@
       "Bash(PYO3_PYTHON=\"C:\\\\tools\\\\python\\\\python.exe\" cargo check)",
       "Bash(python -c ' *)",
       "Bash(maturin --version)",
-      "Bash(PYO3_PYTHON=\"C:\\\\tools\\\\python\\\\python.exe\" maturin build --release --manifest-path crates/scanner/Cargo.toml --target-dir target)"
+      "Bash(PYO3_PYTHON=\"C:\\\\tools\\\\python\\\\python.exe\" maturin build --release --manifest-path crates/scanner/Cargo.toml --target-dir target)",
+      "Bash(PYO3_PYTHON=\"C:\\\\\\\\tools\\\\\\\\python\\\\\\\\python.exe\" cargo check -p image_tools)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('core/amv_models/folder_system_model.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('core/main_window.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('core/tools/file_renamer_worker.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('core/scanner.py', encoding='utf-8'\\).read\\(\\)\\); ast.parse\\(open\\('core/amv_models/pairing_model.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(PYO3_PYTHON=\"C:\\\\\\\\tools\\\\\\\\python\\\\\\\\python.exe\" cargo check --workspace)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('core/amv_models/file_operations_model.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -m py_compile core/amv_models/asset_grid_model.py core/rules.py core/amv_models/file_operations_model.py core/amv_controllers/handlers/folder_tree_controller.py core/amv_controllers/handlers/asset_grid_controller.py core/amv_views/asset_tile_pool.py core/amv_views/asset_tile_view.py core/workers/thumbnail_loader_worker.py core/workers/resolution_loader_worker.py core/thread_manager.py core/main_window.py)",
+      "Bash(where python *)",
+      "Bash(PYO3_PYTHON=\"C:/tools/python/python.exe\" cargo check --workspace)",
+      "Bash(PYO3_PYTHON=\"C:/tools/python/python.exe\" cargo build --release --workspace)",
+      "Bash(C:/tools/python/python.exe -c \"from core.__rust import scanner_rust, image_tools, hash_utils; print\\('scanner_rust:', scanner_rust\\); print\\('image_tools:', image_tools\\); print\\('hash_utils:', hash_utils\\)\")"
     ]
   }
 }

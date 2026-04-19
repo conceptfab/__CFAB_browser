@@ -21,15 +21,6 @@ impl Default for ThumbnailGenerator {
 }
 
 impl ThumbnailGenerator {
-    // Function reserved for future use
-    #[allow(dead_code)]
-    pub fn new(thumbnail_size: u32) -> Self {
-        Self {
-            thumbnail_size,
-            cache_dir_name: ".cache".to_string(),
-        }
-    }
-
     /// Checks if image has transparency
     fn has_transparency(&self, img: &DynamicImage) -> bool {
         match img {
@@ -96,11 +87,10 @@ impl ThumbnailGenerator {
         
         let resized = img.resize(new_width, new_height, filter);
 
-        // FIXED cropping to square:
-        // - Tall images: cropped from top (crop_y = 0)
-        // - Wide images: cropped from left side (crop_x = 0)
-        let crop_x = if new_width > size { 0 } else { 0 };
-        let crop_y = if new_height > size { 0 } else { 0 };
+        // Crop to a square anchored at the top-left corner.
+        // Wide images lose the right side; tall images lose the bottom.
+        let crop_x: u32 = 0;
+        let crop_y: u32 = 0;
         let crop_width = new_width.min(size);
         let crop_height = new_height.min(size);
         

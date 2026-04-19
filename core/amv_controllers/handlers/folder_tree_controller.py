@@ -52,13 +52,10 @@ class FolderTreeController(QObject):
                 self.on_folder_refresh_requested
             )
 
-        # Connect the currentChanged signal after setting the model
-        if hasattr(self.view.folder_tree_view, "_on_current_folder_changed"):
-            sel_model = self.view.folder_tree_view.selectionModel()
-            if sel_model:
-                sel_model.currentChanged.connect(
-                    self.view.folder_tree_view._on_current_folder_changed
-                )
+        # The view's setModel override already wires currentChanged ->
+        # _on_current_folder_changed via a QTimer.singleShot; a second
+        # connect here duplicated the signal and ran every folder change
+        # twice.
 
         logger.debug("Folder system model connected to view - STAGE 6")
 
@@ -90,16 +87,14 @@ class FolderTreeController(QObject):
         """
         OPTIMIZATION: Centralized scanning method with throttling
         """
-        # Check if the same folder is already being scanned
+        # Skip only if the same folder scan is actively in-flight.
+        # Do not short-circuit on "recently scanned" — user actions (refresh,
+        # file ops, drag-drop) must be able to re-trigger a scan of the
+        # currently-selected folder.
         if not force_rescan and self._last_scanned_folder == folder_path and self._scanning_in_progress:
             logger.debug(f"Folder {folder_path} is already being scanned - skipping duplication")
             return False
-            
-        # Check if it's the same folder as last scanned
-        if not force_rescan and self._last_scanned_folder == folder_path:
-            logger.debug(f"Folder {folder_path} was recently scanned - skipping")
-            return False
-            
+
         # Perform scan
         logger.debug(f"Scanning folder: {folder_path}")
         self._scanning_in_progress = True

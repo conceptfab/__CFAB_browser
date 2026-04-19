@@ -20,6 +20,7 @@ import logging
 import os
 import re
 import time
+from collections import OrderedDict
 from typing import Dict, Optional, Set
 
 from core.performance_monitor import measure_operation
@@ -319,8 +320,10 @@ class FolderClickRules:
     CACHE_TTL = 300  # 5 minutes
     MAX_CACHE_SIZE = 500  # Limit cache growth to prevent memory leak
 
-    # Cache for folder analysis results
-    _folder_analysis_cache: Dict[str, Dict] = {}
+    # Cache for folder analysis results.
+    # OrderedDict gives O(1) LRU eviction; the old min()-over-timestamps
+    # approach scanned every entry on each insert past MAX_CACHE_SIZE.
+    _folder_analysis_cache: "OrderedDict[str, Dict]" = OrderedDict()
     _cache_timestamps: Dict[str, float] = {}
 
     @staticmethod
@@ -392,6 +395,8 @@ class FolderClickRules:
             and FolderClickRules._is_cache_valid(folder_path)
         ):
             logger.debug(f"Cache hit for folder: {folder_path}")
+            # Bump recency so LRU eviction favors truly-cold entries.
+            FolderClickRules._folder_analysis_cache.move_to_end(folder_path)
             return FolderClickRules._folder_analysis_cache[folder_path]
 
         return None
@@ -405,20 +410,17 @@ class FolderClickRules:
             folder_path (str): Path to the folder
             analysis (Dict): Analysis result to cache
         """
-        # Evict oldest entries when cache exceeds limit
+        # O(1) LRU eviction via OrderedDict.popitem(last=False).
         while (
             len(FolderClickRules._folder_analysis_cache) >= FolderClickRules.MAX_CACHE_SIZE
-            and FolderClickRules._folder_analysis_cache
         ):
-            oldest_key = min(
-                FolderClickRules._cache_timestamps,
-                key=FolderClickRules._cache_timestamps.get,
-            )
-            del FolderClickRules._folder_analysis_cache[oldest_key]
-            del FolderClickRules._cache_timestamps[oldest_key]
+            oldest_key, _ = FolderClickRules._folder_analysis_cache.popitem(last=False)
+            FolderClickRules._cache_timestamps.pop(oldest_key, None)
             logger.debug(f"Cache evicted oldest: {oldest_key}")
 
+        # move_to_end ensures re-caching a key refreshes its LRU position.
         FolderClickRules._folder_analysis_cache[folder_path] = analysis
+        FolderClickRules._folder_analysis_cache.move_to_end(folder_path)
         FolderClickRules._cache_timestamps[folder_path] = time.time()
         logger.debug(f"Cached folder analysis: {folder_path}")
 

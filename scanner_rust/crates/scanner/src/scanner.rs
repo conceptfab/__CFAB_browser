@@ -1,33 +1,10 @@
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyType};
+use pyo3::types::PyDict;
 use pyo3::exceptions::PyRuntimeError;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use rayon::prelude::*;
-use thiserror::Error;
 use log::{debug, error};
-
-#[derive(Error, Debug)]
-#[allow(dead_code)]
-enum ScannerError {
-    #[error("Folder nie istnieje: {0}")]
-    #[allow(dead_code)]
-    FolderNotFound(String),
-
-    #[error("Brak uprawnień do odczytu folderu: {0}")]
-    #[allow(dead_code)]
-    PermissionDenied(String),
-
-    #[error("Błąd I/O: {0}")]
-    IoError(#[from] std::io::Error),
-
-    #[error("Błąd serializacji JSON: {0}")]
-    JsonError(#[from] serde_json::Error),
-
-    #[error("Błąd tworzenia asetu: {0}")]
-    #[allow(dead_code)]
-    AssetCreationError(String),
-}
 
 use crate::types::*;
 use crate::file_utils::*;
@@ -43,30 +20,10 @@ macro_rules! py_runtime_error {
     };
 }
 
-use std::sync::Mutex;
-use once_cell::sync::Lazy;
-
-/// Cache dla powtórnych skanowań
-struct ScannerCache {
-    last_scan_path: Option<String>,
-    archive_files: HashMap<String, std::path::PathBuf>,
-    image_files: HashMap<String, std::path::PathBuf>,
-}
-
-static SCANNER_CACHE: Lazy<Mutex<ScannerCache>> = Lazy::new(|| {
-    Mutex::new(ScannerCache {
-        last_scan_path: None,
-        archive_files: HashMap::new(),
-        image_files: HashMap::new(),
-    })
-});
-
 #[pyclass]
 pub struct RustAssetRepository {
     file_extensions: FileExtensions,
     asset_builder: AssetBuilder,
-    #[allow(dead_code)]
-    use_cache: bool,
 }
 
 #[pymethods]
@@ -76,31 +33,7 @@ impl RustAssetRepository {
         Self {
             file_extensions: FileExtensions::default(),
             asset_builder: AssetBuilder::new(),
-            use_cache: true,
         }
-    }
-
-    /// Tworzy nową instancję z wyłączonym cachem (przydatne dla testów)
-    #[classmethod]
-    #[pyo3(name = "new_without_cache")]
-    fn new_without_cache(_cls: &Bound<'_, PyType>) -> Self {
-        Self {
-            file_extensions: FileExtensions::default(),
-            asset_builder: AssetBuilder::new(),
-            use_cache: false,
-        }
-    }
-
-    /// Main function for scanning and creating assets
-    /// Resetuje cache skanera
-    #[pyo3(name = "reset_cache")]
-    fn reset_scanner_cache(&self) -> PyResult<()> {
-        if let Ok(mut cache) = SCANNER_CACHE.lock() {
-            cache.last_scan_path = None;
-            cache.archive_files.clear();
-            cache.image_files.clear();
-        }
-        Ok(())
     }
 
     #[pyo3(signature = (folder_path, progress_callback=None))]
@@ -348,104 +281,76 @@ impl RustAssetRepository {
 }
 
 impl RustAssetRepository {
-    /// Scans folder and groups files by names - zoptymalizowana wersja równoległa
+    /// Scans folder once and buckets files by extension in a single pass.
+    ///
+    /// Previously this did two parallel `read_dir` calls on the same folder
+    /// (rayon::join) — thrashing on HDDs and redundant syscalls on SSDs.
     fn scan_and_group_files(&self, folder_path: &Path) -> Result<(HashMap<String, std::path::PathBuf>, HashMap<String, std::path::PathBuf>), Box<dyn std::error::Error>> {
+        let mut archive_files = Vec::new();
+        let mut image_files = Vec::new();
 
-        // Równoległe skanowanie folderów
-        let (archive_files, image_files) = rayon::join(
-            || get_files_by_extensions(folder_path, &self.file_extensions.archives),
-            || get_files_by_extensions(folder_path, &self.file_extensions.images)
-        );
+        for entry in std::fs::read_dir(folder_path)? {
+            let path = entry?.path();
+            if !path.is_file() {
+                continue;
+            }
+            if has_valid_extension(&path, &self.file_extensions.archives) {
+                archive_files.push(path);
+            } else if has_valid_extension(&path, &self.file_extensions.images) {
+                image_files.push(path);
+            }
+        }
 
-        let archive_files = archive_files?;
-        let image_files = image_files?;
-
-        // Grupowanie plików równolegle
-        let archive_by_name = group_files_by_name(archive_files);
-        let image_by_name = group_files_by_name(image_files);
-
-        Ok((archive_by_name, image_by_name))
+        Ok((group_files_by_name(archive_files), group_files_by_name(image_files)))
     }
 
-    /// Creates JSON file with unpaired files
+    /// Creates JSON file with unpaired files.
+    ///
+    /// Uses the already-scanned `archive_by_name` / `image_by_name` maps
+    /// instead of re-reading the directory — saves two full `read_dir`
+    /// passes per scan and keeps the extension list in sync with
+    /// `FileExtensions::default()`.
     fn create_unpaired_files_json(
         &self,
         folder_path: &Path,
-        _archive_by_name: &HashMap<String, std::path::PathBuf>,
-        _image_by_name: &HashMap<String, std::path::PathBuf>,
+        archive_by_name: &HashMap<String, std::path::PathBuf>,
+        image_by_name: &HashMap<String, std::path::PathBuf>,
         common_names: &HashSet<String>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        // Sprawdź czy folder istnieje
         if !folder_path.exists() || !folder_path.is_dir() {
             return Err(format!("Folder nie istnieje: {:?}", folder_path).into());
         }
 
-        let mut unpaired_files = UnpairedFiles {
-            archives: Vec::new(),
-            images: Vec::new(),
-            total_archives: 0,
-            total_images: 0,
+        let mut archives: Vec<String> = archive_by_name
+            .iter()
+            .filter(|(name, _)| !common_names.contains(*name))
+            .filter_map(|(_, path)| {
+                let fname = path.file_name()?.to_string_lossy().into_owned();
+                debug!("[UNPAIRED ARCHIVE] {}", fname);
+                Some(fname)
+            })
+            .collect();
+
+        let mut images: Vec<String> = image_by_name
+            .iter()
+            .filter(|(name, _)| !common_names.contains(*name))
+            .filter_map(|(_, path)| {
+                let fname = path.file_name()?.to_string_lossy().into_owned();
+                debug!("[UNPAIRED IMAGE] {}", fname);
+                Some(fname)
+            })
+            .collect();
+
+        archives.sort();
+        images.sort();
+
+        let unpaired_files = UnpairedFiles {
+            total_archives: archives.len(),
+            total_images: images.len(),
+            archives,
+            images,
         };
 
-        // Zbierz wszystkie pliki archiwów w folderze
-        let archive_exts = ["zip", "rar", "7z", "sbsar", "spsm"];
-        let mut all_archives = Vec::new();
-        for entry in std::fs::read_dir(folder_path)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                    if archive_exts.contains(&ext.to_lowercase().as_str()) {
-                        all_archives.push(path.clone());
-                    }
-                }
-            }
-        }
-
-        // Zbierz wszystkie pliki podglądów w folderze
-        let image_exts = ["png", "jpg", "jpeg", "webp"];
-        let mut all_images = Vec::new();
-        for entry in std::fs::read_dir(folder_path)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_file() {
-                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                    if image_exts.contains(&ext.to_lowercase().as_str()) {
-                        all_images.push(path.clone());
-                    }
-                }
-            }
-        }
-
-        // Dodaj do niesparowanych archiwów te, które nie mają pary
-        for path in all_archives {
-            let name = path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
-            if !common_names.contains(&name) {
-                let fname = path.file_name().unwrap_or_default().to_string_lossy().to_string();
-                debug!("[UNPAIRED ARCHIVE] {}", fname);
-                unpaired_files.archives.push(fname);
-            }
-        }
-
-        // Dodaj do niesparowanych obrazków te, które nie mają pary
-        for path in all_images {
-            let name = path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
-            if !common_names.contains(&name) {
-                let fname = path.file_name().unwrap_or_default().to_string_lossy().to_string();
-                debug!("[UNPAIRED IMAGE] {}", fname);
-                unpaired_files.images.push(fname);
-            }
-        }
-
-        // Sortuj alfabetycznie
-        unpaired_files.archives.sort();
-        unpaired_files.images.sort();
-
-        // Ustaw liczniki
-        unpaired_files.total_archives = unpaired_files.archives.len();
-        unpaired_files.total_images = unpaired_files.images.len();
-
-        // Zapisz do pliku JSON
         let json_path = folder_path.join("unpair_files.json");
         let json_content = serde_json::to_string_pretty(&unpaired_files)?;
         std::fs::write(&json_path, json_content)?;

@@ -25,14 +25,6 @@ pub struct SpecialFolder {
     pub folder_path: String,
 }
 
-/// Scan result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScanResult {
-    pub assets: Vec<Asset>,
-    pub special_folders: Vec<SpecialFolder>,
-    pub unpaired_files: UnpairedFiles,
-}
-
 /// Unpaired files
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnpairedFiles {
@@ -68,34 +60,3 @@ impl Default for FileExtensions {
     }
 }
 
-/// Scanner errors
-#[derive(thiserror::Error, Debug)]
-#[allow(dead_code)]
-pub enum ScannerError {
-    #[error("I/O Error: {0}")]
-    IoError(#[from] std::io::Error),
-    #[error("JSON Error: {0}")]
-    JsonError(#[from] serde_json::Error),
-}
-
-/// Scanner configuration
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct ScannerConfig {
-    // Fields reserved for future use
-    _thumbnail_size: u32,
-    _parallel_processing: bool,
-    _cache_dir_name: String,
-    _file_extensions: FileExtensions,
-}
-
-impl Default for ScannerConfig {
-    fn default() -> Self {
-        Self {
-            _thumbnail_size: 256,
-            _parallel_processing: true,
-            _cache_dir_name: ".cache".to_string(),
-            _file_extensions: FileExtensions::default(),
-        }
-    }
-} 

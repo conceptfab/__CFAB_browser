@@ -16,6 +16,8 @@ class FolderSystemModel(QObject):
     folder_structure_updated = pyqtSignal(object)
     loading_state_changed = pyqtSignal(bool)
 
+    _PLACEHOLDER_KEY = "__lazy_placeholder__"
+
     def __init__(self):
         super().__init__()
         self._tree_model = QStandardItemModel()
@@ -208,7 +210,10 @@ class FolderSystemModel(QObject):
             self._set_loading_state(False)
 
     def _load_subfolders(self, parent_item, folder_path):
-        """Recursively loads subfolders"""
+        """Loads direct children only. A placeholder row is attached when
+        the child itself contains subfolders, so the tree view still draws
+        the expand triangle; the real rows are populated lazily from
+        expand_folder."""
         try:
             if not os.path.exists(folder_path):
                 return
@@ -217,20 +222,51 @@ class FolderSystemModel(QObject):
                 item_path = os.path.join(folder_path, item_name)
                 if os.path.isdir(item_path) and not item_name.startswith(".") and not self._is_system_folder(item_name):
                     display_name = self._format_folder_display_name(item_name, item_path)
-                    
+
                     child_item = QStandardItem(display_name)
                     child_item.setData(item_path, Qt.ItemDataRole.UserRole)
                     child_item.setIcon(self._get_folder_icon())
                     child_item.setEditable(False)
                     parent_item.appendRow(child_item)
 
-                    # Recursively load subfolders
-                    self._load_subfolders(child_item, item_path)
+                    if self._has_visible_subdir(item_path):
+                        self._attach_placeholder(child_item)
 
         except PermissionError:
             logger.warning("Permission denied accessing folder: %s", folder_path)
         except Exception as e:
             logger.error("Error loading subfolders: %s", str(e))
+
+    def _attach_placeholder(self, parent_item: QStandardItem):
+        """Adds a single hidden placeholder row so QTreeView shows the
+        expand triangle without us having to walk the whole subtree."""
+        placeholder = QStandardItem(self._PLACEHOLDER_KEY)
+        placeholder.setData(self._PLACEHOLDER_KEY, Qt.ItemDataRole.UserRole)
+        placeholder.setEditable(False)
+        parent_item.appendRow(placeholder)
+
+    def _has_visible_subdir(self, folder_path: str) -> bool:
+        """Cheap probe: is there at least one visible, non-system subdir?"""
+        try:
+            with os.scandir(folder_path) as entries:
+                for entry in entries:
+                    try:
+                        if (entry.is_dir(follow_symlinks=False)
+                                and not entry.name.startswith(".")
+                                and not self._is_system_folder(entry.name)):
+                            return True
+                    except OSError:
+                        continue
+        except OSError:
+            return False
+        return False
+
+    def _has_placeholder_only(self, parent_item: QStandardItem) -> bool:
+        """True iff parent has exactly the sentinel placeholder child."""
+        if parent_item.rowCount() != 1:
+            return False
+        first = parent_item.child(0)
+        return bool(first) and first.data(Qt.ItemDataRole.UserRole) == self._PLACEHOLDER_KEY
 
     def _is_system_folder(self, folder_name: str) -> bool:
         """Checks if folder is a system folder that should be hidden"""
@@ -243,12 +279,20 @@ class FolderSystemModel(QObject):
         return folder_name.lower() in system_folders
 
     def expand_folder(self, item: QStandardItem):
-        """Expands a folder in the tree"""
+        """Expands a folder in the tree, populating children on demand."""
         try:
             folder_path = item.data(Qt.ItemDataRole.UserRole)
-            if folder_path:
-                self.folder_expanded.emit(folder_path)
-                logger.debug("Folder expanded: %s", folder_path)
+            if not folder_path or folder_path == self._PLACEHOLDER_KEY:
+                return
+
+            # Lazy-populate: if only a placeholder is present, swap it for
+            # the real direct children. Deep subtrees stay unloaded.
+            if self._has_placeholder_only(item):
+                item.removeRows(0, item.rowCount())
+                self._load_subfolders(item, folder_path)
+
+            self.folder_expanded.emit(folder_path)
+            logger.debug("Folder expanded: %s", folder_path)
         except Exception as e:
             logger.error("Error expanding folder: %s", str(e))
 
@@ -297,6 +341,10 @@ class FolderSystemModel(QObject):
         for i in range(item.rowCount()):
             child_item = item.child(i)
             child_path = child_item.data(Qt.ItemDataRole.UserRole)
+
+            # Placeholder rows (lazy expansion) have no real path.
+            if child_path == self._PLACEHOLDER_KEY:
+                continue
 
             if child_path == target_path:
                 # Found the target folder, refresh it

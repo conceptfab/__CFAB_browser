@@ -189,12 +189,33 @@ class FileOperationsWorker(QThread):
         return files_to_move, source_asset, target_asset
 
     def _move_files(self, files_to_move):
-        moved_files = []
-        for source_path, target_path in files_to_move:
-            shutil.move(source_path, target_path)
-            moved_files.append(target_path)
-            logger.debug(f"Moved: {source_path} -> {target_path}")
-        return moved_files
+        """Moves the (source, target) pairs atomically at the set level:
+        if any single move fails, previously moved files are restored to
+        their original locations before the exception propagates. This
+        prevents an asset from being split across two folders when a
+        permission / disk-space / kill interrupts us mid-loop."""
+        moved = []  # (source_path, target_path) pairs already moved
+        try:
+            for source_path, target_path in files_to_move:
+                shutil.move(source_path, target_path)
+                moved.append((source_path, target_path))
+                logger.debug(f"Moved: {source_path} -> {target_path}")
+            return [t for _, t in moved]
+        except Exception as move_err:
+            logger.error(
+                f"Move failed mid-batch after {len(moved)}/{len(files_to_move)} "
+                f"files; rolling back. Cause: {move_err}"
+            )
+            for original_source, already_moved_target in reversed(moved):
+                try:
+                    shutil.move(already_moved_target, original_source)
+                    logger.debug(f"Rollback: {already_moved_target} -> {original_source}")
+                except Exception as rollback_err:
+                    logger.error(
+                        f"Rollback FAILED for {already_moved_target} -> "
+                        f"{original_source}: {rollback_err}. Asset may be split."
+                    )
+            raise
 
     def _handle_post_move(self, unique_name, original_name, source_asset, target_asset):
         if unique_name == original_name:

@@ -58,6 +58,9 @@ class AssetTileView(QFrame):
         self.selection_model = selection_model  # Assign selection_model
         self.asset_id = self.model.get_name()  # Use asset name as ID
         self.is_loading_thumbnail = False
+        # Monotonic id lets us discard results from workers started before
+        # the tile was reused (pool reacquire) or before a new path/size.
+        self._thumbnail_request_id = 0
         self._drag_in_progress = False  # Initialize drag state
         self.setObjectName("AssetTileViewFrame")  # Added object name
         self._setup_ui()
@@ -79,6 +82,8 @@ class AssetTileView(QFrame):
             except (TypeError, AttributeError):
                 pass
         self.is_loading_thumbnail = False
+        # Any in-flight result from the previous model is now stale.
+        self._thumbnail_request_id += 1
         self.model = tile_model
         self.tile_number = tile_number
         self.total_tiles = total_tiles
@@ -324,25 +329,36 @@ class AssetTileView(QFrame):
         if self.is_loading_thumbnail:
             return
         self.is_loading_thumbnail = True
+        self._thumbnail_request_id += 1
+        request_id = self._thumbnail_request_id
 
-        worker = ThumbnailLoaderWorker(path)
+        worker = ThumbnailLoaderWorker(path, request_id)
         worker.signals.finished.connect(self._on_thumbnail_loaded)
         worker.signals.error.connect(self._on_thumbnail_error)
         self.thread_pool.start(worker)
 
-    def _on_thumbnail_loaded(self, path: str, image: QImage):
-        """Slot - converts QImage to QPixmap in GUI thread (QPixmap is not thread-safe)."""
-        if self.model and path == self.model.get_thumbnail_path():
-            pixmap = QPixmap.fromImage(image)
-            thumbnail_cache.put(path, pixmap)
-            self._set_thumbnail_pixmap(pixmap)
-            self.is_loading_thumbnail = False
+    def _is_current_request(self, request_id: int, path: str) -> bool:
+        return (
+            request_id == self._thumbnail_request_id
+            and self.model is not None
+            and path == self.model.get_thumbnail_path()
+        )
 
-    def _on_thumbnail_error(self, path: str, error_message: str):
-        if self.model and path == self.model.get_thumbnail_path():
-            logger.warning(error_message)
-            self._create_placeholder_thumbnail()
-            self.is_loading_thumbnail = False
+    def _on_thumbnail_loaded(self, request_id: int, path: str, image: QImage):
+        """Slot - converts QImage to QPixmap in GUI thread (QPixmap is not thread-safe)."""
+        if not self._is_current_request(request_id, path):
+            return
+        pixmap = QPixmap.fromImage(image)
+        thumbnail_cache.put(path, pixmap)
+        self._set_thumbnail_pixmap(pixmap)
+        self.is_loading_thumbnail = False
+
+    def _on_thumbnail_error(self, request_id: int, path: str, error_message: str):
+        if not self._is_current_request(request_id, path):
+            return
+        logger.warning(error_message)
+        self._create_placeholder_thumbnail()
+        self.is_loading_thumbnail = False
 
     def _set_thumbnail_pixmap(self, pixmap: QPixmap):
         """Sets QPixmap on the thumbnail label, cropping to square as required."""

@@ -77,16 +77,29 @@ class ThreadManager:
                 self.active_threads.remove(thread)
                 logger.debug(f"Unregistered thread: {thread.__class__.__name__} ({id(thread)})")
     
+    @staticmethod
+    def _is_thread_alive(thread: QThread) -> bool:
+        """Guarded isRunning() — returns False if the underlying C++
+        QThread has already been deleted by Qt."""
+        if thread is None:
+            return False
+        try:
+            return thread.isRunning()
+        except RuntimeError:
+            return False
+
     def get_active_thread_count(self) -> int:
         """
         Get count of currently active threads (thread-safe).
-        
+
         Returns:
             int: Number of active threads
         """
         with self._lock:
-            # Clean up finished threads
-            self.active_threads = [t for t in self.active_threads if t.isRunning()]
+            # Clean up finished (or deleted) threads.
+            self.active_threads = [
+                t for t in self.active_threads if self._is_thread_alive(t)
+            ]
             return len(self.active_threads)
     
     def stop_all_threads(self, timeout_ms: int = 5000) -> bool:
@@ -169,7 +182,7 @@ class ThreadManager:
         """
         with self._lock:
             # Check how many threads are still actually running
-            still_running = [t for t in self.active_threads if t.isRunning()]
+            still_running = [t for t in self.active_threads if self._is_thread_alive(t)]
             running_count = len(still_running)
             
             if running_count > 0:
@@ -194,7 +207,7 @@ class ThreadManager:
         Returns:
             bool: True if stopped gracefully, False if terminated
         """
-        if not thread or not thread.isRunning():
+        if not self._is_thread_alive(thread):
             return True
             
         thread_name = thread.__class__.__name__
@@ -241,7 +254,7 @@ class ThreadManager:
             pools_copy = list(self.thread_pools)
 
         for thread in threads_copy:
-            if thread and thread.isRunning():
+            if self._is_thread_alive(thread):
                 try:
                     thread.terminate()
                     thread.wait(1000)  # Short wait

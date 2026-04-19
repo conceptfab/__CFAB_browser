@@ -1,10 +1,32 @@
 use pyo3::prelude::*;
-use image::{imageops::FilterType, GenericImageView};
+use image::{imageops::FilterType, GenericImageView, ImageFormat};
 use anyhow::{Result, anyhow};
 use log::{debug, info, error};
+use std::path::Path;
 
 mod build_info;
 use build_info::{get_build_info, get_build_number, get_build_datetime, get_git_commit, get_module_number, get_module_info, get_log_prefix, format_log_message};
+
+/// Writes image bytes to `target` via a temp file in the same directory,
+/// then atomically renames. If the encoder panics or the write is truncated
+/// the original file is preserved intact.
+fn atomic_write_image(target: &Path, encoded: &[u8]) -> std::io::Result<()> {
+    let parent = target.parent().unwrap_or_else(|| Path::new("."));
+    let file_name = target
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("image");
+    let tmp = parent.join(format!(".{}.tmp", file_name));
+
+    std::fs::write(&tmp, encoded)?;
+    match std::fs::rename(&tmp, target) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp);
+            Err(e)
+        }
+    }
+}
 
 /// Resizes an image based on specific rules.
 #[pyfunction]
@@ -37,11 +59,26 @@ fn resize_image(py: Python, file_path: String) -> PyResult<bool> {
 
         let resized_img = img.resize(new_width, new_height, filter);
 
-        resized_img.save(&file_path)
+        // Encode in-memory then swap the file atomically — a mid-write
+        // panic would otherwise leave a truncated original on disk.
+        let path = Path::new(&file_path);
+        let format = ImageFormat::from_path(path)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyIOError, _>(
+                format!("Cannot determine image format for {}: {}", file_path, e)
+            ))?;
+
+        let mut buf: Vec<u8> = Vec::new();
+        resized_img
+            .write_to(&mut std::io::Cursor::new(&mut buf), format)
             .map_err(|e| {
-                error!("Failed to save resized image {}: {}", file_path, e);
-                PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to save resized image {}: {}", file_path, e))
+                error!("Failed to encode resized image {}: {}", file_path, e);
+                PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to encode resized image {}: {}", file_path, e))
             })?;
+
+        atomic_write_image(path, &buf).map_err(|e| {
+            error!("Failed to save resized image {}: {}", file_path, e);
+            PyErr::new::<pyo3::exceptions::PyIOError, _>(format!("Failed to save resized image {}: {}", file_path, e))
+        })?;
 
         debug!("Successfully resized image: {}", file_path);
         Ok(true)
@@ -236,9 +273,9 @@ fn generate_thumbnail(py: Python, image_path: String, size: Option<u32>, cache_d
 
             let resized = img.resize(new_width, new_height, filter);
 
-            // Przytnij do kwadratu (od góry i od lewej)
-            let crop_x = if new_width > size { 0 } else { 0 };
-            let crop_y = if new_height > size { 0 } else { 0 };
+            // Crop to square anchored at the top-left corner.
+            let crop_x: u32 = 0;
+            let crop_y: u32 = 0;
             let crop_width = new_width.min(size);
             let crop_height = new_height.min(size);
 
@@ -288,7 +325,7 @@ fn image_tools(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let _ = env_logger::try_init();
 
     // Informacje o inicjalizacji modułu
-    info!("🦀 Rust Image Tools module initialized [build: {}, module: {}]", 
+    info!("[RUST] Image Tools module initialized [build: {}, module: {}]",
           env!("VERGEN_BUILD_TIMESTAMP"), 3);
 
     // Add main functions

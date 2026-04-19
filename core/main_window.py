@@ -25,7 +25,6 @@ from core.json_utils import load_from_file
 from core.pairing_tab import PairingTab
 from core.tools_tab import ToolsTab
 from core.thread_manager import ThreadManager
-from core.selection_counter import SelectionCounter
 from core.managers.status_bar_manager import StatusBarManager
 
 # Global logger instance for functions outside the class
@@ -44,9 +43,7 @@ class MainWindow(QMainWindow):
         # Initialize ThreadManager early
         self.thread_manager = ThreadManager()
         logger.info("ThreadManager initialized")
-        
-        # Initialize SelectionCounter (will be properly set up after AMV tab creation)
-        self.selection_counter = None
+
         self.status_bar_manager = None
 
         # Default configuration as class field
@@ -214,44 +211,72 @@ class MainWindow(QMainWindow):
         self, selected_count=None, filtered_count=None, total_count=None
     ):
         try:
-            if not self._validate_components():
+            if not hasattr(self, "amv_tab") or not self.amv_tab:
                 return
-                
-            # Use provided counts or calculate via SelectionCounter
+
             if self._has_provided_counts(selected_count, filtered_count, total_count):
                 summary = {
-                    'selected': selected_count,
-                    'visible': filtered_count,
-                    'total': total_count
+                    "selected": selected_count,
+                    "visible": filtered_count,
+                    "total": total_count,
                 }
-                self.logger.debug(f"Using provided counts: {summary}")
             else:
-                summary = self.selection_counter.get_selection_summary()
-                self.logger.debug(f"Calculated counts: {summary}")
-            
-            # Generate and set status text
-            status_text = self.selection_counter.get_status_text(summary)
+                summary = self._compute_selection_summary()
+
+            status_text = self._format_status_text(summary)
             if self.status_bar_manager:
                 self.status_bar_manager.update_selection_status(status_text)
-            
+
         except Exception as e:
             self._handle_status_error(e)
-    
-    def _validate_components(self) -> bool:
-        """Validate that required components are available for status update"""
-        if not hasattr(self, "amv_tab") or not self.amv_tab:
-            self.logger.debug("AMV tab not available")
-            return False
-            
-        if not self.selection_counter:
-            self.logger.debug("SelectionCounter not available")
-            return False
-            
-        return True
-    
+
     def _has_provided_counts(self, selected_count, filtered_count, total_count) -> bool:
         """Check if external counts were provided"""
         return selected_count is not None and filtered_count is not None and total_count is not None
+
+    def _compute_selection_summary(self) -> dict:
+        """Pulls selected/visible/total directly from the authoritative models.
+        SelectionModel owns the selected set; tiles/original_assets own visible/total."""
+        controller = self.amv_tab.get_controller() if self.amv_tab else None
+        if controller is None:
+            return {"selected": 0, "visible": 0, "total": 0}
+
+        selected = 0
+        selection_model = getattr(getattr(controller, "model", None), "selection_model", None)
+        if selection_model is not None:
+            selected = len(selection_model.get_selected_asset_ids())
+
+        grid = getattr(controller, "asset_grid_controller", None)
+        visible = self._count_visible_tiles(grid)
+        total = self._count_total_assets(grid)
+
+        return {"selected": selected, "visible": visible, "total": total}
+
+    def _count_visible_tiles(self, grid_controller) -> int:
+        if grid_controller is None:
+            return 0
+        tiles = getattr(grid_controller, "asset_tiles", None) or []
+        return sum(
+            1 for tile in tiles
+            if getattr(tile, "model", None)
+            and not getattr(tile.model, "is_special_folder", False)
+        )
+
+    def _count_total_assets(self, grid_controller) -> int:
+        if grid_controller is None or not hasattr(grid_controller, "get_original_assets"):
+            return 0
+        originals = grid_controller.get_original_assets() or []
+        return sum(1 for asset in originals if asset.get("type") != "special_folder")
+
+    @staticmethod
+    def _format_status_text(summary: dict) -> str:
+        selected = summary.get("selected", 0)
+        visible = summary.get("visible", 0)
+        total = summary.get("total", 0)
+        text = f"Selected: {selected}"
+        if visible != total and total > 0:
+            text += f" (visible: {visible}/{total})"
+        return text
     
     def _update_status_label(self, status_text: str):
         if self.status_bar_manager:
@@ -610,16 +635,12 @@ class MainWindow(QMainWindow):
 
 
     def _calculate_asset_counts(self, controller_data: dict) -> AssetCounts:
-        """Calculate visible and total asset counts using SelectionCounter"""
-        if not self.selection_counter:
-            logger.warning("SelectionCounter not available for asset counting")
-            return AssetCounts(visible=0, total=0)
-        
-        visible_count = self.selection_counter.count_visible_assets()
-        total_count = self.selection_counter.count_total_assets()
-        
-        self.logger.debug(f"Visible assets: {visible_count}, Total assets: {total_count}")
-        return AssetCounts(visible=visible_count, total=total_count)
+        """Calculate visible and total asset counts straight from the grid."""
+        grid = controller_data.get("grid_controller") if controller_data else None
+        return AssetCounts(
+            visible=self._count_visible_tiles(grid),
+            total=self._count_total_assets(grid),
+        )
     
     def _handle_selection_change_error(self, error: Exception, selected_count: int):
         """Handle errors during selection change"""
@@ -683,26 +704,12 @@ class MainWindow(QMainWindow):
         """Setup special features for specific tab types"""
         if isinstance(tab_instance, AmvTab):
             self.amv_tab = tab_instance
-            self._initialize_selection_counter()
         elif isinstance(tab_instance, PairingTab):
             self.pairing_tab = tab_instance
         elif isinstance(tab_instance, ToolsTab):
             self.tools_tab = tab_instance
             # Force deactivation of buttons on startup
             self.tools_tab.clear_working_directory()
-    
-    def _initialize_selection_counter(self):
-        """Initialize SelectionCounter after AMV tab is ready"""
-        try:
-            amv_controller = self.amv_tab.get_controller()
-            if amv_controller:
-                self.selection_counter = SelectionCounter(amv_controller)
-                self.logger.info("SelectionCounter initialized")
-            else:
-                self.logger.warning("Could not initialize SelectionCounter - no AMV controller")
-        except Exception as e:
-            self.logger.error(f"Error initializing SelectionCounter: {e}")
-            self.selection_counter = None
     
     def _create_error_placeholder(self, tab_name: str, error: Exception):
         """Create error placeholder for critical tabs that failed to load"""
@@ -729,17 +736,12 @@ class MainWindow(QMainWindow):
         return self.amv_tab.get_controller()
     
     def _calculate_current_asset_counts(self, controller) -> AssetCountsDetailed:
-        """Calculate all asset counts using SelectionCounter"""
-        if not self.selection_counter:
-            logger.warning("SelectionCounter not available for detailed asset counting")
-            return AssetCountsDetailed(selected=0, filtered=0, total=0)
-        
-        summary = self.selection_counter.get_selection_summary()
-        
+        """Pull selected/visible/total from the authoritative models directly."""
+        summary = self._compute_selection_summary()
         return AssetCountsDetailed(
-            selected=summary['selected'],
-            filtered=summary['visible'], 
-            total=summary['total']
+            selected=summary["selected"],
+            filtered=summary["visible"],
+            total=summary["total"],
         )
     
 

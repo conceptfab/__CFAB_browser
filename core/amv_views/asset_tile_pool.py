@@ -18,11 +18,18 @@ class AssetTilePool:
     and destruction of widgets. Implements the Object Pooling pattern.
     """
 
-    def __init__(self, selection_model: SelectionModel, parent_widget=None):
+    # Upper bound prevents unbounded retention when the user browses
+    # folders that shrink; extras are scheduled for deletion instead of
+    # sitting forever in memory. Sized to roughly 2× a large viewport.
+    DEFAULT_MAX_SIZE = 256
+
+    def __init__(self, selection_model: SelectionModel, parent_widget=None,
+                 max_size: int = DEFAULT_MAX_SIZE):
         self._pool: List[AssetTileView] = []
         self._selection_model = selection_model
         self._parent_widget = parent_widget
-        logger.info("AssetTilePool initialized.")
+        self._max_size = max_size
+        logger.info(f"AssetTilePool initialized (max_size={max_size}).")
 
     def acquire(
         self,
@@ -59,17 +66,26 @@ class AssetTilePool:
         """
         Returns the tile to the pool so it can be reused.
         """
-        if tile:
-            tile.hide()  # Hide widget, instead of destroying it
-            # FIXED: Do not change parent if not necessary
-            # Avoid potential memory issues by unnecessary parent changes
-            if tile.parent() != self._parent_widget and self._parent_widget:
-                tile.setParent(self._parent_widget)
-            self._pool.append(tile)
+        if not tile:
+            return
+        if len(self._pool) >= self._max_size:
+            # Pool saturated — drop this tile rather than let the cache grow.
+            tile.hide()
+            tile.setParent(None)
+            tile.deleteLater()
             logger.debug(
-                f"Returned tile {tile.asset_id} to pool. "
-                f"Pool size: {len(self._pool)}"
+                f"Pool at capacity ({self._max_size}); "
+                f"scheduled tile {tile.asset_id} for deletion."
             )
+            return
+        tile.hide()
+        if tile.parent() != self._parent_widget and self._parent_widget:
+            tile.setParent(self._parent_widget)
+        self._pool.append(tile)
+        logger.debug(
+            f"Returned tile {tile.asset_id} to pool. "
+            f"Pool size: {len(self._pool)}"
+        )
 
     def clear(self):
         """Returns all tiles to the pool."""

@@ -22,7 +22,7 @@ fn scanner_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let build_number = env!("VERGEN_BUILD_TIMESTAMP");
     let module_number = 1;
     
-    info!("🦀 Rust Scanner module initialized [build: {}, module: {}]", build_number, module_number);
+    info!("[RUST] Scanner module initialized [build: {}, module: {}]", build_number, module_number);
     
     // Add main class
     m.add_class::<RustAssetRepository>()?;

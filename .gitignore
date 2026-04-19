@@ -168,3 +168,8 @@ temp/
 thumbnails/
 local_config.json
 user_settings.json
+
+# Rust / PyO3 artefakty
+scanner_rust/target/
+*.pyd.bak
+*.pdb

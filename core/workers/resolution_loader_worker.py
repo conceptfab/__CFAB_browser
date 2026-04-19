@@ -50,10 +50,24 @@ class ResolutionLoaderWorker(QThread):
         logger.debug("Resolution loading finished")
         self.finished_loading.emit()
 
+    # Max time to wait for the run loop to observe `_is_running = False`.
+    # Pillow can hold us for one file at a time; 3 s is a generous ceiling.
+    _STOP_TIMEOUT_MS = 3000
+
     def stop(self):
-        """Stop the worker gracefully"""
+        """Request stop and wait up to `_STOP_TIMEOUT_MS` milliseconds.
+
+        A bounded wait prevents shutdown from hanging forever if the worker
+        is stuck inside Pillow (e.g. decoding a large or corrupt image).
+        """
         self._is_running = False
-        self.wait()
+        if not self.wait(self._STOP_TIMEOUT_MS):
+            logger.warning(
+                "ResolutionLoaderWorker did not stop within "
+                f"{self._STOP_TIMEOUT_MS} ms; requesting interruption."
+            )
+            self.requestInterruption()
+            self.wait(1000)
 
     def _get_image_resolution(self, file_path: str) -> str:
         """Reads image resolution using Pillow"""

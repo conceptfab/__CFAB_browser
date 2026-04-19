@@ -5,8 +5,10 @@ Provides tools for measuring operation duration, monitoring memory usage,
 and logging performance metrics in a structured way.
 """
 
+import atexit
 import json
 import logging
+import threading
 import time
 from collections import deque
 from contextlib import contextmanager
@@ -97,24 +99,44 @@ class PerformanceMonitor:
         self.log_file = log_file
         self.enable_console_logging = enable_console_logging
         self.metrics_history: deque = deque(maxlen=1000)
+        self._log_handle = None
+        self._log_lock = threading.Lock()
         self._setup_logging()
 
     def _setup_logging(self):
-        """Configures logging system"""
-        if self.log_file:
-            log_dir = Path(self.log_file).parent
-            log_dir.mkdir(parents=True, exist_ok=True)
+        """Opens a single append-mode log handle for the process lifetime."""
+        if not self.log_file:
+            return
+        log_dir = Path(self.log_file).parent
+        log_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self._log_handle = open(self.log_file, "a", encoding="utf-8", buffering=1)
+            atexit.register(self._close_log_handle)
+        except OSError as e:
+            logger.error("Could not open performance log file %s: %s", self.log_file, e)
+            self._log_handle = None
+
+    def _close_log_handle(self):
+        """Closes the long-lived log handle on interpreter shutdown."""
+        handle, self._log_handle = self._log_handle, None
+        if handle is not None:
+            try:
+                handle.close()
+            except OSError:
+                pass
 
     def _log_metrics(self, metrics: PerformanceMetrics):
         """Logs metrics to file and/or console"""
         metrics_dict = metrics.to_dict()
 
-        # Logging to a file
-        if self.log_file:
+        # Append via the long-lived handle — one open() call per process,
+        # not one per hot-path measurement.
+        if self._log_handle is not None:
+            line = json.dumps(metrics_dict, ensure_ascii=False) + "\n"
             try:
-                with open(self.log_file, "a", encoding="utf-8") as f:
-                    f.write(json.dumps(metrics_dict, ensure_ascii=False) + "\n")
-            except Exception as e:
+                with self._log_lock:
+                    self._log_handle.write(line)
+            except (OSError, ValueError) as e:
                 logger.error(f"Could not write to performance log file: {e}")
 
         # Logging to the console
