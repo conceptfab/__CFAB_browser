@@ -4,7 +4,7 @@ import sys
 
 from PyQt6.QtCore import QObject, pyqtSignal
 
-from core.json_utils import load_from_file
+from core.json_utils import load_from_file, save_to_file
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +15,7 @@ class ConfigManagerMV(QObject):
     config_loaded = pyqtSignal(dict)
     config_error = pyqtSignal(str)
     config_reloaded = pyqtSignal(dict)
+    config_saved = pyqtSignal(dict)
 
     def __init__(self):
         super().__init__()
@@ -55,6 +56,30 @@ class ConfigManagerMV(QObject):
         config = self.load_config(force_reload=True)
         self.config_reloaded.emit(config)
         return config
+
+    def save_config(self, config: dict) -> bool:
+        """Persists configuration to disk and refreshes the cache.
+
+        Returns True on success, False on failure. Errors are logged and
+        emitted via ``config_error`` rather than raised, so callers can
+        react without catching exceptions.
+        """
+        try:
+            save_to_file(config, self._config_path, indent=True)
+            self._config_cache = config
+            self._config_timestamp = (
+                os.path.getmtime(self._config_path)
+                if os.path.exists(self._config_path)
+                else 0
+            )
+            self.config_saved.emit(config)
+            logger.debug("Configuration saved to %s", self._config_path)
+            return True
+        except (OSError, TypeError, ValueError) as e:
+            error_msg = f"Error saving configuration: {e}"
+            logger.error(error_msg, exc_info=True)
+            self.config_error.emit(error_msg)
+            return False
 
     def get_config(self):
         if not self._config_cache:

@@ -145,7 +145,7 @@ class WorkspaceFoldersModel(QObject):
             return True
 
         except Exception as e:
-            logger.error("Error adding workspace folder: %s", str(e))
+            logger.error("Error adding workspace folder: %s", e, exc_info=True)
             return False
 
     def remove_folder(self, path: str) -> bool:
@@ -168,7 +168,7 @@ class WorkspaceFoldersModel(QObject):
             return False
 
         except Exception as e:
-            logger.error("Error removing workspace folder: %s", str(e))
+            logger.error("Error removing workspace folder: %s", e, exc_info=True)
             return False
 
     def update_folder(
@@ -204,18 +204,35 @@ class WorkspaceFoldersModel(QObject):
             return False
 
         except Exception as e:
-            logger.error("Error updating workspace folder: %s", str(e))
+            logger.error("Error updating workspace folder: %s", e, exc_info=True)
             return False
 
     def _update_config(self):
-        """Updates the configuration with current folders"""
+        """Persists current folders back to ``work_folder1..work_folder9`` keys.
+
+        ``load_folders`` reads this schema, so we must write it back in the
+        same shape for round-trip persistence.
+        """
         try:
-            config = self._config_manager.get_config()
-            config["workspace_folders"] = self._folders
-            self._config_manager.save_config(config)
-            logger.debug("Configuration updated with workspace folders")
-        except Exception as e:
-            logger.error("Error updating configuration: %s", str(e))
+            config = dict(self._config_manager.get_config())
+
+            # Clear existing work_folder{i} slots so removals actually persist
+            for i in range(1, 10):
+                config[f"work_folder{i}"] = {}
+
+            # Persist up to 9 folders into the fixed slots
+            for i, folder in enumerate(self._folders[:9], start=1):
+                config[f"work_folder{i}"] = {
+                    "name": folder.get("name", ""),
+                    "path": folder.get("path", ""),
+                    "icon": folder.get("icon", ""),
+                    "color": folder.get("color", "#007ACC"),
+                }
+
+            if not self._config_manager.save_config(config):
+                logger.error("save_config returned False while persisting workspace folders")
+        except (OSError, TypeError, ValueError, AttributeError) as e:
+            logger.error("Error updating configuration: %s", e, exc_info=True)
 
     def get_folder_by_path(self, path: str) -> Optional[Dict]:
         """Returns folder information by path"""

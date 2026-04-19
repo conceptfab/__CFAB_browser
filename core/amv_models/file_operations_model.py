@@ -197,10 +197,20 @@ class FileOperationsWorker(QThread):
         return moved_files
 
     def _handle_post_move(self, unique_name, original_name, source_asset, target_asset):
-        if unique_name != original_name:
-            self._update_asset_file_after_rename(source_asset, target_asset)
-            if os.path.exists(source_asset):
-                self._mark_asset_as_duplicate(target_asset, source_asset)
+        if unique_name == original_name:
+            return
+
+        self._update_asset_file_after_rename(source_asset, target_asset)
+
+        # After the conflict-avoiding rename, the *pre-existing* asset at the
+        # destination keeps its original name. Mark the freshly moved file as
+        # a duplicate of that destination-side original (source_asset is gone
+        # by now — it has been moved to target_asset).
+        destination_original_asset = os.path.join(
+            self.target_folder_path, f"{original_name}.asset"
+        )
+        if os.path.exists(destination_original_asset):
+            self._mark_asset_as_duplicate(target_asset, destination_original_asset)
 
     def _compose_move_message(self, unique_name, original_name):
         if unique_name != original_name:

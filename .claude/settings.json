@@ -3,7 +3,13 @@
     "allow": [
       "Read(//c/Users/micz/.claude/projects/f-----APPS---CFAB-browser/memory//**)",
       "Read(//c/Users/micz/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/requesting-code-review/**)",
-      "Read(//f/f/___APPS/**)"
+      "Read(//f/f/___APPS/**)",
+      "Bash(python -c \"from core import json_utils; print\\('HAS_ORJSON=', json_utils.HAS_ORJSON\\); print\\('loads:', json_utils.loads\\('{\\\\\"a\\\\\":1}'\\)\\); print\\('dumps:', json_utils.dumps\\({'a':1}\\)\\); print\\('JSONDecodeError class:', json_utils.json.JSONDecodeError\\)\")",
+      "Read(//c/tools/python//**)",
+      "Bash(PYO3_PYTHON=\"C:\\\\tools\\\\python\\\\python.exe\" cargo check)",
+      "Bash(python -c ' *)",
+      "Bash(maturin --version)",
+      "Bash(PYO3_PYTHON=\"C:\\\\tools\\\\python\\\\python.exe\" maturin build --release --manifest-path crates/scanner/Cargo.toml --target-dir target)"
     ]
   }
 }

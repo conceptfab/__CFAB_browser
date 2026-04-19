@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use rayon::prelude::*;
 use thiserror::Error;
-use log::error;
+use log::{debug, error};
 
 #[derive(Error, Debug)]
 #[allow(dead_code)]
@@ -110,31 +110,29 @@ impl RustAssetRepository {
         folder_path: String,
         progress_callback: Option<Py<PyAny>>,
     ) -> PyResult<Vec<Py<PyAny>>> {
-        let folder_path = Path::new(&folder_path);
+        let folder_pathbuf = std::path::PathBuf::from(&folder_path);
+        let folder_path = folder_pathbuf.as_path();
 
-        // Path validation
         if !folder_path.exists() || !folder_path.is_dir() {
             return Err(PyErr::new::<pyo3::exceptions::PyFileNotFoundError, _>(
                 format!("Folder does not exist: {:?}", folder_path)
             ));
         }
 
-        // Initial message - scanning files (0-10%)
         if let Some(ref callback) = progress_callback {
             callback.call1(py, (0, 100, "Scanning files...".to_string()))
                 .map_err(|e| py_runtime_error!("Progress callback failed: {}", e))?;
         }
 
-        // Scanning and grouping files (10-20%)
-        let (archive_by_name, image_by_name) = self.scan_and_group_files(folder_path)
-            .map_err(|e| py_runtime_error!("Scan error: {}", e))?;
+        let (archive_by_name, image_by_name) = py.detach(|| {
+            self.scan_and_group_files(folder_path).map_err(|e| e.to_string())
+        }).map_err(|e| py_runtime_error!("Scan error: {}", e))?;
 
         if let Some(ref callback) = progress_callback {
             callback.call1(py, (20, 100, "Files scanned".to_string()))
                 .map_err(|e| py_runtime_error!("Progress callback failed: {}", e))?;
         }
 
-        // Find common names
         let common_names: HashSet<String> = archive_by_name
             .keys()
             .filter(|name| image_by_name.contains_key(*name))
@@ -142,92 +140,85 @@ impl RustAssetRepository {
             .collect();
 
         if common_names.is_empty() {
-            // Message if no assets found, but still create unpaired files list
             if let Some(ref callback) = progress_callback {
                 if let Err(e) = callback.call1(py, (95, 100, "No assets found, creating unpaired files list...".to_string())) {
-                    eprintln!("Progress callback error: {:?}", e);
+                    error!("Progress callback error: {:?}", e);
                 }
             }
-            
-            // Create unpaired files list even when no assets are found
-            self.create_unpaired_files_json(folder_path, &archive_by_name, &image_by_name, &common_names)
-                .map_err(|e| py_runtime_error!("Error creating unpaired files: {}", e))?;
-            
-            // Final message
+
+            py.detach(|| {
+                self.create_unpaired_files_json(folder_path, &archive_by_name, &image_by_name, &common_names)
+                    .map_err(|e| e.to_string())
+            }).map_err(|e| py_runtime_error!("Error creating unpaired files: {}", e))?;
+
             if let Some(ref callback) = progress_callback {
                 if let Err(e) = callback.call1(py, (100, 100, "Scan completed - no assets found".to_string())) {
-                    eprintln!("Progress callback error: {:?}", e);
+                    error!("Progress callback error: {:?}", e);
                 }
             }
             return Ok(Vec::new());
         }
 
-        // Prepare names for parallel processing
         let names_vec: Vec<_> = common_names.into_iter().collect();
         let total_assets = names_vec.len();
-        
-        // Progress tracking without callback in parallel code
+
         if let Some(ref callback) = progress_callback {
             callback.call1(py, (25, 100, format!("Processing {} assets...", total_assets)))
                 .map_err(|e| py_runtime_error!("Progress callback failed: {}", e))?;
         }
 
-        // Parallel processing without Python objects
-        let created_assets: Vec<_> = names_vec
-            .par_iter()
-            .filter_map(|name| {
-                if let (Some(archive_path), Some(image_path)) =
-                    (archive_by_name.get(name), image_by_name.get(name)) {
+        let created_assets: Vec<_> = py.detach(|| {
+            names_vec
+                .par_iter()
+                .filter_map(|name| {
+                    if let (Some(archive_path), Some(image_path)) =
+                        (archive_by_name.get(name), image_by_name.get(name)) {
 
-                    match self.asset_builder.create_single_asset(
-                        name,
-                        archive_path,
-                        image_path,
-                        folder_path
-                    ) {
-                        Ok(asset) => {
-                            // Save asset to file
-                            let asset_file_path = folder_path.join(format!("{}.asset", name));
-                            if let Err(e) = self.asset_builder.save_asset_to_file(&asset, &asset_file_path) {
-                                eprintln!("🦀 Error saving asset {}: {:?} [build: {}, module: 1]", name, e, env!("VERGEN_BUILD_TIMESTAMP"));
-                                return None;
+                        match self.asset_builder.create_single_asset(
+                            name,
+                            archive_path,
+                            image_path,
+                            folder_path
+                        ) {
+                            Ok(asset) => {
+                                let asset_file_path = folder_path.join(format!("{}.asset", name));
+                                if let Err(e) = self.asset_builder.save_asset_to_file(&asset, &asset_file_path) {
+                                    error!("Error saving asset {}: {:?}", name, e);
+                                    return None;
+                                }
+                                Some(asset)
                             }
-
-                            Some(asset)
+                            Err(e) => {
+                                error!("Error creating asset {}: {:?}", name, e);
+                                None
+                            }
                         }
-                        Err(e) => {
-                            eprintln!("🦀 Error creating asset {}: {:?} [build: {}, module: 1]", name, e, env!("VERGEN_BUILD_TIMESTAMP"));
-                            None
-                        }
+                    } else {
+                        None
                     }
-                } else {
-                    None
-                }
-            })
-            .collect();
+                })
+                .collect()
+        });
 
-        // Progress update (80%)
         if let Some(ref callback) = progress_callback {
             callback.call1(py, (80, 100, format!("Created {} assets, converting...", created_assets.len())))
                 .map_err(|e| py_runtime_error!("Progress callback failed: {}", e))?;
         }
 
-        // Convert assets to Python objects (sequential, but fast)
         let mut py_assets = Vec::new();
-        for asset in created_assets {
-            py_assets.push(self.asset_builder.asset_to_pydict(py, &asset)?);
+        for asset in &created_assets {
+            py_assets.push(self.asset_builder.asset_to_pydict(py, asset)?);
         }
 
-        // Message about adding special folders (95%)
         if let Some(ref callback) = progress_callback {
             if let Err(e) = callback.call1(py, (95, 100, "Adding special folders...".to_string())) {
-                eprintln!("Progress callback error: {:?}", e);
+                error!("Progress callback error: {:?}", e);
             }
         }
 
-        // Add special folders
-        let special_folders = scan_for_special_folders(folder_path)
-            .unwrap_or_else(|_| Vec::new());
+        let special_folders = py.detach(|| {
+            scan_for_special_folders(folder_path).unwrap_or_else(|_| Vec::new())
+        });
 
         for special_folder in special_folders {
             let py_dict = PyDict::new(py);
@@ -237,20 +228,21 @@ impl RustAssetRepository {
             py_assets.push(py_dict.into());
         }
 
-        // Create unpaired files file (97%)
         if let Some(ref callback) = progress_callback {
             if let Err(e) = callback.call1(py, (97, 100, "Creating unpaired files list...".to_string())) {
-                eprintln!("Progress callback error: {:?}", e);
+                error!("Progress callback error: {:?}", e);
             }
         }
 
-        self.create_unpaired_files_json(folder_path, &archive_by_name, &image_by_name, &HashSet::from_iter(names_vec.iter().cloned()))
-            .map_err(|e| py_runtime_error!("Error creating unpaired files: {}", e))?;
+        let names_hashset: HashSet<String> = names_vec.iter().cloned().collect();
+        py.detach(|| {
+            self.create_unpaired_files_json(folder_path, &archive_by_name, &image_by_name, &names_hashset)
+                .map_err(|e| e.to_string())
+        }).map_err(|e| py_runtime_error!("Error creating unpaired files: {}", e))?;
 
-        // Final message (100%)
         if let Some(ref callback) = progress_callback {
             if let Err(e) = callback.call1(py, (100, 100, format!("Scan completed - {} assets created", py_assets.len()))) {
-                eprintln!("Progress callback error: {:?}", e);
+                error!("Progress callback error: {:?}", e);
             }
         }
 
@@ -259,7 +251,8 @@ impl RustAssetRepository {
 
     /// Loads existing assets from folder
     fn load_existing_assets(&self, py: Python, folder_path: String) -> PyResult<Vec<Py<PyAny>>> {
-        let folder_path = Path::new(&folder_path);
+        let folder_pathbuf = std::path::PathBuf::from(&folder_path);
+        let folder_path = folder_pathbuf.as_path();
 
         if !folder_path.exists() || !folder_path.is_dir() {
             return Err(PyErr::new::<pyo3::exceptions::PyFileNotFoundError, _>(
@@ -267,28 +260,21 @@ impl RustAssetRepository {
             ));
         }
 
-        let mut assets = Vec::new();
-
-        // Load .asset files
-        for entry in std::fs::read_dir(folder_path)? {
-            let entry = entry?;
-            let path = entry.path();
-
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "asset") {
-                match self.asset_builder.load_asset_from_file(&path) {
-                    Ok(asset) => {
-                        assets.push(self.asset_builder.asset_to_pydict(py, &asset)?);
-                    }
-                    Err(e) => {
-                        eprintln!("🦀 Error loading asset from {:?}: {:?} [build: {}, module: 1]", path, e, env!("VERGEN_BUILD_TIMESTAMP"));
+        let (loaded_assets, special_folders) = py.detach(|| -> std::io::Result<(Vec<crate::types::Asset>, Vec<SpecialFolder>)> {
+            let mut loaded = Vec::new();
+            for entry in std::fs::read_dir(folder_path)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.is_file() && path.extension().map_or(false, |ext| ext == "asset") {
+                    match self.asset_builder.load_asset_from_file(&path) {
+                        Ok(asset) => loaded.push(asset),
+                        Err(e) => error!("Error loading asset from {:?}: {:?}", path, e),
                     }
                 }
             }
-        }
-
-        // Add special folders at the beginning
-        let special_folders = scan_for_special_folders(folder_path)
-            .unwrap_or_else(|_| Vec::new());
+            let special = scan_for_special_folders(folder_path).unwrap_or_else(|_| Vec::new());
+            Ok((loaded, special))
+        })?;
 
         let mut result = Vec::new();
         for special_folder in special_folders {
@@ -299,17 +285,21 @@ impl RustAssetRepository {
             result.push(py_dict.into());
         }
 
-        result.extend(assets);
+        for asset in &loaded_assets {
+            result.push(self.asset_builder.asset_to_pydict(py, asset)?);
+        }
+
         Ok(result)
     }
 
     /// Scans folder for archive and image files
     fn scan_folder_for_files(&self, py: Python, folder_path: String) -> PyResult<(Py<PyAny>, Py<PyAny>)> {
-        let folder_path = Path::new(&folder_path);
-        let (archive_by_name, image_by_name) = self.scan_and_group_files(folder_path)
-            .map_err(|e| py_runtime_error!("Scan error: {}", e))?;
+        let folder_pathbuf = std::path::PathBuf::from(&folder_path);
+        let folder_path = folder_pathbuf.as_path();
+        let (archive_by_name, image_by_name) = py.detach(|| {
+            self.scan_and_group_files(folder_path).map_err(|e| e.to_string())
+        }).map_err(|e| py_runtime_error!("Scan error: {}", e))?;
 
-        // Convert to Python dict
         let py_archives = PyDict::new(py);
         let py_images = PyDict::new(py);
 
@@ -333,27 +323,27 @@ impl RustAssetRepository {
         preview_path: String,
         work_folder_path: String,
     ) -> PyResult<Py<PyAny>> {
-        let archive_path = Path::new(&archive_path);
-        let preview_path = Path::new(&preview_path);
-        let work_folder_path = Path::new(&work_folder_path);
+        let archive_pathbuf = std::path::PathBuf::from(&archive_path);
+        let preview_pathbuf = std::path::PathBuf::from(&preview_path);
+        let work_folder_pathbuf = std::path::PathBuf::from(&work_folder_path);
+        let name_str = name;
 
-        match self.asset_builder.create_single_asset(
-            &name,
-            archive_path,
-            preview_path,
-            work_folder_path,
-        ) {
-            Ok(asset) => {
-                // Save asset to file
-                let asset_file_path = work_folder_path.join(format!("{}.asset", name));
-                if let Err(e) = self.asset_builder.save_asset_to_file(&asset, &asset_file_path) {
-                    return Err(py_runtime_error!("Error saving asset file: {}", e));
-                }
+        let asset = py.detach(|| -> PyResult<crate::types::Asset> {
+            let built = self.asset_builder.create_single_asset(
+                &name_str,
+                archive_pathbuf.as_path(),
+                preview_pathbuf.as_path(),
+                work_folder_pathbuf.as_path(),
+            ).map_err(|e| py_runtime_error!("Error creating asset: {}", e))?;
 
-                Ok(self.asset_builder.asset_to_pydict(py, &asset)?)
-            }
-            Err(e) => Err(py_runtime_error!("Error creating asset: {}", e)),
-        }
+            let asset_file_path = work_folder_pathbuf.join(format!("{}.asset", name_str));
+            self.asset_builder.save_asset_to_file(&built, &asset_file_path)
+                .map_err(|e| py_runtime_error!("Error saving asset file: {}", e))?;
+
+            Ok(built)
+        })?;
+
+        self.asset_builder.asset_to_pydict(py, &asset)
     }
 }
 
@@ -390,12 +380,6 @@ impl RustAssetRepository {
             return Err(format!("Folder nie istnieje: {:?}", folder_path).into());
         }
 
-        // Upewnij się, że mamy prawa zapisu do folderu
-        let test_path = folder_path.join(".write_test");
-        if let Err(e) = std::fs::write(&test_path, "") {
-            return Err(format!("Brak uprawnień do zapisu w folderze: {}", e).into());
-        }
-        let _ = std::fs::remove_file(test_path);
         let mut unpaired_files = UnpairedFiles {
             archives: Vec::new(),
             images: Vec::new(),
@@ -438,7 +422,7 @@ impl RustAssetRepository {
             let name = path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
             if !common_names.contains(&name) {
                 let fname = path.file_name().unwrap_or_default().to_string_lossy().to_string();
-                println!("[UNPAIRED ARCHIVE] {}", fname);
+                debug!("[UNPAIRED ARCHIVE] {}", fname);
                 unpaired_files.archives.push(fname);
             }
         }
@@ -448,7 +432,7 @@ impl RustAssetRepository {
             let name = path.file_stem().and_then(|n| n.to_str()).unwrap_or("").to_lowercase();
             if !common_names.contains(&name) {
                 let fname = path.file_name().unwrap_or_default().to_string_lossy().to_string();
-                println!("[UNPAIRED IMAGE] {}", fname);
+                debug!("[UNPAIRED IMAGE] {}", fname);
                 unpaired_files.images.push(fname);
             }
         }

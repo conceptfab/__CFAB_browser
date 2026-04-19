@@ -3,11 +3,10 @@ JSON utilities with fallback to standard json
 Facilitates migration and ensures compatibility
 """
 
+import json
 import logging
 
 logger = logging.getLogger(__name__)
-
-
 
 
 try:
@@ -16,8 +15,6 @@ try:
     HAS_ORJSON = True
     logger.info("Using orjson for JSON operations")
 except ImportError:
-    import json
-
     HAS_ORJSON = False
     logger.warning("orjson not available, falling back to standard json")
 

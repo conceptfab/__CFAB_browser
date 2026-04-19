@@ -80,17 +80,21 @@ class WorkerManager:
             button.setEnabled(False)
             button.setText(f"{original_text}...")
 
-            # Connect signals - QueuedConnection ensures handle_progress runs in GUI thread
+            # Connect signals - QueuedConnection ensures the slot runs in the
+            # GUI thread regardless of which thread emits. QMessageBox and
+            # button/state mutations are not safe to invoke off-thread.
             from PyQt6.QtCore import Qt
             worker.progress_updated.connect(
                 lambda c, t, m: WorkerManager.handle_progress(button, c, t, m),
                 Qt.ConnectionType.QueuedConnection
             )
             worker.finished.connect(
-                lambda m: WorkerManager.handle_finished(button, m, original_text, parent_instance)
+                lambda m: WorkerManager.handle_finished(button, m, original_text, parent_instance),
+                Qt.ConnectionType.QueuedConnection
             )
             worker.error_occurred.connect(
-                lambda e: WorkerManager.handle_error(button, e, original_text, parent_instance)
+                lambda e: WorkerManager.handle_error(button, e, original_text, parent_instance),
+                Qt.ConnectionType.QueuedConnection
             )
 
             # Start worker
