@@ -7,7 +7,12 @@ def check_command(cmd):
         subprocess.run([cmd, "--version"], capture_output=True, check=True)
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
-        return False
+        # Fallback: try as a Python module (e.g. maturin installed via pip3)
+        try:
+            subprocess.run([sys.executable, "-m", cmd, "--version"], capture_output=True, check=True)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return False
 
 def main():
     print("🦀 --- CFAB Browser: Rust Engine Rebuilder ---")

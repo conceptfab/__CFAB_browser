@@ -1,0 +1,27 @@
+#!/bin/bash
+# CFAB Browser launcher – runs from inside the .app bundle.
+
+# ---- Resolve project directory ----
+APP_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+
+# ---- Find python3 ----
+for candidate in \
+    /usr/bin/python3 \
+    /usr/local/bin/python3 \
+    /opt/homebrew/bin/python3 \
+    /Applications/Xcode.app/Contents/Developer/usr/bin/python3 \
+    ; do
+    if [ -x "$candidate" ]; then
+        PYTHON="$candidate"
+        break
+    fi
+done
+
+if [ -z "$PYTHON" ]; then
+    osascript -e 'display dialog "CFAB Browser: python3 not found!\nPlease install Python 3." buttons {"OK"} default button "OK" with icon stop with title "CFAB Browser"'
+    exit 1
+fi
+
+# ---- Launch with forced arm64 architecture ----
+cd "$APP_DIR"
+exec arch -arm64 "$PYTHON" "$APP_DIR/cfab_browser.py" "$@"

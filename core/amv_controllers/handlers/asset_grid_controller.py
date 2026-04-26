@@ -282,8 +282,8 @@ class AssetGridController(QObject):
             )
         )
         tile.filename_clicked.connect(
-            lambda asset_id, asset_path, _: self.controller._handle_file_action(
-                asset_path, "filename"
+            lambda asset_id, asset_path, t: self.controller._handle_file_action(
+                asset_path, "filename", tile=t
             )
         )
         tile.checkbox_state_changed.connect(

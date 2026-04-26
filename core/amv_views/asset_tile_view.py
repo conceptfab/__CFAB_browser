@@ -6,12 +6,13 @@ Displays thumbnail, filename, stars, and checkbox for the asset.
 import logging
 import os
 
-from PyQt6.QtCore import QMimeData, Qt, QThreadPool, pyqtSignal
+from PyQt6.QtCore import QMimeData, QPropertyAnimation, QTimer, Qt, QThreadPool, pyqtSignal
 from PyQt6.QtGui import QColor, QDrag, QImage, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
     QFrame,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QSizePolicy,
@@ -715,3 +716,44 @@ class AssetTileView(QFrame):
             new_size = max(new_size, 64)  # Minimum size 64px
 
             self.thumbnail_container.setFixedSize(new_size, new_size)
+
+    def show_copy_feedback(self):
+        """Shows an animated '📋 Copied!' toast directly on the tile."""
+        toast = QLabel("📋 Copied!", self)
+        toast.setObjectName("CopyToast")
+        toast.setStyleSheet(
+            "background-color: rgba(40, 167, 69, 220);"
+            "color: white;"
+            "font-weight: bold;"
+            "font-size: 11px;"
+            "padding: 4px 10px;"
+            "border-radius: 6px;"
+        )
+        toast.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        toast.adjustSize()
+
+        # Center the toast on the tile
+        x = (self.width() - toast.width()) // 2
+        y = (self.height() - toast.height()) // 2
+        toast.move(x, y)
+        toast.raise_()
+        toast.show()
+
+        # Fade out animation
+        opacity_effect = QGraphicsOpacityEffect(toast)
+        toast.setGraphicsEffect(opacity_effect)
+
+        fade_anim = QPropertyAnimation(opacity_effect, b"opacity", self)
+        fade_anim.setDuration(600)
+        fade_anim.setStartValue(1.0)
+        fade_anim.setEndValue(0.0)
+
+        # Start fade after 900ms, then remove widget
+        def _start_fade():
+            fade_anim.start()
+
+        def _cleanup():
+            toast.deleteLater()
+
+        fade_anim.finished.connect(_cleanup)
+        QTimer.singleShot(900, _start_fade)

@@ -259,6 +259,109 @@ def open_path_in_explorer(path: str, parent_widget=None) -> bool:
         return False
 
 
+def copy_file_to_clipboard(path: str, parent_widget=None) -> bool:
+    """
+    Copies a file reference to the system clipboard so it can be pasted
+    in Finder or another file manager.
+
+    Args:
+        path (str): Absolute path to the file
+        parent_widget: Parent widget for displaying error messages
+
+    Returns:
+        bool: True if the operation succeeded, False otherwise
+    """
+    logger.debug(f"copy_file_to_clipboard - received path: {path}")
+
+    try:
+        is_valid, result = _validate_path_input(path)
+        if not is_valid:
+            logger.error(result)
+            _show_error_message(parent_widget, result, path)
+            return False
+
+        normalized_path = result
+
+        if sys.platform == "darwin":
+            return _copy_file_to_clipboard_macos(normalized_path, parent_widget)
+        elif sys.platform == "win32":
+            return _copy_file_to_clipboard_windows(normalized_path, parent_widget)
+        else:
+            # Linux fallback: use xclip if available
+            return _copy_file_to_clipboard_linux(normalized_path, parent_widget)
+
+    except Exception as e:
+        logger.error(f"Unexpected error copying file to clipboard: {e}")
+        _show_error_message(parent_widget, "Unexpected error", str(e))
+        return False
+
+
+def _copy_file_to_clipboard_macos(normalized_path: str, parent_widget=None) -> bool:
+    """
+    macOS: Uses osascript to place a file reference on the pasteboard
+    so Finder recognises it for Paste.
+    """
+    try:
+        posix_path = normalized_path.replace("\\", "/")
+        apple_script = (
+            'set the clipboard to (POSIX file "' + posix_path + '")'
+        )
+        subprocess.run(
+            ["osascript", "-e", apple_script],
+            check=True, timeout=5, capture_output=True,
+        )
+        logger.info(f"File copied to clipboard (macOS): {normalized_path}")
+        return True
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
+        logger.error(f"Error copying file to clipboard on macOS: {e}")
+        _show_error_message(parent_widget, "Failed to copy file to clipboard", normalized_path)
+        return False
+
+
+def _copy_file_to_clipboard_windows(normalized_path: str, parent_widget=None) -> bool:
+    """
+    Windows: Uses PowerShell to place a file object on the clipboard.
+    """
+    try:
+        ps_cmd = (
+            f'Set-Clipboard -Path "{normalized_path}"'
+        )
+        subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_cmd],
+            check=True, timeout=5, capture_output=True,
+        )
+        logger.info(f"File copied to clipboard (Windows): {normalized_path}")
+        return True
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError) as e:
+        logger.error(f"Error copying file to clipboard on Windows: {e}")
+        _show_error_message(parent_widget, "Failed to copy file to clipboard", normalized_path)
+        return False
+
+
+def _copy_file_to_clipboard_linux(normalized_path: str, parent_widget=None) -> bool:
+    """
+    Linux: Uses xclip to place a file URI on the clipboard.
+    """
+    try:
+        file_uri = f"file://{normalized_path}"
+        process = subprocess.Popen(
+            ["xclip", "-selection", "clipboard", "-t", "text/uri-list"],
+            stdin=subprocess.PIPE, timeout=5,
+        )
+        process.communicate(input=file_uri.encode())
+        if process.returncode == 0:
+            logger.info(f"File copied to clipboard (Linux): {normalized_path}")
+            return True
+        else:
+            logger.error(f"xclip returned non-zero exit code: {process.returncode}")
+            _show_error_message(parent_widget, "Failed to copy file to clipboard", normalized_path)
+            return False
+    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+        logger.error(f"Error copying file to clipboard on Linux: {e}")
+        _show_error_message(parent_widget, "Failed to copy file to clipboard (xclip required)", normalized_path)
+        return False
+
+
 def open_file_in_default_app(path: str, parent_widget=None) -> bool:
     """
     Opens a file in the system's default application.
@@ -362,10 +465,10 @@ def handle_file_action(path: str, action_type: str, parent_widget=None):
                     return False
                     
             elif action_type == "filename":
-                # Open file in default application
-                success = open_file_in_default_app(path, parent_widget)
+                # Copy file to system clipboard for pasting in Finder/Explorer
+                success = copy_file_to_clipboard(path, parent_widget)
                 if success:
-                    logger.info(f"Opened file in external application: {path}")
+                    logger.info(f"Copied file to clipboard: {path}")
                 return success
             else:
                 logger.warning(f"Unknown action type: {action_type}")

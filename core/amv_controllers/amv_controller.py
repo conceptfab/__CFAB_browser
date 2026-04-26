@@ -147,9 +147,23 @@ class AmvController(QObject):
         # Update button states after a scan error
         self.control_panel_controller.update_button_states()
 
-    def _handle_file_action(self, path: str, action_type: str):
+    def _handle_file_action(self, path: str, action_type: str, tile=None):
         """
         Delegates file action handling to consolidated utility function
         """
         logger.debug(f"Controller: File action '{action_type}' for: {path}")
-        return handle_file_action(path, action_type, self.view)
+        result = handle_file_action(path, action_type, self.view)
+
+        # Show user-visible feedback for clipboard copy
+        if action_type == "filename" and result:
+            # Toast on the tile itself
+            if tile and hasattr(tile, "show_copy_feedback"):
+                tile.show_copy_feedback()
+            # Status bar message
+            if self.main_window:
+                filename = os.path.basename(path)
+                self.main_window.show_operation_status(
+                    f"📋 Copied to clipboard: {filename}", "completed"
+                )
+
+        return result

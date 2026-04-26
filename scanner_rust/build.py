@@ -1,7 +1,9 @@
 import os
+import sys
 import subprocess
 import shutil
 import zipfile
+import platform
 
 # --- Konfiguracja ---
 CRATES_DIR = "crates"
@@ -9,15 +11,38 @@ TARGET_DIR = "core/__rust"
 MODULES = ["scanner", "image_tools", "hash_utils"]
 # --------------------
 
+def get_native_ext():
+    """Returns the native extension for compiled modules on this platform."""
+    if platform.system() == "Windows":
+        return ".pyd"
+    else:
+        return ".so"
+
+def resolve_maturin_command():
+    """Find working maturin invocation."""
+    # Try bare maturin first
+    try:
+        subprocess.run(["maturin", "--version"], capture_output=True, check=True)
+        return "maturin"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    # Fallback to python -m maturin
+    try:
+        subprocess.run([sys.executable, "-m", "maturin", "--version"], capture_output=True, check=True)
+        return f"{sys.executable} -m maturin"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    raise RuntimeError("Could not find maturin. Install with: pip3 install maturin")
+
 def clean_previous_builds(script_dir):
     """Czyści pozostałości po poprzednich kompilacjach."""
     print("🧹 --- Czyszczenie pozostałości po poprzednich kompilacjach ---")
-    
+    native_ext = get_native_ext()
     # 1. Usuń pliki .pyd z docelowego katalogu
     target_root_dir = os.path.join(script_dir, '..', TARGET_DIR)
     if os.path.exists(target_root_dir):
         for file in os.listdir(target_root_dir):
-            if file.endswith('.pyd'):
+            if file.endswith(native_ext):
                 file_path = os.path.join(target_root_dir, file)
                 try:
                     os.remove(file_path)
@@ -82,7 +107,8 @@ def main():
         manifest_path = os.path.join(module_path, "Cargo.toml")
         
         # 1. Budowanie koła (wheel)
-        run_command("maturin build --release", cwd=module_path, manifest_path=manifest_path)
+        maturin_cmd = resolve_maturin_command()
+        run_command(f"{maturin_cmd} build --release", cwd=module_path, manifest_path=manifest_path)
         
         # 2. Znajdowanie pliku .whl
         wheels_dir = os.path.join(script_dir, "target", "wheels")
@@ -96,9 +122,10 @@ def main():
         wheel_path = os.path.join(wheels_dir, latest_wheel)
         print(f"🦀 Znaleziono koło: {wheel_path}")
 
-        # 3. Rozpakowanie i przeniesienie .pyd
-        pyd_final_name = f"{module if module != 'scanner' else 'scanner_rust'}.pyd"
-        target_pyd_path = os.path.join(script_dir, '..', TARGET_DIR, pyd_final_name)
+        # 3. Rozpakowanie i przeniesienie natywnej biblioteki (.pyd/.so)
+        native_ext = get_native_ext()
+        lib_final_name = f"{module if module != 'scanner' else 'scanner_rust'}{native_ext}"
+        target_lib_path = os.path.join(script_dir, '..', TARGET_DIR, lib_final_name)
         
         temp_unpack_dir = os.path.join(module_path, "target", "temp_unpack")
         if os.path.exists(temp_unpack_dir):
@@ -108,17 +135,18 @@ def main():
         with zipfile.ZipFile(wheel_path, 'r') as zf:
             zf.extractall(temp_unpack_dir)
             
-        # Znajdź plik .pyd rekurencyjnie
-        pyd_files = []
+        # Znajdź natywny plik (.pyd/.so/.dylib) rekurencyjnie
+        native_exts = ('.pyd', '.so', '.dylib')
+        native_files = []
         for root, dirs, files in os.walk(temp_unpack_dir):
-            pyd_files.extend([os.path.join(root, f) for f in files if f.endswith('.pyd')])
+            native_files.extend([os.path.join(root, f) for f in files if any(f.endswith(ext) for ext in native_exts)])
             
-        if not pyd_files:
-            raise FileNotFoundError(f"Nie znaleziono pliku .pyd w kole dla modułu {module}")
+        if not native_files:
+            raise FileNotFoundError(f"Nie znaleziono natywnego pliku biblioteki w kole dla modułu {module}")
         
-        source_pyd = pyd_files[0]  # Weź pierwszy znaleziony plik .pyd
-        print(f"🦀 Przenoszenie {source_pyd} do {target_pyd_path}")
-        shutil.move(source_pyd, target_pyd_path)
+        source_lib = native_files[0]  # Weź pierwszy znaleziony plik
+        print(f"🦀 Przenoszenie {source_lib} do {target_lib_path}")
+        shutil.move(source_lib, target_lib_path)
         
         # 4. Czyszczenie
         shutil.rmtree(temp_unpack_dir)
