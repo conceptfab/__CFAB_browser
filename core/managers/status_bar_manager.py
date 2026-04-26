@@ -80,9 +80,11 @@ class StatusBarManager:
         try:
             if directory_path:
                 if len(directory_path) > 80:
-                    parts = directory_path.split("\\")
+                    sep = "\\" if "\\" in directory_path else "/"
+                    parts = directory_path.split(sep)
                     if len(parts) > 3:
-                        short_path = f"...\\{'\\'.join(parts[-3:])}"
+                        tail = sep.join(parts[-3:])
+                        short_path = f"...{sep}{tail}"
                     else:
                         short_path = directory_path
                 else:
