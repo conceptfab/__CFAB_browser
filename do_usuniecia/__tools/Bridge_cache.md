@@ -1,1 +1,0 @@
-C:\Users\micz\AppData\Roaming\Adobe\Bridge\Cache\v36\1024
