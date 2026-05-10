@@ -10,7 +10,6 @@ Drzewo folderów z opisem plików. Folder `do_usuniecia/` pomijany.
 __CFAB_browser/
 │
 ├── cfab_browser.py          # Punkt wejścia – main(), QApplication, splash, ładowanie stylów
-├── run.py                   # Launcher – czyści __pycache__, uruchamia cfab_browser.py
 ├── config.json              # Konfiguracja – work_folder*, thumbnail, logger_level, use_styles
 ├── requirements.txt         # Zależności Python (PyQt6, Pillow, orjson, psutil, maturin)
 ├── rebuild_rust.py          # Skrypt budowania modułu Rust (wywołuje scanner_rust/build.py)

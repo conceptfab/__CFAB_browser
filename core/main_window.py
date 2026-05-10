@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 
 from core.amv_tab import AmvTab
+from core.console_tab import ConsoleTab
 from core.json_utils import load_from_file
 from core.pairing_tab import PairingTab
 from core.tools_tab import ToolsTab
@@ -515,6 +516,13 @@ class MainWindow(QMainWindow):
             except Exception as emergency_error:
                 self.logger.error(f"Emergency stop failed: {emergency_error}")
 
+        # Detach the in-app console so logging/stdio don't reference dead Qt objects.
+        if self.console_tab is not None:
+            try:
+                self.console_tab.shutdown()
+            except Exception as console_error:
+                self.logger.error(f"Error shutting down console tab: {console_error}")
+
         # Always accept the close event
         event.accept()
 
@@ -658,13 +666,15 @@ class MainWindow(QMainWindow):
         self.amv_tab = None
         self.pairing_tab = None
         self.tools_tab = None
-    
+        self.console_tab = None
+
     def _get_tabs_configuration(self) -> list:
         """Get configuration for tabs to create"""
         return [
             (AmvTab, "Asset Browser", True),  # True = critical tab (main)
             (PairingTab, "Pairing", False),
             (ToolsTab, "Tools", False),
+            (ConsoleTab, "Console", False),
         ]
     
     def _create_tabs_from_config(self, config: list) -> int:
@@ -710,6 +720,8 @@ class MainWindow(QMainWindow):
             self.tools_tab = tab_instance
             # Force deactivation of buttons on startup
             self.tools_tab.clear_working_directory()
+        elif isinstance(tab_instance, ConsoleTab):
+            self.console_tab = tab_instance
     
     def _create_error_placeholder(self, tab_name: str, error: Exception):
         """Create error placeholder for critical tabs that failed to load"""

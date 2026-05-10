@@ -440,6 +440,7 @@ def build_with_pyinstaller(debug_mode=False, version="1.0.0", upx_available=Fals
             "--hidden-import=core.amv_tab",
             "--hidden-import=core.pairing_tab",
             "--hidden-import=core.tools_tab",
+            "--hidden-import=core.console_tab",
             "--hidden-import=core.file_utils",
             "--hidden-import=core.scanner",
             # 📊 PODSTAWOWE IMPORTS

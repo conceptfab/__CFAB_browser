@@ -39,11 +39,11 @@ python rebuild_rust.py
 ### 4. Uruchomienie
 
 ```bash
-# Bezpośrednio
-python cfab_browser.py
+# macOS / Linux
+python3 cfab_browser.py
 
-# Lub z czyszczeniem __pycache__
-python run.py
+# Windows (bez okna konsoli)
+pythonw cfab_browser.py
 ```
 
 ### 5. Konfiguracja minimalna
@@ -73,7 +73,6 @@ Utwórz lub edytuj `config.json` w katalogu głównym:
 ```
 __CFAB_browser/
 ├── cfab_browser.py      # Punkt wejścia aplikacji
-├── run.py               # Launcher (czyści __pycache__, uruchamia cfab_browser)
 ├── config.json          # Konfiguracja użytkownika
 ├── requirements.txt
 ├── rebuild_rust.py      # Budowanie modułu Rust

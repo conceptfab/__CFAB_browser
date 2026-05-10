@@ -9,9 +9,42 @@ import sys
 import time
 import traceback
 
+
+# ---------------------------------------------------------------------------
+# Bootstrap: keep the app launchable without a system console.
+#
+# When started through ``pythonw.exe`` on Windows or via a macOS ``.app``
+# bundle, ``sys.stdout`` / ``sys.stderr`` may be ``None``. Any ``print()``
+# would then crash before the UI is up. Provide a no-op fallback so the
+# application starts cleanly; the in-app ConsoleTab takes over once created.
+# ---------------------------------------------------------------------------
+
+
+class _NullStream:
+    def write(self, *args, **kwargs):
+        return 0
+
+    def flush(self):
+        pass
+
+    def isatty(self):
+        return False
+
+
+if sys.stdout is None:
+    sys.stdout = _NullStream()
+if sys.stderr is None:
+    sys.stderr = _NullStream()
+
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication, QSplashScreen
+
+# Capture early log records so they can be replayed inside the ConsoleTab.
+from core.console_tab import install_early_log_buffer
+
+install_early_log_buffer()
 
 # Import main window
 from core.json_utils import load_from_file
