@@ -140,6 +140,112 @@ def _drain_early_records() -> List[Tuple[str, str]]:
 
 
 # ---------------------------------------------------------------------------
+# Early stdio buffer — captures print() calls during module imports.
+#
+# Many modules (scanner, image tools, hash utils) emit `RUST ...: Using LOCAL
+# version ...` lines via ``print()`` at import time. That happens before the
+# ConsoleTab can install its stdio redirectors, so those prints would otherwise
+# only appear on the system console. Tee them through this lightweight buffer
+# and drain them when the ConsoleTab comes up.
+# ---------------------------------------------------------------------------
+
+_early_stdio_records: List[Tuple[str, str]] = []
+
+
+class _EarlyStdioCapture:
+    """File-like wrapper that buffers writes for later replay."""
+
+    def __init__(self, level_label: str, original) -> None:
+        self._level_label = level_label
+        self._original = original
+        self._buffer = ""
+
+    def write(self, text) -> int:
+        if not isinstance(text, str):
+            try:
+                text = str(text)
+            except Exception:
+                return 0
+
+        if self._original is not None:
+            try:
+                self._original.write(text)
+            except Exception:
+                pass
+
+        self._buffer += text
+        while "\n" in self._buffer:
+            line, self._buffer = self._buffer.split("\n", 1)
+            if line:
+                _early_stdio_records.append((self._level_label, line))
+        return len(text)
+
+    def flush(self) -> None:
+        if self._original is not None:
+            try:
+                self._original.flush()
+            except Exception:
+                pass
+        if self._buffer:
+            _early_stdio_records.append((self._level_label, self._buffer))
+            self._buffer = ""
+
+    def isatty(self) -> bool:
+        return False
+
+    def fileno(self) -> int:
+        if self._original is not None and hasattr(self._original, "fileno"):
+            return self._original.fileno()
+        raise OSError("Early stdio capture has no fileno")
+
+    @property
+    def original(self):
+        return self._original
+
+
+_early_stdout_capture: Optional[_EarlyStdioCapture] = None
+_early_stderr_capture: Optional[_EarlyStdioCapture] = None
+
+
+def install_early_stdio_buffer() -> None:
+    """Capture stdout/stderr writes before the ConsoleTab exists. Idempotent."""
+    global _early_stdout_capture, _early_stderr_capture
+    if _early_stdout_capture is None:
+        _early_stdout_capture = _EarlyStdioCapture("STDOUT", sys.stdout)
+        sys.stdout = _early_stdout_capture
+    if _early_stderr_capture is None:
+        _early_stderr_capture = _EarlyStdioCapture("STDERR", sys.stderr)
+        sys.stderr = _early_stderr_capture
+
+
+def _drain_early_stdio_records() -> List[Tuple[str, str]]:
+    """Return buffered stdio records (kept verbatim for replay)."""
+    records = list(_early_stdio_records)
+    _early_stdio_records.clear()
+    return records
+
+
+def _uninstall_early_stdio_buffer() -> Tuple[object, object]:
+    """Restore the original stdio streams that were active before capture.
+
+    Returns the original (stdout, stderr) so the caller can chain them into
+    its own redirectors.
+    """
+    global _early_stdout_capture, _early_stderr_capture
+    original_stdout = _early_stdout_capture.original if _early_stdout_capture else sys.stdout
+    original_stderr = _early_stderr_capture.original if _early_stderr_capture else sys.stderr
+
+    if _early_stdout_capture is not None and sys.stdout is _early_stdout_capture:
+        sys.stdout = original_stdout
+    if _early_stderr_capture is not None and sys.stderr is _early_stderr_capture:
+        sys.stderr = original_stderr
+
+    _early_stdout_capture = None
+    _early_stderr_capture = None
+    return original_stdout, original_stderr
+
+
+# ---------------------------------------------------------------------------
 # Bridges
 # ---------------------------------------------------------------------------
 
@@ -238,8 +344,9 @@ class ConsoleTab(QWidget):
         super().__init__()
 
         self._minimum_level = logging.DEBUG
-        self._original_stdout = sys.stdout
-        self._original_stderr = sys.stderr
+        original_stdout, original_stderr = _uninstall_early_stdio_buffer()
+        self._original_stdout = original_stdout
+        self._original_stderr = original_stderr
         self._stdout_redirector: Optional[_StreamRedirector] = None
         self._stderr_redirector: Optional[_StreamRedirector] = None
         self._log_handler: Optional[_QtLogHandler] = None
@@ -250,6 +357,7 @@ class ConsoleTab(QWidget):
         self._install_logging_handler()
         self._install_stdio_redirectors()
         self._flush_early_records()
+        self._flush_early_stdio_records()
 
     # -- setup ------------------------------------------------------------
 
@@ -318,15 +426,20 @@ class ConsoleTab(QWidget):
         self._log_handler = handler
 
     def _install_stdio_redirectors(self) -> None:
-        # Preserve current stream as the "original" so we still tee to a
-        # real terminal when the app is launched from one.
-        self._stdout_redirector = _StreamRedirector(self, "STDOUT", sys.stdout)
-        self._stderr_redirector = _StreamRedirector(self, "STDERR", sys.stderr)
+        # Preserve the *real* underlying stream (resolved before any early
+        # capture wrapper) so we still tee to a real terminal when the app is
+        # launched from one.
+        self._stdout_redirector = _StreamRedirector(self, "STDOUT", self._original_stdout)
+        self._stderr_redirector = _StreamRedirector(self, "STDERR", self._original_stderr)
         sys.stdout = self._stdout_redirector
         sys.stderr = self._stderr_redirector
 
     def _flush_early_records(self) -> None:
         for level, msg in _drain_early_records():
+            self.append_log_signal.emit(level, msg)
+
+    def _flush_early_stdio_records(self) -> None:
+        for level, msg in _drain_early_stdio_records():
             self.append_log_signal.emit(level, msg)
 
     # -- events -----------------------------------------------------------

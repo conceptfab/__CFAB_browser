@@ -11,6 +11,27 @@ import traceback
 
 
 # ---------------------------------------------------------------------------
+# Hide the system console window on Windows, no matter how we were launched.
+#
+# When started via ``python.exe`` (terminal, VS Code, double-click on .py),
+# Windows attaches a console window. The user wants ALL output inside the
+# in-app Console tab — never in a separate terminal. Hide the console window
+# immediately; the in-app ConsoleTab still captures stdout/stderr through the
+# early stdio buffer installed below.
+# ---------------------------------------------------------------------------
+
+if sys.platform == "win32" and os.environ.get("CFAB_KEEP_CONSOLE") != "1":
+    try:
+        import ctypes
+
+        _hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if _hwnd:
+            ctypes.windll.user32.ShowWindow(_hwnd, 0)  # SW_HIDE
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
 # Bootstrap: keep the app launchable without a system console.
 #
 # When started through ``pythonw.exe`` on Windows or via a macOS ``.app``
@@ -37,14 +58,17 @@ if sys.stderr is None:
     sys.stderr = _NullStream()
 
 
+# Capture early log records and stdout/stderr writes so they can be replayed
+# inside the ConsoleTab. Must happen BEFORE importing any module that may
+# print at import time (scanner, image tools, hash utils, ...).
+from core.console_tab import install_early_log_buffer, install_early_stdio_buffer
+
+install_early_log_buffer()
+install_early_stdio_buffer()
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QApplication, QSplashScreen
-
-# Capture early log records so they can be replayed inside the ConsoleTab.
-from core.console_tab import install_early_log_buffer
-
-install_early_log_buffer()
 
 # Import main window
 from core.json_utils import load_from_file
